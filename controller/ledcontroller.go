@@ -6,6 +6,7 @@ import (
 )
 
 const LEDS_TOTAL = 125
+
 const HOLD_TIME = 5 * time.Second
 const RUN_UP = 20 * time.Millisecond
 const RUN_DOWN = 40 * time.Millisecond
