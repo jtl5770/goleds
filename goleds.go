@@ -2,23 +2,23 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
-	lc "goleds/controller"
+	c "goleds/controller"
 )
 
-const SENSOR_TOTAL = 4
-
-var controllers [SENSOR_TOTAL]lc.LedController
+var LEDS_TOTAL = 125
+var sensor_indices = []int{0, 69, 70, 124}
+var controllers = make([]c.LedController, len(sensor_indices))
 
 func main() {
-	sensor_indices := [SENSOR_TOTAL]int{0, 69, 70, 124}
-	ledReader := make(chan (*lc.LedController), 10)
-	ledWriter := make(chan [lc.LEDS_TOTAL]int)
+	ledReader := make(chan (*c.LedController), 10)
+	ledWriter := make(chan []int, LEDS_TOTAL)
 	sensorReader := make(chan int, 10)
 
-	for i := 0; i < SENSOR_TOTAL; i++ {
-		controllers[i] = lc.NewLedController(i, sensor_indices[i], ledReader)
+	for i := range controllers {
+		controllers[i] = c.NewLedController(i, LEDS_TOTAL, sensor_indices[i], ledReader)
 	}
 
 	go updateDisplay(ledReader, ledWriter)
@@ -38,36 +38,38 @@ func main() {
 	}
 }
 
-func updateDisplay(r chan (*lc.LedController), w chan ([lc.LEDS_TOTAL]int)) {
-	var oldSumLeds [lc.LEDS_TOTAL]int
-	var leds [SENSOR_TOTAL][lc.LEDS_TOTAL]int
+func updateDisplay(r chan (*c.LedController), w chan ([]int)) {
+	var oldSumLeds []int
+	var allLedRanges = make([][]int, len(sensor_indices))
+	for i := range allLedRanges {
+		allLedRanges[i] = make([]int, LEDS_TOTAL)
+	}
 	for {
-		var sumLeds [lc.LEDS_TOTAL]int
+		sumLeds := make([]int, LEDS_TOTAL)
 		select {
 		case s := <-r:
-			leds[s.Name] = s.GetLeds()
+			allLedRanges[s.Name] = s.GetLeds()
 		}
-		for i := 0; i < SENSOR_TOTAL; i++ {
-			currleds := leds[i]
-			for j := 0; j < lc.LEDS_TOTAL; j++ {
-				if currleds[j] == 1 {
+		for _, currleds := range allLedRanges {
+			for j, v := range currleds {
+				if v == 1 {
 					sumLeds[j] = 1
 				}
 			}
 		}
-		if sumLeds != oldSumLeds {
+		if !reflect.DeepEqual(sumLeds, oldSumLeds) {
 			w <- sumLeds
 		}
 		oldSumLeds = sumLeds
 	}
 }
 
-func hardwareDriver(display chan ([lc.LEDS_TOTAL]int), sensor chan (int)) {
+func hardwareDriver(display chan ([]int), sensor chan (int)) {
 	for {
 		select {
 		case sumLeds := <-display:
-			for i := 0; i < lc.LEDS_TOTAL; i++ {
-				if sumLeds[i] == 0 {
+			for _, v := range sumLeds {
+				if v == 0 {
 					fmt.Print(" ")
 				} else {
 					fmt.Print("☼")

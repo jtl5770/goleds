@@ -1,11 +1,9 @@
-package lc
+package ledcontroller
 
 import (
 	"sync"
 	"time"
 )
-
-const LEDS_TOTAL = 125
 
 const HOLD_TIME = 5 * time.Second
 const RUN_UP = 20 * time.Millisecond
@@ -17,7 +15,7 @@ type LedController struct {
 	// private
 	index          int
 	ledsMutex      sync.Mutex
-	leds           [LEDS_TOTAL]int
+	leds           []int
 	lastFireMutex  sync.Mutex
 	lastFire       int64
 	isRunningMutex sync.Mutex
@@ -26,8 +24,9 @@ type LedController struct {
 }
 
 // public
-func NewLedController(name int, index int, reader chan (*LedController)) LedController {
-	return LedController{Name: name, index: index, isRunning: false, reader: reader}
+func NewLedController(name int, size int, index int, reader chan (*LedController)) LedController {
+	s := make([]int, size)
+	return LedController{leds: s, Name: name, index: index, isRunning: false, reader: reader}
 }
 
 func (s *LedController) Fire() {
@@ -37,10 +36,12 @@ func (s *LedController) Fire() {
 	}
 }
 
-func (s *LedController) GetLeds() [LEDS_TOTAL]int {
+func (s *LedController) GetLeds() []int {
 	s.ledsMutex.Lock()
 	defer s.ledsMutex.Unlock()
-	return s.leds
+	ret := make([]int, len(s.leds))
+	copy(ret, s.leds)
+	return ret
 }
 
 // private
@@ -91,13 +92,13 @@ loop:
 			if left >= 0 {
 				s.setLed(left, 1)
 			}
-			if right <= (LEDS_TOTAL - 1) {
+			if right <= (len(s.leds) - 1) {
 				s.setLed(right, 1)
 			}
 			right++
 			left--
 			s.reader <- s
-			if left < 0 && right > LEDS_TOTAL-1 {
+			if left < 0 && right > len(s.leds)-1 {
 				break
 			}
 			time.Sleep(time.Duration(RUN_UP))
@@ -125,7 +126,7 @@ loop:
 			if left <= s.index && left >= 0 {
 				s.setLed(left, 0)
 			}
-			if right >= s.index && right <= LEDS_TOTAL-1 {
+			if right >= s.index && right <= len(s.leds)-1 {
 				s.setLed(right, 0)
 			}
 			left++
