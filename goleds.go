@@ -3,25 +3,23 @@ package main
 import (
 	"fmt"
 	"time"
+
+	lc "goleds/controller"
 )
 
 const LEDS_TOTAL = 125
 const SENSOR_TOTAL = 4
 
-const HOLD_TIME = 5 * time.Second
-const RUN_UP = 20 * time.Millisecond
-const RUN_DOWN = 40 * time.Millisecond
-
-var controllers [SENSOR_TOTAL]LedController
+var controllers [SENSOR_TOTAL]lc.LedController
 
 func main() {
 	sensor_indices := [SENSOR_TOTAL]int{0, 69, 70, 124}
-	ledReader := make(chan (*LedController), 10)
+	ledReader := make(chan (*lc.LedController), 10)
 	ledWriter := make(chan [LEDS_TOTAL]int)
 	sensorReader := make(chan int, 10)
 
 	for i := 0; i < SENSOR_TOTAL; i++ {
-		controllers[i] = newLedController(i, sensor_indices[i], ledReader)
+		controllers[i] = lc.NewLedController(i, sensor_indices[i], ledReader)
 	}
 
 	go updateDisplay(ledReader, ledWriter)
@@ -41,14 +39,14 @@ func main() {
 	}
 }
 
-func updateDisplay(r chan (*LedController), w chan ([LEDS_TOTAL]int)) {
+func updateDisplay(r chan (*lc.LedController), w chan ([LEDS_TOTAL]int)) {
 	var oldSumLeds [LEDS_TOTAL]int
 	var leds [SENSOR_TOTAL][LEDS_TOTAL]int
 	for {
 		var sumLeds [LEDS_TOTAL]int
 		select {
 		case s := <-r:
-			leds[s.name] = s.getLeds()
+			leds[s.Name] = s.GetLeds()
 		}
 		for i := 0; i < SENSOR_TOTAL; i++ {
 			currleds := leds[i]
@@ -78,7 +76,7 @@ func hardwareDriver(display chan ([LEDS_TOTAL]int), sensor chan (int)) {
 			}
 			fmt.Print("\r")
 		case sensorIndex := <-sensor:
-			controllers[sensorIndex].fire()
+			controllers[sensorIndex].Fire()
 		}
 	}
 }
