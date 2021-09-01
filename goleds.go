@@ -10,9 +10,9 @@ import (
 
 var LEDS_TOTAL = 125
 var sensor_indices = []int{0, 69, 70, 124}
-var controllers = make([]c.LedController, len(sensor_indices))
 
 func main() {
+	controllers := make([]c.LedController, len(sensor_indices))
 	ledReader := make(chan (*c.LedController), 10)
 	ledWriter := make(chan []int, LEDS_TOTAL)
 	sensorReader := make(chan int, 10)
@@ -22,7 +22,7 @@ func main() {
 	}
 
 	go updateDisplay(ledReader, ledWriter)
-	go hardwareDriver(ledWriter, sensorReader)
+	go hardwareDriver(ledWriter, sensorReader, controllers)
 
 	sensorReader <- 3
 	sensorReader <- 0
@@ -64,7 +64,7 @@ func updateDisplay(r chan (*c.LedController), w chan ([]int)) {
 	}
 }
 
-func hardwareDriver(display chan ([]int), sensor chan (int)) {
+func hardwareDriver(display chan ([]int), sensor chan (int), controllers []c.LedController) {
 	for {
 		select {
 		case sumLeds := <-display:
