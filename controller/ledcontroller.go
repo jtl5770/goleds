@@ -1,12 +1,17 @@
-package main
+package lc
 
 import (
 	"sync"
 	"time"
 )
 
+const LEDS_TOTAL = 125
+const HOLD_TIME = 5 * time.Second
+const RUN_UP = 20 * time.Millisecond
+const RUN_DOWN = 40 * time.Millisecond
+
 type LedController struct {
-	name             int
+	Name             int
 	index            int
 	leds_mutex       sync.Mutex
 	leds             [LEDS_TOTAL]int
@@ -17,8 +22,8 @@ type LedController struct {
 	reader           chan (*LedController)
 }
 
-func newLedController(name int, index int, reader chan (*LedController)) LedController {
-	return LedController{name: name, index: index, is_running: false, reader: reader}
+func NewLedController(name int, index int, reader chan (*LedController)) LedController {
+	return LedController{Name: name, index: index, is_running: false, reader: reader}
 }
 
 func (s *LedController) setLed(index int, value int) {
@@ -27,7 +32,7 @@ func (s *LedController) setLed(index int, value int) {
 	s.leds[index] = value
 }
 
-func (s *LedController) getLeds() [LEDS_TOTAL]int {
+func (s *LedController) GetLeds() [LEDS_TOTAL]int {
 	s.leds_mutex.Lock()
 	defer s.leds_mutex.Unlock()
 	return s.leds
@@ -62,7 +67,7 @@ func (s *LedController) getLastFire() int64 {
 	return s.last_fire
 }
 
-func (s *LedController) fire() {
+func (s *LedController) Fire() {
 	s.setLastFire()
 	if s.isNotRunningAndSet() {
 		go s.runner()
