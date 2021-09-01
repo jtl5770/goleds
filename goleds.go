@@ -7,7 +7,6 @@ import (
 	lc "goleds/controller"
 )
 
-const LEDS_TOTAL = 125
 const SENSOR_TOTAL = 4
 
 var controllers [SENSOR_TOTAL]lc.LedController
@@ -15,7 +14,7 @@ var controllers [SENSOR_TOTAL]lc.LedController
 func main() {
 	sensor_indices := [SENSOR_TOTAL]int{0, 69, 70, 124}
 	ledReader := make(chan (*lc.LedController), 10)
-	ledWriter := make(chan [LEDS_TOTAL]int)
+	ledWriter := make(chan [lc.LEDS_TOTAL]int)
 	sensorReader := make(chan int, 10)
 
 	for i := 0; i < SENSOR_TOTAL; i++ {
@@ -39,18 +38,18 @@ func main() {
 	}
 }
 
-func updateDisplay(r chan (*lc.LedController), w chan ([LEDS_TOTAL]int)) {
-	var oldSumLeds [LEDS_TOTAL]int
-	var leds [SENSOR_TOTAL][LEDS_TOTAL]int
+func updateDisplay(r chan (*lc.LedController), w chan ([lc.LEDS_TOTAL]int)) {
+	var oldSumLeds [lc.LEDS_TOTAL]int
+	var leds [SENSOR_TOTAL][lc.LEDS_TOTAL]int
 	for {
-		var sumLeds [LEDS_TOTAL]int
+		var sumLeds [lc.LEDS_TOTAL]int
 		select {
 		case s := <-r:
 			leds[s.Name] = s.GetLeds()
 		}
 		for i := 0; i < SENSOR_TOTAL; i++ {
 			currleds := leds[i]
-			for j := 0; j < LEDS_TOTAL; j++ {
+			for j := 0; j < lc.LEDS_TOTAL; j++ {
 				if currleds[j] == 1 {
 					sumLeds[j] = 1
 				}
@@ -63,11 +62,11 @@ func updateDisplay(r chan (*lc.LedController), w chan ([LEDS_TOTAL]int)) {
 	}
 }
 
-func hardwareDriver(display chan ([LEDS_TOTAL]int), sensor chan (int)) {
+func hardwareDriver(display chan ([lc.LEDS_TOTAL]int), sensor chan (int)) {
 	for {
 		select {
 		case sumLeds := <-display:
-			for i := 0; i < LEDS_TOTAL; i++ {
+			for i := 0; i < lc.LEDS_TOTAL; i++ {
 				if sumLeds[i] == 0 {
 					fmt.Print(" ")
 				} else {

@@ -12,60 +12,22 @@ const RUN_UP = 20 * time.Millisecond
 const RUN_DOWN = 40 * time.Millisecond
 
 type LedController struct {
-	Name             int
-	index            int
-	leds_mutex       sync.Mutex
-	leds             [LEDS_TOTAL]int
-	last_fire_mutex  sync.Mutex
-	last_fire        int64
-	is_running_mutex sync.Mutex
-	is_running       bool
-	reader           chan (*LedController)
+	// public
+	Name int
+	// private
+	index          int
+	ledsMutex      sync.Mutex
+	leds           [LEDS_TOTAL]int
+	lastFireMutex  sync.Mutex
+	lastFire       int64
+	isRunningMutex sync.Mutex
+	isRunning      bool
+	reader         chan (*LedController)
 }
 
+// public
 func NewLedController(name int, index int, reader chan (*LedController)) LedController {
-	return LedController{Name: name, index: index, is_running: false, reader: reader}
-}
-
-func (s *LedController) setLed(index int, value int) {
-	s.leds_mutex.Lock()
-	defer s.leds_mutex.Unlock()
-	s.leds[index] = value
-}
-
-func (s *LedController) GetLeds() [LEDS_TOTAL]int {
-	s.leds_mutex.Lock()
-	defer s.leds_mutex.Unlock()
-	return s.leds
-}
-
-func (s *LedController) isNotRunningAndSet() bool {
-	s.is_running_mutex.Lock()
-	defer s.is_running_mutex.Unlock()
-	if !s.is_running {
-		s.is_running = true
-		return true
-	} else {
-		return false
-	}
-}
-
-func (s *LedController) unsetIsRunning() {
-	s.is_running_mutex.Lock()
-	defer s.is_running_mutex.Unlock()
-	s.is_running = false
-}
-
-func (s *LedController) setLastFire() {
-	s.last_fire_mutex.Lock()
-	defer s.last_fire_mutex.Unlock()
-	s.last_fire = time.Now().UnixNano()
-}
-
-func (s *LedController) getLastFire() int64 {
-	s.last_fire_mutex.Lock()
-	defer s.last_fire_mutex.Unlock()
-	return s.last_fire
+	return LedController{Name: name, index: index, isRunning: false, reader: reader}
 }
 
 func (s *LedController) Fire() {
@@ -73,6 +35,48 @@ func (s *LedController) Fire() {
 	if s.isNotRunningAndSet() {
 		go s.runner()
 	}
+}
+
+func (s *LedController) GetLeds() [LEDS_TOTAL]int {
+	s.ledsMutex.Lock()
+	defer s.ledsMutex.Unlock()
+	return s.leds
+}
+
+// private
+func (s *LedController) setLed(index int, value int) {
+	s.ledsMutex.Lock()
+	defer s.ledsMutex.Unlock()
+	s.leds[index] = value
+}
+
+func (s *LedController) isNotRunningAndSet() bool {
+	s.isRunningMutex.Lock()
+	defer s.isRunningMutex.Unlock()
+	if !s.isRunning {
+		s.isRunning = true
+		return true
+	} else {
+		return false
+	}
+}
+
+func (s *LedController) unsetIsRunning() {
+	s.isRunningMutex.Lock()
+	defer s.isRunningMutex.Unlock()
+	s.isRunning = false
+}
+
+func (s *LedController) setLastFire() {
+	s.lastFireMutex.Lock()
+	defer s.lastFireMutex.Unlock()
+	s.lastFire = time.Now().UnixNano()
+}
+
+func (s *LedController) getLastFire() int64 {
+	s.lastFireMutex.Lock()
+	defer s.lastFireMutex.Unlock()
+	return s.lastFire
 }
 
 func (s *LedController) runner() {
