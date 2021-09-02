@@ -12,7 +12,7 @@ import (
 
 const LEDS_TOTAL = 125
 const HOLD_T = 5 * time.Second
-const RUN_UP_T = 20 * time.Millisecond
+const RUN_UP_T = 10 * time.Millisecond
 const RUN_DOWN_T = 40 * time.Millisecond
 
 var sensor_indices = []int{0, 69, 70, 124}
@@ -47,16 +47,13 @@ func updateDisplay(r chan (*c.LedController), w chan ([]byte)) {
 		allLedRanges[i] = make([]byte, LEDS_TOTAL)
 	}
 	for {
+		s := <-r
+		allLedRanges[s.Name] = s.GetLeds()
+
 		sumLeds := make([]byte, LEDS_TOTAL)
-		select {
-		case s := <-r:
-			allLedRanges[s.Name] = s.GetLeds()
-		}
 		for _, currleds := range allLedRanges {
 			for j, v := range currleds {
-				if v > 0 {
-					sumLeds[j] = max(sumLeds[j], v)
-				}
+				sumLeds[j] = max(sumLeds[j], v)
 			}
 		}
 		if !reflect.DeepEqual(sumLeds, oldSumLeds) {
