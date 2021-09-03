@@ -12,7 +12,7 @@ import (
 )
 
 const HOLD_T = 5 * time.Second
-const RUN_UP_T = 10 * time.Millisecond
+const RUN_UP_T = 15 * time.Millisecond
 const RUN_DOWN_T = 40 * time.Millisecond
 
 func main() {
@@ -51,21 +51,15 @@ func updateDisplay(r chan (*c.LedController), w chan ([]byte)) {
 		sumLeds := make([]byte, hw.LEDS_TOTAL)
 		for _, currleds := range allLedRanges {
 			for j, v := range currleds {
-				sumLeds[j] = max(sumLeds[j], v)
+				if v > sumLeds[j] {
+					sumLeds[j] = v
+				}
 			}
 		}
 		if !reflect.DeepEqual(sumLeds, oldSumLeds) {
 			w <- sumLeds
 		}
 		oldSumLeds = sumLeds
-	}
-}
-
-func max(x byte, y byte) byte {
-	if x > y {
-		return x
-	} else {
-		return y
 	}
 }
 
