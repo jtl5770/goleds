@@ -13,13 +13,15 @@ import (
 
 const HOLD_T = 5 * time.Second
 const RUN_UP_T = 10 * time.Millisecond
-const RUN_DOWN_T = 50 * time.Millisecond
+const RUN_DOWN_T = 40 * time.Millisecond
 
 func main() {
 	controllers := make([]c.LedController, len(hw.Sensors))
 	ledReader := make(chan (*c.LedController))
 	ledWriter := make(chan []byte, hw.LEDS_TOTAL)
 	sensorReader := make(chan int)
+	sigchan := make(chan os.Signal)
+	signal.Notify(sigchan, os.Interrupt)
 
 	for i := range controllers {
 		controllers[i] = c.NewLedController(i, hw.LEDS_TOTAL, hw.Sensors[i].LedIndex,
@@ -31,8 +33,6 @@ func main() {
 	go hw.DisplayDriver(ledWriter)
 	go hw.SensorDriver(sensorReader, hw.Sensors)
 
-	sigchan := make(chan os.Signal)
-	signal.Notify(sigchan, os.Interrupt)
 	<-sigchan
 	fmt.Println("\nExiting...")
 	os.Exit(0)

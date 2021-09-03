@@ -2,6 +2,7 @@ package hardware
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -24,15 +25,18 @@ func NewSensor(ledIndex int, adc int, adcIndex int) Sensor {
 // ****
 func DisplayDriver(display chan ([]byte)) {
 	for {
+		var tmp strings.Builder
+		tmp.Grow(LEDS_TOTAL + 1)
+
 		sumLeds := <-display
 		for _, v := range sumLeds {
 			if v == 0 {
-				fmt.Print(" ")
+				tmp.WriteString(" ")
 			} else {
-				fmt.Print("☼")
+				tmp.WriteString("*")
 			}
 		}
-		fmt.Print("\r")
+		fmt.Print(tmp.String(), "\r")
 	}
 }
 
