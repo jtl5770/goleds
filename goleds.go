@@ -46,7 +46,7 @@ func updateDisplay(r chan (*c.LedController), w chan ([]byte)) {
 	}
 	for {
 		s := <-r
-		allLedRanges[s.Name] = s.GetLeds()
+		allLedRanges[s.GetUID()] = s.GetLeds()
 
 		sumLeds := make([]byte, hw.LEDS_TOTAL)
 		for _, currleds := range allLedRanges {

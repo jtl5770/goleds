@@ -7,7 +7,7 @@ import (
 
 type LedController struct {
 	// public
-	Name int
+	uid int
 	// private
 	index          int
 	ledsMutex      sync.Mutex
@@ -23,11 +23,15 @@ type LedController struct {
 }
 
 // public
-func NewLedController(name int, size int, index int, reader chan (*LedController),
+func NewLedController(uid int, size int, index int, reader chan (*LedController),
 	hold time.Duration, runup time.Duration, rundown time.Duration) LedController {
 	s := make([]byte, size)
-	return LedController{leds: s, Name: name, index: index, isRunning: false, reader: reader,
+	return LedController{leds: s, uid: uid, index: index, isRunning: false, reader: reader,
 		holdT: hold, runUpT: runup, runDownT: rundown}
+}
+
+func (s *LedController) GetUID() int {
+	return s.uid
 }
 
 func (s *LedController) Fire() {
