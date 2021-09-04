@@ -3,6 +3,7 @@ package hardware
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,38 +18,45 @@ type Sensor struct {
 
 var Sensors = []Sensor{{0, 0, 0}, {69, 0, 7}, {70, 1, 0}, {124, 1, 5}}
 
+var hwMutex sync.Mutex
+
 func NewSensor(ledIndex int, adc int, adcIndex int) Sensor {
 	return Sensor{LedIndex: ledIndex, Adc: adc, AdcIndex: adcIndex}
+}
+
+func DisplayDriver(display chan ([]byte)) {
+	for {
+		sumLeds := <-display
+		led1 := sumLeds[0:_LEDS_SPLIT]
+		led2 := sumLeds[_LEDS_SPLIT:]
+
+		hwMutex.Lock()
+		setLedSegment(0, led1)
+		setLedSegment(1, led2)
+		hwMutex.Unlock()
+	}
 }
 
 // ****
 // TODO: real hardware implementation
 // ****
-func DisplayDriver(display chan ([]byte)) {
-	for {
-		var tmp strings.Builder
-		tmp.Grow(LEDS_TOTAL + 1)
+func setLedSegment(segementID int, values []byte) {
+	var buf strings.Builder
+	buf.Grow(len(values))
 
-		sumLeds := <-display
-		led1 := sumLeds[0:_LEDS_SPLIT]
-		led2 := sumLeds[_LEDS_SPLIT:]
-
-		for _, v := range led1 {
-			if v == 0 {
-				tmp.WriteString(" ")
-			} else {
-				tmp.WriteString("*")
-			}
+	fmt.Print("[")
+	for _, v := range values {
+		if v == 0 {
+			buf.WriteString(" ")
+		} else {
+			buf.WriteString("*")
 		}
-		tmp.WriteString("[            ]")
-		for _, v := range led2 {
-			if v == 0 {
-				tmp.WriteString(" ")
-			} else {
-				tmp.WriteString("*")
-			}
-		}
-		fmt.Print(tmp.String(), "\r")
+	}
+	fmt.Print(buf.String())
+	if segementID == 0 {
+		fmt.Print("]       ")
+	} else {
+		fmt.Print("]\r")
 	}
 }
 
@@ -66,3 +74,7 @@ func SensorDriver(sensorReader chan int, sensors []Sensor) {
 	time.Sleep(2 * time.Second)
 	sensorReader <- 0
 }
+
+// Local Variables:
+// compile-command: "cd .. && go build"
+// End:

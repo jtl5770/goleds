@@ -144,3 +144,7 @@ loop:
 		}
 	}
 }
+
+// Local Variables:
+// compile-command: "cd .. && go build"
+// End:

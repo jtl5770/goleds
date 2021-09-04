@@ -69,3 +69,7 @@ func fireController(sensor chan (int), controllers []c.LedController) {
 		controllers[sensorIndex].Fire()
 	}
 }
+
+// Local Variables:
+// compile-command: "go build"
+// End:
