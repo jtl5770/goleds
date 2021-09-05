@@ -124,7 +124,7 @@ loop:
 			last_fire := s.getLastFire()
 			if last_fire > old_last_fire {
 				// breaking out of inner for loop, but not outer,
-				// so we are back at RUN UP with left and right preserverd
+				// so we are back at RUN UP with left and right preserved
 				break
 			}
 
