@@ -7,7 +7,7 @@ import (
 
 type LedController struct {
 	// public
-	uid int
+	UID int
 	// private
 	index          int
 	ledsMutex      sync.Mutex
@@ -16,22 +16,18 @@ type LedController struct {
 	lastFire       int64
 	isRunningMutex sync.Mutex
 	isRunning      bool
-	reader         chan (*LedController)
+	ledsChanged    chan (*LedController)
 	holdT          time.Duration
 	runUpT         time.Duration
 	runDownT       time.Duration
 }
 
 // public
-func NewLedController(uid int, size int, index int, reader chan (*LedController),
+func NewLedController(uid int, size int, index int, ledsChanged chan (*LedController),
 	hold time.Duration, runup time.Duration, rundown time.Duration) LedController {
 	s := make([]byte, size)
-	return LedController{leds: s, uid: uid, index: index, isRunning: false, reader: reader,
+	return LedController{leds: s, UID: uid, index: index, isRunning: false, ledsChanged: ledsChanged,
 		holdT: hold, runUpT: runup, runDownT: rundown}
-}
-
-func (s *LedController) GetUID() int {
-	return s.uid
 }
 
 func (s *LedController) Fire() {
@@ -102,7 +98,7 @@ loop:
 			}
 			right++
 			left--
-			s.reader <- s
+			s.ledsChanged <- s
 			if left < 0 && right > len(s.leds)-1 {
 				break
 			}
@@ -136,7 +132,7 @@ loop:
 			}
 			left++
 			right--
-			s.reader <- s
+			s.ledsChanged <- s
 			if left > s.index && right < s.index {
 				break loop
 			}

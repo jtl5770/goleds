@@ -7,21 +7,50 @@ import (
 	"time"
 )
 
+// constants and other values describing the hardware.
 const LEDS_TOTAL = 125
 const _LEDS_SPLIT = 70
+const _SMOOTHING_SIZE = 3
+
+func init() {
+	Sensors[0] = NewSensor(0, 0, 0, 120)
+	Sensors[1] = NewSensor(69, 0, 7, 130)
+	Sensors[2] = NewSensor(70, 1, 0, 140)
+	Sensors[3] = NewSensor(124, 1, 5, 130)
+}
+
+// end of tuneable part
 
 type Sensor struct {
 	LedIndex int
 	Adc      int
 	AdcIndex int
+	trigger  int
+	values   []int
 }
 
-var Sensors = []Sensor{{0, 0, 0}, {69, 0, 7}, {70, 1, 0}, {124, 1, 5}}
-
 var hwMutex sync.Mutex
+var Sensors []Sensor = make([]Sensor, 4)
 
-func NewSensor(ledIndex int, adc int, adcIndex int) Sensor {
-	return Sensor{LedIndex: ledIndex, Adc: adc, AdcIndex: adcIndex}
+func NewSensor(ledIndex int, adc int, adcIndex int, trigger int) Sensor {
+	return Sensor{
+		LedIndex: ledIndex,
+		Adc:      adc,
+		AdcIndex: adcIndex,
+		trigger:  trigger,
+		values:   make([]int, _SMOOTHING_SIZE, _SMOOTHING_SIZE+1),
+	}
+}
+
+func (s *Sensor) smoothValue(val int) int {
+	var ret int
+	newValues := make([]int, _SMOOTHING_SIZE, _SMOOTHING_SIZE+1)
+	for index, curr := range append(s.values, val)[1:] {
+		newValues[index] = curr
+		ret += curr
+	}
+	s.values = newValues
+	return ret / _SMOOTHING_SIZE
 }
 
 func DisplayDriver(display chan ([]byte)) {
