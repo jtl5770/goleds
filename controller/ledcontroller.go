@@ -2,7 +2,7 @@ package ledcontroller
 
 import (
 	"sync"
-	"time"
+	t "time"
 )
 
 type Led byte
@@ -15,19 +15,19 @@ type LedController struct {
 	ledsMutex      sync.Mutex
 	leds           []Led
 	lastFireMutex  sync.Mutex
-	lastFire       time.Time
+	lastFire       t.Time
 	isRunningMutex sync.Mutex
 	isRunning      bool
 	ledsChanged    chan (*LedController)
-	holdT          time.Duration
-	runUpT         time.Duration
-	runDownT       time.Duration
+	holdT          t.Duration
+	runUpT         t.Duration
+	runDownT       t.Duration
 }
 
 // public
 
 func NewLedController(uid int, size int, index int, ledsChanged chan (*LedController),
-	hold time.Duration, runup time.Duration, rundown time.Duration) LedController {
+	hold t.Duration, runup t.Duration, rundown t.Duration) LedController {
 	s := make([]Led, size)
 	return LedController{leds: s, UID: uid, ledIndex: index, isRunning: false, ledsChanged: ledsChanged,
 		holdT: hold, runUpT: runup, runDownT: rundown}
@@ -76,10 +76,10 @@ func (s *LedController) unsetIsRunning() {
 func (s *LedController) setLastFire() {
 	s.lastFireMutex.Lock()
 	defer s.lastFireMutex.Unlock()
-	s.lastFire = time.Now()
+	s.lastFire = t.Now()
 }
 
-func (s *LedController) getLastFire() time.Time {
+func (s *LedController) getLastFire() t.Time {
 	s.lastFireMutex.Lock()
 	defer s.lastFireMutex.Unlock()
 	return s.lastFire
@@ -106,14 +106,14 @@ loop:
 			if left < 0 && right > len(s.leds)-1 {
 				break
 			}
-			time.Sleep(s.runUpT)
+			t.Sleep(s.runUpT)
 		}
 		// Now entering HOLD state - always after RUN_UP
 		for {
-			now := time.Now()
+			now := t.Now()
 			hold_until := s.getLastFire().Add(s.holdT)
 			if hold_until.After(now) {
-				time.Sleep(time.Duration(hold_until.Sub(now)))
+				t.Sleep(t.Duration(hold_until.Sub(now)))
 			} else {
 				break
 			}
@@ -140,7 +140,7 @@ loop:
 			if left > s.ledIndex && right < s.ledIndex {
 				break loop
 			}
-			time.Sleep(s.runDownT)
+			t.Sleep(s.runDownT)
 		}
 	}
 }
