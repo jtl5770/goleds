@@ -5,6 +5,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	c "goleds/controller"
 )
 
 // constants and other values describing the hardware.
@@ -29,7 +31,7 @@ type Sensor struct {
 	values   []int
 }
 
-var hwMutex sync.Mutex
+var spiMutex sync.Mutex
 var Sensors []Sensor = make([]Sensor, 4)
 
 func NewSensor(ledIndex int, adc int, adcIndex int, trigger int) Sensor {
@@ -53,23 +55,23 @@ func (s *Sensor) smoothValue(val int) int {
 	return ret / _SMOOTHING_SIZE
 }
 
-func DisplayDriver(display chan ([]byte)) {
+func DisplayDriver(display chan ([]c.Led)) {
 	for {
 		sumLeds := <-display
 		led1 := sumLeds[0:_LEDS_SPLIT]
 		led2 := sumLeds[_LEDS_SPLIT:]
 
-		hwMutex.Lock()
+		spiMutex.Lock()
 		setLedSegment(0, led1)
 		setLedSegment(1, led2)
-		hwMutex.Unlock()
+		spiMutex.Unlock()
 	}
 }
 
 // ****
 // TODO: real hardware implementation
 // ****
-func setLedSegment(segementID int, values []byte) {
+func setLedSegment(segementID int, values []c.Led) {
 	var buf strings.Builder
 	buf.Grow(len(values))
 

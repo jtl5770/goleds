@@ -5,15 +5,17 @@ import (
 	"time"
 )
 
+type Led byte
+
 type LedController struct {
 	// public
 	UID int
 	// private
-	index          int
+	ledIndex       int
 	ledsMutex      sync.Mutex
-	leds           []byte
+	leds           []Led
 	lastFireMutex  sync.Mutex
-	lastFire       int64
+	lastFire       time.Time
 	isRunningMutex sync.Mutex
 	isRunning      bool
 	ledsChanged    chan (*LedController)
@@ -23,10 +25,11 @@ type LedController struct {
 }
 
 // public
+
 func NewLedController(uid int, size int, index int, ledsChanged chan (*LedController),
 	hold time.Duration, runup time.Duration, rundown time.Duration) LedController {
-	s := make([]byte, size)
-	return LedController{leds: s, UID: uid, index: index, isRunning: false, ledsChanged: ledsChanged,
+	s := make([]Led, size)
+	return LedController{leds: s, UID: uid, ledIndex: index, isRunning: false, ledsChanged: ledsChanged,
 		holdT: hold, runUpT: runup, runDownT: rundown}
 }
 
@@ -37,16 +40,17 @@ func (s *LedController) Fire() {
 	}
 }
 
-func (s *LedController) GetLeds() []byte {
+func (s *LedController) GetLeds() []Led {
 	s.ledsMutex.Lock()
 	defer s.ledsMutex.Unlock()
-	ret := make([]byte, len(s.leds))
+	ret := make([]Led, len(s.leds))
 	copy(ret, s.leds)
 	return ret
 }
 
 // private
-func (s *LedController) setLed(index int, value byte) {
+
+func (s *LedController) setLed(index int, value Led) {
 	s.ledsMutex.Lock()
 	defer s.ledsMutex.Unlock()
 	s.leds[index] = value
@@ -72,18 +76,18 @@ func (s *LedController) unsetIsRunning() {
 func (s *LedController) setLastFire() {
 	s.lastFireMutex.Lock()
 	defer s.lastFireMutex.Unlock()
-	s.lastFire = time.Now().UnixNano()
+	s.lastFire = time.Now()
 }
 
-func (s *LedController) getLastFire() int64 {
+func (s *LedController) getLastFire() time.Time {
 	s.lastFireMutex.Lock()
 	defer s.lastFireMutex.Unlock()
 	return s.lastFire
 }
 
 func (s *LedController) runner() {
-	left := s.index
-	right := s.index
+	left := s.ledIndex
+	right := s.ledIndex
 
 	defer s.unsetIsRunning()
 
@@ -106,10 +110,10 @@ loop:
 		}
 		// Now entering HOLD state - always after RUN_UP
 		for {
-			now := time.Now().UnixNano()
-			hold_until := s.getLastFire() + s.holdT.Nanoseconds()
-			if hold_until > now {
-				time.Sleep(time.Duration(hold_until - now))
+			now := time.Now()
+			hold_until := s.getLastFire().Add(s.holdT)
+			if hold_until.After(now) {
+				time.Sleep(time.Duration(hold_until.Sub(now)))
 			} else {
 				break
 			}
@@ -118,22 +122,22 @@ loop:
 		old_last_fire := s.getLastFire()
 		for {
 			last_fire := s.getLastFire()
-			if last_fire > old_last_fire {
+			if last_fire.After(old_last_fire) {
 				// breaking out of inner for loop, but not outer,
 				// so we are back at RUN UP with left and right preserved
 				break
 			}
 
-			if left <= s.index && left >= 0 {
+			if left <= s.ledIndex && left >= 0 {
 				s.setLed(left, 0)
 			}
-			if right >= s.index && right <= len(s.leds)-1 {
+			if right >= s.ledIndex && right <= len(s.leds)-1 {
 				s.setLed(right, 0)
 			}
 			left++
 			right--
 			s.ledsChanged <- s
-			if left > s.index && right < s.index {
+			if left > s.ledIndex && right < s.ledIndex {
 				break loop
 			}
 			time.Sleep(s.runDownT)

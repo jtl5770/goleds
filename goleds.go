@@ -18,7 +18,7 @@ const RUN_DOWN_T = 40 * time.Millisecond
 func main() {
 	controllers := make([]c.LedController, len(hw.Sensors))
 	ledReader := make(chan (*c.LedController))
-	ledWriter := make(chan []byte, hw.LEDS_TOTAL)
+	ledWriter := make(chan []c.Led, hw.LEDS_TOTAL)
 	sensorReader := make(chan int)
 	sigchan := make(chan os.Signal)
 	signal.Notify(sigchan, os.Interrupt)
@@ -28,7 +28,7 @@ func main() {
 			ledReader, HOLD_T, RUN_UP_T, RUN_DOWN_T)
 	}
 
-	go updateDisplay(ledReader, ledWriter)
+	go combineAndupdateDisplay(ledReader, ledWriter)
 	go fireController(sensorReader, controllers)
 	go hw.DisplayDriver(ledWriter)
 	go hw.SensorDriver(sensorReader, hw.Sensors)
@@ -38,17 +38,17 @@ func main() {
 	os.Exit(0)
 }
 
-func updateDisplay(r chan (*c.LedController), w chan ([]byte)) {
-	var oldSumLeds []byte
-	var allLedRanges = make([][]byte, len(hw.Sensors))
+func combineAndupdateDisplay(r chan (*c.LedController), w chan ([]c.Led)) {
+	var oldSumLeds []c.Led
+	var allLedRanges = make([][]c.Led, len(hw.Sensors))
 	for i := range allLedRanges {
-		allLedRanges[i] = make([]byte, hw.LEDS_TOTAL)
+		allLedRanges[i] = make([]c.Led, hw.LEDS_TOTAL)
 	}
 	for {
 		s := <-r
 		allLedRanges[s.UID] = s.GetLeds()
 
-		sumLeds := make([]byte, hw.LEDS_TOTAL)
+		sumLeds := make([]c.Led, hw.LEDS_TOTAL)
 		for _, currleds := range allLedRanges {
 			for j, v := range currleds {
 				if v > sumLeds[j] {
