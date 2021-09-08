@@ -8,9 +8,7 @@ import (
 type Led byte
 
 type LedController struct {
-	// public
-	UID int
-	// private
+	UID            int
 	ledIndex       int
 	ledsMutex      sync.Mutex
 	leds           []Led
