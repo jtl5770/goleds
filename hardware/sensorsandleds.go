@@ -58,7 +58,7 @@ func (s *Sensor) smoothValue(val int) int {
 func DisplayDriver(display chan ([]c.Led)) {
 	for {
 		sumLeds := <-display
-		led1 := sumLeds[0:_LEDS_SPLIT]
+		led1 := sumLeds[:_LEDS_SPLIT]
 		led2 := sumLeds[_LEDS_SPLIT:]
 
 		spiMutex.Lock()
