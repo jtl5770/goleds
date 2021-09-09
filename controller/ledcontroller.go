@@ -91,6 +91,7 @@ func (s *LedController) runner() {
 
 loop:
 	for {
+		ticker := t.NewTicker(s.runUpT)
 		for {
 			if left >= 0 {
 				s.setLed(left, 255)
@@ -102,9 +103,10 @@ loop:
 			left--
 			s.ledsChanged <- s
 			if left < 0 && right > len(s.leds)-1 {
+				ticker.Stop()
 				break
 			}
-			t.Sleep(s.runUpT)
+			<-ticker.C
 		}
 		// Now entering HOLD state - always after RUN_UP
 		for {
@@ -118,11 +120,13 @@ loop:
 		}
 		// finally entering RUN DOWN state
 		old_last_fire := s.getLastFire()
+		ticker.Reset(s.runDownT)
 		for {
 			last_fire := s.getLastFire()
 			if last_fire.After(old_last_fire) {
 				// breaking out of inner for loop, but not outer,
 				// so we are back at RUN UP with left and right preserved
+				ticker.Stop()
 				break
 			}
 
@@ -136,9 +140,10 @@ loop:
 			right--
 			s.ledsChanged <- s
 			if left > s.ledIndex && right < s.ledIndex {
+				ticker.Stop()
 				break loop
 			}
-			t.Sleep(s.runDownT)
+			<-ticker.C
 		}
 	}
 }
