@@ -138,7 +138,7 @@ loop:
 			if left == s.ledIndex && right == s.ledIndex {
 				// that means: we have run down completely. Now we
 				// either simply end the go routine (allowing for a
-				// fire event to trigger a new complete run up, hold
+				// fire event to trigger a new complete run up, hold,
 				// run down cycle in the future or - as a last check -
 				// we see if there has been a fire event in the little
 				// time while this last iteration of the inner for
@@ -149,9 +149,9 @@ loop:
 					// again back into running up again
 					break
 				} else {
-					// we are finally ready and can set s.isRunning to false again
-					// so the next fire event can pass the mutex and fire up the
-					// go routine again from the start
+					// we are finally ready and can set s.isRunning to
+					// false so the next fire event can pass the mutex
+					// and fire up the go routine again from the start
 					ticker.Stop()
 					s.isRunning = false
 					s.updateMutex.Unlock()
