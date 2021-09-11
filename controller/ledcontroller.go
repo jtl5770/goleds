@@ -8,21 +8,20 @@ import (
 type Led byte
 
 type LedController struct {
-	UID            int
-	ledIndex       int
-	ledsMutex      sync.Mutex
-	leds           []Led
-	lastFireMutex  sync.Mutex
-	lastFire       t.Time
-	isRunningMutex sync.Mutex
-	isRunning      bool
-	ledsChanged    chan (*LedController)
-	holdT          t.Duration
-	runUpT         t.Duration
-	runDownT       t.Duration
+	UID       int
+	ledIndex  int
+	leds      []Led
+	isRunning bool
+	lastFire  t.Time
+	holdT     t.Duration
+	runUpT    t.Duration
+	runDownT  t.Duration
+	// Guards getting and setting LED values
+	ledsMutex sync.Mutex
+	// Guards changes to lastFire & isRunning
+	updateMutex sync.Mutex
+	ledsChanged chan (*LedController)
 }
-
-// public
 
 func NewLedController(uid int, size int, index int, ledsChanged chan (*LedController),
 	hold t.Duration, runup t.Duration, rundown t.Duration) LedController {
@@ -31,13 +30,8 @@ func NewLedController(uid int, size int, index int, ledsChanged chan (*LedContro
 		holdT: hold, runUpT: runup, runDownT: rundown}
 }
 
-func (s *LedController) Fire() {
-	s.setLastFire()
-	if s.isNotRunningAndSet() {
-		go s.runner()
-	}
-}
-
+// Returns a slice with the current values of all the LEDs.
+// Guarded by s.ledsMutex
 func (s *LedController) GetLeds() []Led {
 	s.ledsMutex.Lock()
 	defer s.ledsMutex.Unlock()
@@ -46,48 +40,51 @@ func (s *LedController) GetLeds() []Led {
 	return ret
 }
 
-// private
-
+// Sets a single LED at index index to value
+// Guarded by s.ledsMutex
 func (s *LedController) setLed(index int, value Led) {
 	s.ledsMutex.Lock()
 	defer s.ledsMutex.Unlock()
 	s.leds[index] = value
 }
 
-func (s *LedController) isNotRunningAndSet() bool {
-	s.isRunningMutex.Lock()
-	defer s.isRunningMutex.Unlock()
+// This public method can be called whenever the associated sensor
+// reads a value above its trigger point. When the s.runner go routine
+// is already running, it does nothing besides updating s.lastFire to
+// the current time. If the s.runner go routine is started and
+// s.isRunning is set to true, so no intermiediate call to Fire() will
+// be able to start another runner concurrently.
+// The method is guarded by s.updateMutex
+func (s *LedController) Fire() {
+	s.updateMutex.Lock()
+	defer s.updateMutex.Unlock()
+
+	s.lastFire = t.Now()
 	if !s.isRunning {
 		s.isRunning = true
-		return true
-	} else {
-		return false
+		go s.runner()
 	}
 }
 
-func (s *LedController) unsetIsRunning() {
-	s.isRunningMutex.Lock()
-	defer s.isRunningMutex.Unlock()
-	s.isRunning = false
-}
-
-func (s *LedController) setLastFire() {
-	s.lastFireMutex.Lock()
-	defer s.lastFireMutex.Unlock()
-	s.lastFire = t.Now()
-}
-
+// Return the s.lastFire value, guarded by s.updateMutex
 func (s *LedController) getLastFire() t.Time {
-	s.lastFireMutex.Lock()
-	defer s.lastFireMutex.Unlock()
+	s.updateMutex.Lock()
+	defer s.updateMutex.Unlock()
+
 	return s.lastFire
 }
 
+// The main worker, doing a run-up, hold, and run-down cycle (if
+// undisturbed by intermediate Fire() events). It checks for these
+// intermediate Fire() events by during hold time (to prolong the hold
+// time for accordingly) and during run-down to switch back into the
+// run-up part if needed. At the end it checks one last time for an
+// intermediate Fire() before finally setting s.isRunning to false and
+// ending the go routine. All this is either quarded directly or
+// indirectly (by calls to s.getLastFire()) by s.updateMutex.
 func (s *LedController) runner() {
 	left := s.ledIndex
 	right := s.ledIndex
-
-	defer s.unsetIsRunning()
 
 loop:
 	for {
@@ -124,8 +121,9 @@ loop:
 		for {
 			last_fire := s.getLastFire()
 			if last_fire.After(old_last_fire) {
-				// breaking out of inner for loop, but not outer,
-				// so we are back at RUN UP with left and right preserved
+				// breaking out of inner for loop, but not outer, so
+				// we are back at RUN UP while reserving the current
+				// value for left and right
 				ticker.Stop()
 				break
 			}
@@ -136,13 +134,32 @@ loop:
 			if right >= s.ledIndex && right <= len(s.leds)-1 {
 				s.setLed(right, 0)
 			}
+			s.ledsChanged <- s
+			if left == s.ledIndex && right == s.ledIndex {
+				// that means: we have run down completely. Now we
+				// either simply end the go routine (allowing for a
+				// fire event to trigger a new complete run up, hold
+				// run down cycle in the future or - as a last check -
+				// we see if there has been a fire event in the little
+				// time while this last iteration of the inner for
+				// loop took place)
+				s.updateMutex.Lock()
+				if s.lastFire.After(last_fire) {
+					s.updateMutex.Unlock()
+					// again back into running up again
+					break
+				} else {
+					// we are finally ready and can set s.isRunning to false again
+					// so the next fire event can pass the mutex and fire up the
+					// go routine again from the start
+					ticker.Stop()
+					s.isRunning = false
+					s.updateMutex.Unlock()
+					break loop
+				}
+			}
 			left++
 			right--
-			s.ledsChanged <- s
-			if left > s.ledIndex && right < s.ledIndex {
-				ticker.Stop()
-				break loop
-			}
 			<-ticker.C
 		}
 	}
