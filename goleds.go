@@ -16,7 +16,7 @@ const RUN_UP_T = 5 * time.Millisecond
 const RUN_DOWN_T = 50 * time.Millisecond
 
 func main() {
-	controllers := make([]c.LedController, len(hw.Sensors))
+	controllers := make([]*c.LedController, len(hw.Sensors))
 	ledReader := make(chan (*c.LedController))
 	ledWriter := make(chan []c.Led, hw.LEDS_TOTAL)
 	sensorReader := make(chan int)
@@ -63,7 +63,7 @@ func combineAndupdateDisplay(r chan (*c.LedController), w chan ([]c.Led)) {
 	}
 }
 
-func fireController(sensor chan (int), controllers []c.LedController) {
+func fireController(sensor chan (int), controllers []*c.LedController) {
 	for {
 		sensorIndex := <-sensor
 		controllers[sensorIndex].Fire()

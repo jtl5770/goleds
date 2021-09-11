@@ -24,9 +24,9 @@ type LedController struct {
 }
 
 func NewLedController(uid int, size int, index int, ledsChanged chan (*LedController),
-	hold t.Duration, runup t.Duration, rundown t.Duration) LedController {
+	hold t.Duration, runup t.Duration, rundown t.Duration) *LedController {
 	s := make([]Led, size)
-	return LedController{leds: s, UID: uid, ledIndex: index, isRunning: false, ledsChanged: ledsChanged,
+	return &LedController{leds: s, UID: uid, ledIndex: index, isRunning: false, ledsChanged: ledsChanged,
 		holdT: hold, runUpT: runup, runDownT: rundown}
 }
 
