@@ -12,8 +12,8 @@ import (
 )
 
 const HOLD_T = 5 * time.Second
-const RUN_UP_T = 15 * time.Millisecond
-const RUN_DOWN_T = 40 * time.Millisecond
+const RUN_UP_T = 5 * time.Millisecond
+const RUN_DOWN_T = 50 * time.Millisecond
 
 func main() {
 	controllers := make([]c.LedController, len(hw.Sensors))
