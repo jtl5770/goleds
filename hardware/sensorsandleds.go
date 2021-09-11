@@ -104,6 +104,8 @@ func SensorDriver(sensorReader chan int, sensors []Sensor) {
 	sensorReader <- 1
 	time.Sleep(2 * time.Second)
 	sensorReader <- 0
+	time.Sleep(15 * time.Second)
+	sensorReader <- 3
 }
 
 // Local Variables:
