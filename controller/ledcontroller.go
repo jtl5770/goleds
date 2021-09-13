@@ -76,8 +76,8 @@ func (s *LedController) getLastFire() t.Time {
 
 // The main worker, doing a run-up, hold, and run-down cycle (if
 // undisturbed by intermediate Fire() events). It checks for these
-// intermediate Fire() events by during hold time (to prolong the hold
-// time for accordingly) and during run-down to switch back into the
+// intermediate Fire() events during hold time (to prolong the hold
+// time accordingly) and during run-down to switch back into the
 // run-up part if needed. At the end it checks one last time for an
 // intermediate Fire() before finally setting s.isRunning to false and
 // ending the go routine. All this is either quarded directly or
@@ -144,6 +144,7 @@ loop:
 				// time while this last iteration of the inner for
 				// loop took place)
 				s.updateMutex.Lock()
+				ticker.Stop()
 				if s.lastFire.After(last_fire) {
 					s.updateMutex.Unlock()
 					// again back into running up again
@@ -152,7 +153,6 @@ loop:
 					// we are finally ready and can set s.isRunning to
 					// false so the next fire event can pass the mutex
 					// and fire up the go routine again from the start
-					ticker.Stop()
 					s.isRunning = false
 					s.updateMutex.Unlock()
 					break loop
