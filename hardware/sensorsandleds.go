@@ -98,6 +98,14 @@ func setLedSegment(segementID int, values []c.Led) {
 // ****
 func SensorDriver(sensorReader chan int, sensors []Sensor) {
 	sensorReader <- 0
+	time.Sleep(11 * time.Second)
+	sensorReader <- 1
+	time.Sleep(11 * time.Second)
+	sensorReader <- 2
+	time.Sleep(11 * time.Second)
+	sensorReader <- 3
+	time.Sleep(11 * time.Second)
+	sensorReader <- 0
 	time.Sleep(1 * time.Second)
 	sensorReader <- 3
 	time.Sleep(10 * time.Second)
