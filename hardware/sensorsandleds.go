@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	c "goleds/controller"
+	c "lautenbacher.net/goleds/controller"
 )
 
 // constants and other values describing the hardware.
