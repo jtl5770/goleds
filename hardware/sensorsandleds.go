@@ -10,9 +10,11 @@ import (
 )
 
 // constants and other values describing the hardware.
-const LEDS_TOTAL = 125
-const _LEDS_SPLIT = 70
-const _SMOOTHING_SIZE = 3
+const (
+	LEDS_TOTAL      = 125
+	_LEDS_SPLIT     = 70
+	_SMOOTHING_SIZE = 3
+)
 
 func init() {
 	Sensors[0] = NewSensor(0, 0, 0, 120)
@@ -98,7 +100,7 @@ func SensorDriver(sensorReader chan int, sensors []Sensor) {
 	sensorReader <- 0
 	time.Sleep(1 * time.Second)
 	sensorReader <- 3
-	time.Sleep(9 * time.Second)
+	time.Sleep(10 * time.Second)
 	sensorReader <- 1
 	time.Sleep(7 * time.Second)
 	sensorReader <- 1
