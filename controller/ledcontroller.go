@@ -93,36 +93,46 @@ loop:
 			if left >= 0 {
 				s.setLed(left, 255)
 			}
-			if right <= (len(s.leds) - 1) {
+			if right <= len(s.leds)-1 {
 				s.setLed(right, 255)
 			}
-			right++
-			left--
 			s.ledsChanged <- s
-			if left < 0 && right > len(s.leds)-1 {
+			if left <= 0 && right >= len(s.leds)-1 {
 				ticker.Stop()
 				break
 			}
+			right++
+			left--
 			<-ticker.C
 		}
-		// Now entering HOLD state - always after RUN_UP
+		// Now entering HOLD state - always, uconditionally after
+		// RUN_UP is complete. If there have been any Fire() events in
+		// the meantime or if there are more during hold, the hold
+		// period will be extended to be at least the last Fire()
+		// event time plus s.holdT
+		var old_last_fire t.Time
 		for {
 			now := t.Now()
-			hold_until := s.getLastFire().Add(s.holdT)
+			last_fire := s.getLastFire()
+			hold_until := last_fire.Add(s.holdT)
 			if hold_until.After(now) {
 				t.Sleep(t.Duration(hold_until.Sub(now)))
 			} else {
+				// make sure to store the last looked at Fire() event
+				// time so we don'taccidentally loose events. If there
+				// have been new ones, we will see in the RUN_DOWN section
+				// and skip back to the beginning
+				old_last_fire = last_fire
 				break
 			}
 		}
 		// finally entering RUN DOWN state
-		old_last_fire := s.getLastFire()
 		ticker.Reset(s.runDownT)
 		for {
 			last_fire := s.getLastFire()
 			if last_fire.After(old_last_fire) {
 				// breaking out of inner for loop, but not outer, so
-				// we are back at RUN UP while reserving the current
+				// we are back at RUN UP while preserving the current
 				// value for left and right
 				ticker.Stop()
 				break
