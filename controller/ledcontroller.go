@@ -7,6 +7,8 @@ import (
 
 type Led byte
 
+const _LED_ON Led = 255
+
 type LedController struct {
 	UID       int
 	ledIndex  int
@@ -91,10 +93,10 @@ loop:
 		ticker := t.NewTicker(s.runUpT)
 		for {
 			if left >= 0 {
-				s.setLed(left, 255)
+				s.setLed(left, _LED_ON)
 			}
 			if right <= len(s.leds)-1 {
-				s.setLed(right, 255)
+				s.setLed(right, _LED_ON)
 			}
 			s.ledsChanged <- s
 			if left <= 0 && right >= len(s.leds)-1 {
