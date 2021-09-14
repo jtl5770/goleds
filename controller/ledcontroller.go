@@ -119,9 +119,9 @@ loop:
 				t.Sleep(t.Duration(hold_until.Sub(now)))
 			} else {
 				// make sure to store the last looked at Fire() event
-				// time so we don'taccidentally loose events. If there
-				// have been new ones, we will see in the RUN_DOWN section
-				// and skip back to the beginning
+				// time so we don't accidentally loose events. If
+				// there have been new ones, we will see in the
+				// RUN_DOWN section and skip back to the beginning
 				old_last_fire = last_fire
 				break
 			}
