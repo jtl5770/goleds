@@ -15,25 +15,19 @@ const HOLD_T = 5 * time.Second
 const RUN_UP_T = 5 * time.Millisecond
 const RUN_DOWN_T = 50 * time.Millisecond
 
-var NUMCONTROLLERS = len(hw.Sensors)
-
 func main() {
-	controllers := make([]*c.SensorLedController, NUMCONTROLLERS)
+	controllers := make(map[string]c.LedProducer)
 	ledReader := make(chan (c.LedProducer))
 	ledWriter := make(chan []c.Led, hw.LEDS_TOTAL)
-	sensorReader := make(chan int)
+	sensorReader := make(chan string)
 	sigchan := make(chan os.Signal)
 	signal.Notify(sigchan, os.Interrupt)
 
-	// NUMCONTROLLERS could be different from hw.Sensors as soon as we
-	// implement other types of LedProduces that may not be associated
-	// to a sensor. But here we only want to init the LedController
-	// types.
-	for i := range hw.Sensors {
-		controllers[i] = c.NewSensorLedController(i, hw.LEDS_TOTAL, hw.Sensors[i].LedIndex,
+	for uid := range hw.Sensors {
+		controllers[uid] = c.NewSensorLedController(uid, hw.LEDS_TOTAL, hw.Sensors[uid].LedIndex,
 			ledReader, HOLD_T, RUN_UP_T, RUN_DOWN_T)
 	}
-	// *FUTURE* init more controllers as needed
+	// *FUTURE* init more types of controllers if needed/wanted
 
 	go combineAndupdateDisplay(ledReader, ledWriter)
 	go fireController(sensorReader, controllers)
@@ -47,9 +41,9 @@ func main() {
 
 func combineAndupdateDisplay(r chan (c.LedProducer), w chan ([]c.Led)) {
 	var oldSumLeds []c.Led
-	var allLedRanges = make([][]c.Led, NUMCONTROLLERS)
-	for i := range allLedRanges {
-		allLedRanges[i] = make([]c.Led, hw.LEDS_TOTAL)
+	var allLedRanges = make(map[string][]c.Led)
+	for uid := range hw.Sensors {
+		allLedRanges[uid] = make([]c.Led, hw.LEDS_TOTAL)
 	}
 	for {
 		s := <-r
@@ -70,10 +64,10 @@ func combineAndupdateDisplay(r chan (c.LedProducer), w chan ([]c.Led)) {
 	}
 }
 
-func fireController(sensor chan (int), controllers []*c.SensorLedController) {
+func fireController(sensor chan (string), controllers map[string]c.LedProducer) {
 	for {
-		sensorIndex := <-sensor
-		controllers[sensorIndex].Fire()
+		sensorUid := <-sensor
+		controllers[sensorUid].Fire()
 	}
 }
 

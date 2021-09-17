@@ -3,6 +3,7 @@ package ledcontroller
 type LedProducer interface {
 	GetLeds() []Led
 	GetUID() string
+	Fire()
 }
 
 // Local Variables:
