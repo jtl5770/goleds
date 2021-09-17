@@ -96,25 +96,25 @@ func setLedSegment(segementID int, values []c.Led) {
 // TODO: real hardware implementation
 // *****
 func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
-	sensorReader <- "s0"
+	sensorReader <- "_s0"
 	time.Sleep(11 * time.Second)
-	sensorReader <- "s1"
+	sensorReader <- "_s1"
 	time.Sleep(11 * time.Second)
-	sensorReader <- "s2"
+	sensorReader <- "_s2"
 	time.Sleep(11 * time.Second)
-	sensorReader <- "s3"
+	sensorReader <- "_s3"
 	time.Sleep(11 * time.Second)
-	sensorReader <- "s0"
+	sensorReader <- "_s0"
 	time.Sleep(1 * time.Second)
-	sensorReader <- "s3"
+	sensorReader <- "_s3"
 	time.Sleep(10 * time.Second)
-	sensorReader <- "s1"
+	sensorReader <- "_s1"
 	time.Sleep(7 * time.Second)
-	sensorReader <- "s1"
+	sensorReader <- "_s1"
 	time.Sleep(2 * time.Second)
-	sensorReader <- "s0"
+	sensorReader <- "_s0"
 	time.Sleep(15 * time.Second)
-	sensorReader <- "s3"
+	sensorReader <- "_s3"
 }
 
 // Local Variables:
