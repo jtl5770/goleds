@@ -70,9 +70,9 @@ func DisplayDriver(display chan ([]c.Led)) {
 	}
 }
 
-// ****
-// TODO: real hardware implementation
-// ****
+// *****
+// TODO:  real hardware implementation
+// *****
 func setLedSegment(segementID int, values []c.Led) {
 	var buf strings.Builder
 	buf.Grow(len(values))
@@ -93,9 +93,9 @@ func setLedSegment(segementID int, values []c.Led) {
 	}
 }
 
-// ****
+// *****
 // TODO: real hardware implementation
-// ****
+// *****
 func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
 	sensorReader <- "s0"
 	time.Sleep(11 * time.Second)
