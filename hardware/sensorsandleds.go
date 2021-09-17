@@ -35,12 +35,12 @@ type Sensor struct {
 
 var spiMutex sync.Mutex
 
-func NewSensor(ledIndex int, adc int, adcIndex int, trigger int) Sensor {
+func NewSensor(ledIndex int, adc int, adcIndex int, triggerLevel int) Sensor {
 	return Sensor{
 		LedIndex:     ledIndex,
 		adc:          adc,
 		adcIndex:     adcIndex,
-		triggerLevel: trigger,
+		triggerLevel: triggerLevel,
 		values:       make([]int, _SMOOTHING_SIZE, _SMOOTHING_SIZE+1),
 	}
 }
