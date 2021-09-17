@@ -9,7 +9,7 @@ type Led byte
 
 const _LED_ON Led = 255
 
-type LedController struct {
+type SensorLedController struct {
 	uid       int
 	ledIndex  int
 	leds      []Led
@@ -22,19 +22,19 @@ type LedController struct {
 	ledsMutex sync.Mutex
 	// Guards changes to lastFire & isRunning
 	updateMutex sync.Mutex
-	ledsChanged chan (*LedController)
+	ledsChanged chan (LedProducer)
 }
 
-func NewLedController(uid int, size int, index int, ledsChanged chan (*LedController),
-	hold t.Duration, runup t.Duration, rundown t.Duration) *LedController {
+func NewSensorLedController(uid int, size int, index int, ledsChanged chan (LedProducer),
+	hold t.Duration, runup t.Duration, rundown t.Duration) *SensorLedController {
 	s := make([]Led, size)
-	return &LedController{leds: s, uid: uid, ledIndex: index, isRunning: false, ledsChanged: ledsChanged,
+	return &SensorLedController{leds: s, uid: uid, ledIndex: index, isRunning: false, ledsChanged: ledsChanged,
 		holdT: hold, runUpT: runup, runDownT: rundown}
 }
 
 // Returns a slice with the current values of all the LEDs.
 // Guarded by s.ledsMutex
-func (s *LedController) GetLeds() []Led {
+func (s *SensorLedController) GetLeds() []Led {
 	s.ledsMutex.Lock()
 	defer s.ledsMutex.Unlock()
 	ret := make([]Led, len(s.leds))
@@ -42,13 +42,13 @@ func (s *LedController) GetLeds() []Led {
 	return ret
 }
 
-func (s *LedController) GetUID() int {
+func (s *SensorLedController) GetUID() int {
 	return s.uid
 }
 
 // Sets a single LED at index index to value
 // Guarded by s.ledsMutex
-func (s *LedController) setLed(index int, value Led) {
+func (s *SensorLedController) setLed(index int, value Led) {
 	s.ledsMutex.Lock()
 	defer s.ledsMutex.Unlock()
 	s.leds[index] = value
@@ -61,7 +61,7 @@ func (s *LedController) setLed(index int, value Led) {
 // s.isRunning is set to true, so no intermiediate call to Fire() will
 // be able to start another runner concurrently.
 // The method is guarded by s.updateMutex
-func (s *LedController) Fire() {
+func (s *SensorLedController) Fire() {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 
@@ -73,7 +73,7 @@ func (s *LedController) Fire() {
 }
 
 // Return the s.lastFire value, guarded by s.updateMutex
-func (s *LedController) getLastFire() t.Time {
+func (s *SensorLedController) getLastFire() t.Time {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 
@@ -88,7 +88,7 @@ func (s *LedController) getLastFire() t.Time {
 // intermediate Fire() before finally setting s.isRunning to false and
 // ending the go routine. All this is either quarded directly or
 // indirectly (by calls to s.getLastFire()) by s.updateMutex.
-func (s *LedController) runner() {
+func (s *SensorLedController) runner() {
 	left := s.ledIndex
 	right := s.ledIndex
 
