@@ -20,7 +20,7 @@ var Sensors = map[string]Sensor{
 	"_s0": NewSensor(0, 0, 0, 120),
 	"_s1": NewSensor(69, 0, 7, 130),
 	"_s2": NewSensor(70, 1, 0, 140),
-	"_s3": NewSensor(1240, 1, 5, 130),
+	"_s3": NewSensor(124, 1, 5, 130),
 }
 
 // end of tuneable part
