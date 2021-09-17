@@ -16,33 +16,32 @@ const (
 	_SMOOTHING_SIZE = 3
 )
 
-func init() {
-	Sensors["s0"] = NewSensor(0, 0, 0, 120)
-	Sensors["s1"] = NewSensor(69, 0, 7, 130)
-	Sensors["s2"] = NewSensor(70, 1, 0, 140)
-	Sensors["s3"] = NewSensor(124, 1, 5, 130)
+var Sensors = map[string]Sensor{
+	"_s0": NewSensor(0, 0, 0, 120),
+	"_s1": NewSensor(69, 0, 7, 130),
+	"_s2": NewSensor(70, 1, 0, 140),
+	"_s3": NewSensor(1240, 1, 5, 130),
 }
 
 // end of tuneable part
 
 type Sensor struct {
-	LedIndex int
-	Adc      int
-	AdcIndex int
-	trigger  int
-	values   []int
+	LedIndex     int
+	adc          int
+	adcIndex     int
+	triggerLevel int
+	values       []int
 }
 
 var spiMutex sync.Mutex
-var Sensors map[string]Sensor = make(map[string]Sensor)
 
 func NewSensor(ledIndex int, adc int, adcIndex int, trigger int) Sensor {
 	return Sensor{
-		LedIndex: ledIndex,
-		Adc:      adc,
-		AdcIndex: adcIndex,
-		trigger:  trigger,
-		values:   make([]int, _SMOOTHING_SIZE, _SMOOTHING_SIZE+1),
+		LedIndex:     ledIndex,
+		adc:          adc,
+		adcIndex:     adcIndex,
+		triggerLevel: trigger,
+		values:       make([]int, _SMOOTHING_SIZE, _SMOOTHING_SIZE+1),
 	}
 }
 
