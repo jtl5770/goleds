@@ -17,10 +17,10 @@ const (
 )
 
 func init() {
-	Sensors[0] = NewSensor(0, 0, 0, 120)
-	Sensors[1] = NewSensor(69, 0, 7, 130)
-	Sensors[2] = NewSensor(70, 1, 0, 140)
-	Sensors[3] = NewSensor(124, 1, 5, 130)
+	Sensors["s0"] = NewSensor(0, 0, 0, 120)
+	Sensors["s1"] = NewSensor(69, 0, 7, 130)
+	Sensors["s2"] = NewSensor(70, 1, 0, 140)
+	Sensors["s3"] = NewSensor(124, 1, 5, 130)
 }
 
 // end of tuneable part
@@ -34,7 +34,7 @@ type Sensor struct {
 }
 
 var spiMutex sync.Mutex
-var Sensors []Sensor = make([]Sensor, 4)
+var Sensors map[string]Sensor = make(map[string]Sensor)
 
 func NewSensor(ledIndex int, adc int, adcIndex int, trigger int) Sensor {
 	return Sensor{
@@ -96,26 +96,26 @@ func setLedSegment(segementID int, values []c.Led) {
 // ****
 // TODO: real hardware implementation
 // ****
-func SensorDriver(sensorReader chan int, sensors []Sensor) {
-	sensorReader <- 0
+func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
+	sensorReader <- "s0"
 	time.Sleep(11 * time.Second)
-	sensorReader <- 1
+	sensorReader <- "s1"
 	time.Sleep(11 * time.Second)
-	sensorReader <- 2
+	sensorReader <- "s2"
 	time.Sleep(11 * time.Second)
-	sensorReader <- 3
+	sensorReader <- "s3"
 	time.Sleep(11 * time.Second)
-	sensorReader <- 0
+	sensorReader <- "s0"
 	time.Sleep(1 * time.Second)
-	sensorReader <- 3
+	sensorReader <- "s3"
 	time.Sleep(10 * time.Second)
-	sensorReader <- 1
+	sensorReader <- "s1"
 	time.Sleep(7 * time.Second)
-	sensorReader <- 1
+	sensorReader <- "s1"
 	time.Sleep(2 * time.Second)
-	sensorReader <- 0
+	sensorReader <- "s0"
 	time.Sleep(15 * time.Second)
-	sensorReader <- 3
+	sensorReader <- "s3"
 }
 
 // Local Variables:
