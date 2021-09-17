@@ -10,7 +10,7 @@ type Led byte
 const _LED_ON Led = 255
 
 type LedController struct {
-	UID       int
+	uid       int
 	ledIndex  int
 	leds      []Led
 	isRunning bool
@@ -28,7 +28,7 @@ type LedController struct {
 func NewLedController(uid int, size int, index int, ledsChanged chan (*LedController),
 	hold t.Duration, runup t.Duration, rundown t.Duration) *LedController {
 	s := make([]Led, size)
-	return &LedController{leds: s, UID: uid, ledIndex: index, isRunning: false, ledsChanged: ledsChanged,
+	return &LedController{leds: s, uid: uid, ledIndex: index, isRunning: false, ledsChanged: ledsChanged,
 		holdT: hold, runUpT: runup, runDownT: rundown}
 }
 
@@ -40,6 +40,10 @@ func (s *LedController) GetLeds() []Led {
 	ret := make([]Led, len(s.leds))
 	copy(ret, s.leds)
 	return ret
+}
+
+func (s *LedController) GetUID() int {
+	return s.uid
 }
 
 // Sets a single LED at index index to value

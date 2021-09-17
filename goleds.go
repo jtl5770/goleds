@@ -46,7 +46,7 @@ func combineAndupdateDisplay(r chan (*c.LedController), w chan ([]c.Led)) {
 	}
 	for {
 		s := <-r
-		allLedRanges[s.UID] = s.GetLeds()
+		allLedRanges[s.GetUID()] = s.GetLeds()
 
 		sumLeds := make([]c.Led, hw.LEDS_TOTAL)
 		for _, currleds := range allLedRanges {
