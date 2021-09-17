@@ -16,7 +16,7 @@ const RUN_UP_T = 5 * time.Millisecond
 const RUN_DOWN_T = 50 * time.Millisecond
 
 func main() {
-	controllers := make(map[string]c.LedProducer)
+	ledproducers := make(map[string]c.LedProducer)
 	ledReader := make(chan (c.LedProducer))
 	ledWriter := make(chan []c.Led, hw.LEDS_TOTAL)
 	sensorReader := make(chan string)
@@ -24,13 +24,13 @@ func main() {
 	signal.Notify(sigchan, os.Interrupt)
 
 	for uid := range hw.Sensors {
-		controllers[uid] = c.NewSensorLedController(uid, hw.LEDS_TOTAL, hw.Sensors[uid].LedIndex,
+		ledproducers[uid] = c.NewSensorLedProducer(uid, hw.LEDS_TOTAL, hw.Sensors[uid].LedIndex,
 			ledReader, HOLD_T, RUN_UP_T, RUN_DOWN_T)
 	}
-	// *FUTURE* init more types of controllers if needed/wanted
+	// *FUTURE* init more types of ledproducers if needed/wanted
 
 	go combineAndupdateDisplay(ledReader, ledWriter)
-	go fireController(sensorReader, controllers)
+	go fireController(sensorReader, ledproducers)
 	go hw.DisplayDriver(ledWriter)
 	go hw.SensorDriver(sensorReader, hw.Sensors)
 
@@ -64,10 +64,10 @@ func combineAndupdateDisplay(r chan (c.LedProducer), w chan ([]c.Led)) {
 	}
 }
 
-func fireController(sensor chan (string), controllers map[string]c.LedProducer) {
+func fireController(sensor chan (string), producers map[string]c.LedProducer) {
 	for {
 		sensorUid := <-sensor
-		controllers[sensorUid].Fire()
+		producers[sensorUid].Fire()
 	}
 }
 
