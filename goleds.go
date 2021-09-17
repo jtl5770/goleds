@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"reflect"
@@ -67,7 +68,11 @@ func combineAndupdateDisplay(r chan (c.LedProducer), w chan ([]c.Led)) {
 func fireController(sensor chan (string), producers map[string]c.LedProducer) {
 	for {
 		sensorUid := <-sensor
-		producers[sensorUid].Fire()
+		if producer, ok := producers[sensorUid]; ok {
+			producer.Fire()
+		} else {
+			log.Printf("Unknown UID %s", sensorUid)
+		}
 	}
 }
 
