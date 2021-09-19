@@ -80,8 +80,10 @@ func setLedSegment(segementID int, values []c.Led) {
 	for _, v := range values {
 		if v.IsEmpty() {
 			buf.WriteString(" ")
-		} else {
+		} else if v.Intensity() > 50 {
 			buf.WriteString("*")
+		} else {
+			buf.WriteString("_")
 		}
 	}
 	fmt.Print(buf.String())
