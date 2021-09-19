@@ -20,6 +20,12 @@ const RUN_DOWN_T = 50 * time.Millisecond
 // used for all three compnents red, green, blue)
 const LED_ON_SLP = 80
 
+// Karlsruhe
+const LAT = 49.1
+const LONG = 8.24
+
+var NIGHT_LED = c.Led{Red: 1, Green: 0, Blue: 0}
+
 func main() {
 	ledproducers := make(map[string]c.LedProducer)
 	ledReader := make(chan (c.LedProducer))
@@ -32,6 +38,9 @@ func main() {
 		ledproducers[uid] = c.NewSensorLedProducer(uid, hw.LEDS_TOTAL, hw.Sensors[uid].LedIndex,
 			ledReader, HOLD_T, RUN_UP_T, RUN_DOWN_T, c.Led{Red: LED_ON_SLP, Green: LED_ON_SLP, Blue: LED_ON_SLP})
 	}
+	prod := c.NewNightlightLedProducter("night_led", hw.LEDS_TOTAL, ledReader, NIGHT_LED, LAT, LONG)
+	ledproducers["night_led"] = prod
+	prod.Fire()
 	// *FUTURE* init more types of ledproducers if needed/wanted
 
 	go combineAndupdateDisplay(ledReader, ledWriter)
