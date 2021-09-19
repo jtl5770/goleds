@@ -5,10 +5,6 @@ import (
 	t "time"
 )
 
-type Led byte
-
-const _LED_ON Led = 255
-
 type SensorLedProducer struct {
 	uid       string
 	ledIndex  int
@@ -23,13 +19,14 @@ type SensorLedProducer struct {
 	// Guards changes to lastFire & isRunning
 	updateMutex sync.Mutex
 	ledsChanged chan (LedProducer)
+	ledOn       Led
 }
 
 func NewSensorLedProducer(uid string, size int, index int, ledsChanged chan (LedProducer),
-	hold t.Duration, runup t.Duration, rundown t.Duration) *SensorLedProducer {
+	hold t.Duration, runup t.Duration, rundown t.Duration, ledOn Led) *SensorLedProducer {
 	s := make([]Led, size)
 	return &SensorLedProducer{leds: s, uid: uid, ledIndex: index, isRunning: false, ledsChanged: ledsChanged,
-		holdT: hold, runUpT: runup, runDownT: rundown}
+		holdT: hold, runUpT: runup, runDownT: rundown, ledOn: ledOn}
 }
 
 // Returns a slice with the current values of all the LEDs.
@@ -97,10 +94,10 @@ loop:
 		ticker := t.NewTicker(s.runUpT)
 		for {
 			if left >= 0 {
-				s.setLed(left, _LED_ON)
+				s.setLed(left, s.ledOn)
 			}
 			if right <= len(s.leds)-1 {
-				s.setLed(right, _LED_ON)
+				s.setLed(right, s.ledOn)
 			}
 			s.ledsChanged <- s
 			if left <= 0 && right >= len(s.leds)-1 {
@@ -145,10 +142,10 @@ loop:
 			}
 
 			if left <= s.ledIndex && left >= 0 {
-				s.setLed(left, 0)
+				s.setLed(left, Led{0, 0, 0})
 			}
 			if right >= s.ledIndex && right <= len(s.leds)-1 {
-				s.setLed(right, 0)
+				s.setLed(right, Led{0, 0, 0})
 			}
 			s.ledsChanged <- s
 			if left == s.ledIndex && right == s.ledIndex {

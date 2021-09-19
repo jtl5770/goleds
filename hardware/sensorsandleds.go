@@ -78,7 +78,7 @@ func setLedSegment(segementID int, values []c.Led) {
 
 	fmt.Print("[")
 	for _, v := range values {
-		if v == 0 {
+		if v.IsEmpty() {
 			buf.WriteString(" ")
 		} else {
 			buf.WriteString("*")

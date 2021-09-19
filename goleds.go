@@ -16,6 +16,10 @@ const HOLD_T = 5 * time.Second
 const RUN_UP_T = 5 * time.Millisecond
 const RUN_DOWN_T = 50 * time.Millisecond
 
+// how bright the SensorLedProducer makes the LEDs when on (will be
+// used for all three compnents red, green, blue)
+const LED_ON_SLP = 80
+
 func main() {
 	ledproducers := make(map[string]c.LedProducer)
 	ledReader := make(chan (c.LedProducer))
@@ -26,7 +30,7 @@ func main() {
 
 	for uid := range hw.Sensors {
 		ledproducers[uid] = c.NewSensorLedProducer(uid, hw.LEDS_TOTAL, hw.Sensors[uid].LedIndex,
-			ledReader, HOLD_T, RUN_UP_T, RUN_DOWN_T)
+			ledReader, HOLD_T, RUN_UP_T, RUN_DOWN_T, c.Led{Red: LED_ON_SLP, Green: LED_ON_SLP, Blue: LED_ON_SLP})
 	}
 	// *FUTURE* init more types of ledproducers if needed/wanted
 
@@ -53,9 +57,7 @@ func combineAndupdateDisplay(r chan (c.LedProducer), w chan ([]c.Led)) {
 		sumLeds := make([]c.Led, hw.LEDS_TOTAL)
 		for _, currleds := range allLedRanges {
 			for j, v := range currleds {
-				if v > sumLeds[j] {
-					sumLeds[j] = v
-				}
+				sumLeds[j] = v.Max(sumLeds[j])
 			}
 		}
 		if !reflect.DeepEqual(sumLeds, oldSumLeds) {
