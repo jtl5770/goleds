@@ -1,46 +1,27 @@
 package ledcontroller
 
 import (
-	"sync"
 	t "time"
 )
 
 type SensorLedProducer struct {
-	uid       string
-	ledIndex  int
-	leds      []Led
-	isRunning bool
-	lastFire  t.Time
-	holdT     t.Duration
-	runUpT    t.Duration
-	runDownT  t.Duration
-	// Guards getting and setting LED values
-	ledsMutex sync.Mutex
-	// Guards changes to lastFire & isRunning
-	updateMutex sync.Mutex
-	ledsChanged chan (LedProducer)
-	ledOn       Led
+	AbstractProducer
+	ledIndex int
+	holdT    t.Duration
+	runUpT   t.Duration
+	runDownT t.Duration
+	ledOn    Led
 }
 
 func NewSensorLedProducer(uid string, size int, index int, ledsChanged chan (LedProducer),
 	hold t.Duration, runup t.Duration, rundown t.Duration, ledOn Led) *SensorLedProducer {
-	s := make([]Led, size)
-	return &SensorLedProducer{leds: s, uid: uid, ledIndex: index, isRunning: false, ledsChanged: ledsChanged,
-		holdT: hold, runUpT: runup, runDownT: rundown, ledOn: ledOn}
-}
-
-// Returns a slice with the current values of all the LEDs.
-// Guarded by s.ledsMutex
-func (s *SensorLedProducer) GetLeds() []Led {
-	s.ledsMutex.Lock()
-	defer s.ledsMutex.Unlock()
-	ret := make([]Led, len(s.leds))
-	copy(ret, s.leds)
-	return ret
-}
-
-func (s *SensorLedProducer) GetUID() string {
-	return s.uid
+	leds := make([]Led, size)
+	sledp := &SensorLedProducer{ledIndex: index, holdT: hold, runUpT: runup, runDownT: rundown, ledOn: ledOn}
+	sledp.leds = leds
+	sledp.uid = uid
+	sledp.isRunning = false
+	sledp.ledsChanged = ledsChanged
+	return sledp
 }
 
 // Sets a single LED at index index to value
@@ -67,14 +48,6 @@ func (s *SensorLedProducer) Fire() {
 		s.isRunning = true
 		go s.runner()
 	}
-}
-
-// Return the s.lastFire value, guarded by s.updateMutex
-func (s *SensorLedProducer) getLastFire() t.Time {
-	s.updateMutex.Lock()
-	defer s.updateMutex.Unlock()
-
-	return s.lastFire
 }
 
 // The main worker, doing a run-up, hold, and run-down cycle (if
@@ -142,10 +115,10 @@ loop:
 			}
 
 			if left <= s.ledIndex && left >= 0 {
-				s.setLed(left, Led{0, 0, 0})
+				s.setLed(left, NULL_LED)
 			}
 			if right >= s.ledIndex && right <= len(s.leds)-1 {
-				s.setLed(right, Led{0, 0, 0})
+				s.setLed(right, NULL_LED)
 			}
 			s.ledsChanged <- s
 			if left == s.ledIndex && right == s.ledIndex {
