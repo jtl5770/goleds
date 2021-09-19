@@ -12,7 +12,7 @@ import (
 	hw "lautenbacher.net/goleds/hardware"
 )
 
-const HOLD_T = 5 * time.Second
+const HOLD_T = 10 * time.Second
 const RUN_UP_T = 5 * time.Millisecond
 const RUN_DOWN_T = 50 * time.Millisecond
 
