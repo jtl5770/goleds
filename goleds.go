@@ -21,8 +21,8 @@ const RUN_DOWN_T = 50 * time.Millisecond
 const LED_ON_SLP = 80
 
 // Karlsruhe
-const LAT = 49.1
-const LONG = 8.24
+const LAT = 49.014
+const LONG = 8.4043
 
 var NIGHT_LED = c.Led{Red: 1, Green: 0, Blue: 0}
 
