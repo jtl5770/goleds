@@ -16,11 +16,16 @@ type NightlightLedProducter struct {
 func NewNightlightLedProducter(uid string, size int, ledsChanged chan (LedProducer),
 	ledNight Led, latitude float64, longitude float64) *NightlightLedProducter {
 	leds := make([]Led, size)
-	inst := &NightlightLedProducter{latitude: latitude, longitude: longitude, ledNight: ledNight}
-	inst.leds = leds
-	inst.uid = uid
-	inst.isRunning = false
-	inst.ledsChanged = ledsChanged
+	inst := &NightlightLedProducter{
+		AbstractProducer: AbstractProducer{
+			leds:        leds,
+			uid:         uid,
+			isRunning:   false,
+			ledsChanged: ledsChanged},
+		latitude:  latitude,
+		longitude: longitude,
+		ledNight:  ledNight}
+	inst.runfunc = inst.runner
 	return inst
 }
 
