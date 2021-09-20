@@ -38,6 +38,7 @@ func main() {
 		ledproducers[uid] = c.NewSensorLedProducer(uid, hw.LEDS_TOTAL, hw.Sensors[uid].LedIndex,
 			ledReader, HOLD_T, RUN_UP_T, RUN_DOWN_T, c.Led{Red: LED_ON_SLP, Green: LED_ON_SLP, Blue: LED_ON_SLP})
 	}
+	// The Nightlight producer makes a permanent red glow (by default) during night time
 	prod := c.NewNightlightLedProducter("night_led", hw.LEDS_TOTAL, ledReader, NIGHT_LED, LAT, LONG)
 	ledproducers["night_led"] = prod
 	prod.Fire()
