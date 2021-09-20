@@ -2,6 +2,7 @@ package hardware
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -80,7 +81,7 @@ func setLedSegment(segementID int, values []c.Led) {
 	for _, v := range values {
 		if v.IsEmpty() {
 			buf.WriteString(" ")
-		} else if v.Intensity() > 50 {
+		} else if intensity(v) > 50 {
 			buf.WriteString("*")
 		} else {
 			buf.WriteString("_")
@@ -92,6 +93,10 @@ func setLedSegment(segementID int, values []c.Led) {
 	} else {
 		fmt.Print("]\r")
 	}
+}
+
+func intensity(s c.Led) byte {
+	return byte(math.Round(float64(s.Red+s.Green+s.Blue) / 3.0))
 }
 
 // *****
