@@ -43,17 +43,6 @@ func (s *NightlightLedProducter) setLed(on bool) {
 	}
 }
 
-func (s *NightlightLedProducter) Fire() {
-	s.updateMutex.Lock()
-	defer s.updateMutex.Unlock()
-
-	s.lastFire = t.Now()
-	if !s.isRunning {
-		s.isRunning = true
-		go s.runner()
-	}
-}
-
 func (s *NightlightLedProducter) runner() {
 	for {
 		now := t.Now()

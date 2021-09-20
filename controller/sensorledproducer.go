@@ -16,12 +16,20 @@ type SensorLedProducer struct {
 func NewSensorLedProducer(uid string, size int, index int, ledsChanged chan (LedProducer),
 	hold t.Duration, runup t.Duration, rundown t.Duration, ledOn Led) *SensorLedProducer {
 	leds := make([]Led, size)
-	sledp := &SensorLedProducer{ledIndex: index, holdT: hold, runUpT: runup, runDownT: rundown, ledOn: ledOn}
-	sledp.leds = leds
-	sledp.uid = uid
-	sledp.isRunning = false
-	sledp.ledsChanged = ledsChanged
-	return sledp
+	inst := &SensorLedProducer{
+		AbstractProducer: AbstractProducer{
+			leds:        leds,
+			uid:         uid,
+			isRunning:   false,
+			ledsChanged: ledsChanged,
+		},
+		ledIndex: index,
+		holdT:    hold,
+		runUpT:   runup,
+		runDownT: rundown,
+		ledOn:    ledOn}
+	inst.runfunc = inst.runner
+	return inst
 }
 
 // Sets a single LED at index index to value
@@ -30,24 +38,6 @@ func (s *SensorLedProducer) setLed(index int, value Led) {
 	s.ledsMutex.Lock()
 	defer s.ledsMutex.Unlock()
 	s.leds[index] = value
-}
-
-// This public method can be called whenever the associated sensor
-// reads a value above its trigger point. When the s.runner go routine
-// is already running, it does nothing besides updating s.lastFire to
-// the current time. If the s.runner go routine is started and
-// s.isRunning is set to true, so no intermiediate call to Fire() will
-// be able to start another runner concurrently.
-// The method is guarded by s.updateMutex
-func (s *SensorLedProducer) Fire() {
-	s.updateMutex.Lock()
-	defer s.updateMutex.Unlock()
-
-	s.lastFire = t.Now()
-	if !s.isRunning {
-		s.isRunning = true
-		go s.runner()
-	}
 }
 
 // The main worker, doing a run-up, hold, and run-down cycle (if
