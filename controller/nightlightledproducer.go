@@ -59,8 +59,8 @@ func (s *NightlightLedProducter) runner() {
 			s.setLed(true)
 			s.ledsChanged <- s
 			t.Sleep(rise.Sub(now))
-		} else if now.Before(rise_next) {
-			// in the night before midnight
+		} else {
+			// in the night before midnight - need to sleep unit rise_next
 			s.setLed(true)
 			s.ledsChanged <- s
 			t.Sleep(rise_next.Sub(now))
