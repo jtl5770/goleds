@@ -1,7 +1,7 @@
 package ledcontroller
 
 import (
-	t "time"
+	"time"
 
 	"github.com/nathan-osman/go-sunrise"
 )
@@ -45,25 +45,25 @@ func (s *NightlightLedProducter) setLed(on bool) {
 
 func (s *NightlightLedProducter) runner() {
 	for {
-		now := t.Now()
-		next := now.Add(24 * t.Hour) // tomorrow
+		now := time.Now()
+		next := now.Add(24 * time.Hour) // tomorrow
 		rise, set := sunrise.SunriseSunset(s.latitude, s.longitude, now.Year(), now.Month(), now.Day())
 		rise_next, _ := sunrise.SunriseSunset(s.latitude, s.longitude, next.Year(), next.Month(), next.Day())
 		if now.After(rise) && now.Before(set) {
 			// During the day - between sunrise and sunset
 			s.setLed(false)
 			s.ledsChanged <- s
-			t.Sleep(set.Sub(now))
+			time.Sleep(set.Sub(now))
 		} else if now.Before(rise) {
 			// in the night after midnight but before sunrise
 			s.setLed(true)
 			s.ledsChanged <- s
-			t.Sleep(rise.Sub(now))
+			time.Sleep(rise.Sub(now))
 		} else {
 			// in the night before midnight - need to sleep unit rise_next
 			s.setLed(true)
 			s.ledsChanged <- s
-			t.Sleep(rise_next.Sub(now))
+			time.Sleep(rise_next.Sub(now))
 		}
 	}
 }

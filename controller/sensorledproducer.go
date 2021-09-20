@@ -1,20 +1,20 @@
 package ledcontroller
 
 import (
-	t "time"
+	"time"
 )
 
 type SensorLedProducer struct {
 	AbstractProducer
 	ledIndex int
-	holdT    t.Duration
-	runUpT   t.Duration
-	runDownT t.Duration
+	holdT    time.Duration
+	runUpT   time.Duration
+	runDownT time.Duration
 	ledOn    Led
 }
 
 func NewSensorLedProducer(uid string, size int, index int, ledsChanged chan (LedProducer),
-	hold t.Duration, runup t.Duration, rundown t.Duration, ledOn Led) *SensorLedProducer {
+	hold time.Duration, runup time.Duration, rundown time.Duration, ledOn Led) *SensorLedProducer {
 	leds := make([]Led, size)
 	inst := &SensorLedProducer{
 		AbstractProducer: AbstractProducer{
@@ -54,7 +54,7 @@ func (s *SensorLedProducer) runner() {
 
 loop:
 	for {
-		ticker := t.NewTicker(s.runUpT)
+		ticker := time.NewTicker(s.runUpT)
 		for {
 			if left >= 0 {
 				s.setLed(left, s.ledOn)
@@ -76,13 +76,13 @@ loop:
 		// the meantime or if there are more during hold, the hold
 		// period will be extended to be at least the last Fire()
 		// event time plus s.holdT
-		var old_last_fire t.Time
+		var old_last_fire time.Time
 		for {
-			now := t.Now()
+			now := time.Now()
 			last_fire := s.getLastFire()
 			hold_until := last_fire.Add(s.holdT)
 			if hold_until.After(now) {
-				t.Sleep(t.Duration(hold_until.Sub(now)))
+				time.Sleep(time.Duration(hold_until.Sub(now)))
 			} else {
 				// make sure to store the last looked at Fire() event
 				// time so we don't accidentally loose events. If
