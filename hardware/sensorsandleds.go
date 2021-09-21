@@ -3,6 +3,7 @@ package hardware
 import (
 	"fmt"
 	"math"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -103,6 +104,14 @@ func intensity(s c.Led) byte {
 // TODO: real hardware implementation
 // *****
 func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
+	name, _ := os.Hostname()
+	if name != "pilab" {
+		simulateSensors(sensorReader)
+		return
+	}
+}
+
+func simulateSensors(sensorReader chan string) {
 	sensorReader <- "_s0"
 	time.Sleep(15 * time.Second)
 	sensorReader <- "_s1"
