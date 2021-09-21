@@ -14,7 +14,7 @@ import (
 
 const HOLD_T = 10 * time.Second
 const RUN_UP_T = 5 * time.Millisecond
-const RUN_DOWN_T = 50 * time.Millisecond
+const RUN_DOWN_T = 30 * time.Millisecond
 
 // how bright the SensorLedProducer makes the LEDs when on (will be
 // used for all three compnents red, green, blue)

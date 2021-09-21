@@ -20,10 +20,10 @@ const (
 )
 
 var Sensors = map[string]Sensor{
-	"_s0": NewSensor(0, 0, 0, 120),
-	"_s1": NewSensor(69, 0, 7, 130),
-	"_s2": NewSensor(70, 1, 0, 140),
-	"_s3": NewSensor(124, 1, 5, 130),
+	"_s0": NewSensor(0, 0, 0, 80),
+	"_s1": NewSensor(69, 0, 7, 80),
+	"_s2": NewSensor(70, 1, 0, 80),
+	"_s3": NewSensor(124, 1, 5, 80),
 }
 
 // end of tuneable part
@@ -34,6 +34,9 @@ func init() {
 	name, _ := os.Hostname()
 	if name == "pilab" {
 		if err := rpio.Open(); err != nil {
+			panic(err)
+		}
+		if err := rpio.SpiBegin(rpio.Spi0); err != nil {
 			panic(err)
 		}
 
@@ -128,36 +131,42 @@ func intensity(s c.Led) byte {
 	return byte(math.Round(float64(s.Red+s.Green+s.Blue) / 3.0))
 }
 
-// *****
-// TODO: real hardware implementation
-// *****
 func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
 	name, _ := os.Hostname()
 	if name != "pilab" {
 		simulateSensors(sensorReader)
 		return
 	}
-	if err := rpio.SpiBegin(rpio.Spi0); err != nil {
-		panic(err)
-	}
-	defer rpio.SpiEnd(rpio.Spi0)
 	sensorvalues := make(map[string]int)
+	// sensormax := make(map[string]int)
+	// var ordered []string
+	// for idx, _ := range sensors {
+	// 	ordered = append(ordered, idx)
+	// }
+	// ordered = sort.StringSlice(ordered)
 	for {
 		spiMutex.Lock()
 		for name, sensor := range sensors {
-			adc := sensor.adc
-			channel := sensor.adcIndex
-			selectAdc(adc)
-			value := readAdc(channel)
-			sensorvalues[name] = sensor.smoothValue(value)
+			selectAdc(sensor.adc)
+			sensorvalues[name] = sensor.smoothValue(readAdc(sensor.adcIndex))
 		}
 		spiMutex.Unlock()
+		// var buf strings.Builder
 		for name, value := range sensorvalues {
+			// max := sensormax[name]
+			// if value > max {
+			// 	sensormax[name] = value
+			// }
 			if value > sensors[name].triggerLevel {
 				sensorReader <- name
 			}
 		}
-		time.Sleep(5 * time.Millisecond)
+		// for _, idx := range ordered {
+		// 	fmt.Fprintf(&buf, "%4d ", sensormax[idx])
+		// }
+		// fmt.Fprintf(&buf, "\r")
+		// fmt.Print(buf.String())
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 
@@ -189,18 +198,6 @@ func simulateSensors(sensorReader chan string) {
 	sensorReader <- "_s3"
 	time.Sleep(20 * time.Second)
 	sensorReader <- "_s1"
-	// time.Sleep(20 * time.Second)
-	// sensorReader <- "_s3"
-	// time.Sleep(13 * time.Second)
-	// sensorReader <- "_s0"
-	// time.Sleep(1 * time.Second)
-	// sensorReader <- "_s3"
-	// time.Sleep(10 * time.Second)
-	// sensorReader <- "_s1"
-	// time.Sleep(8 * time.Second)
-	// sensorReader <- "_s0"
-	// time.Sleep(20 * time.Second)
-	// sensorReader <- "_s3"
 }
 
 // Local Variables:
