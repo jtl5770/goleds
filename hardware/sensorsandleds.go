@@ -26,13 +26,17 @@ var Sensors = map[string]Sensor{
 	"_s3": NewSensor(124, 1, 5, 80),
 }
 
+var COLORCORR = []float64{1.0, 0.18, 0.02}
+
 // end of tuneable part
 
 var pin17, pin22, pin23, pin24 rpio.Pin
+var REAL bool = false
 
 func init() {
-	name, _ := os.Hostname()
-	if name == "pilab" {
+	args := os.Args
+	if len(args) == 2 && args[1] == "REAL" {
+		REAL = true
 		if err := rpio.Open(); err != nil {
 			panic(err)
 		}
@@ -94,17 +98,20 @@ func DisplayDriver(display chan ([]c.Led)) {
 		sumLeds := <-display
 		led1 := sumLeds[:_LEDS_SPLIT]
 		led2 := sumLeds[_LEDS_SPLIT:]
-
-		spiMutex.Lock()
-		setLedSegment(0, led1)
-		setLedSegment(1, led2)
-		spiMutex.Unlock()
+		if !REAL {
+			simulateLed(0, led1)
+			simulateLed(1, led2)
+		} else {
+			spiMutex.Lock()
+			setLedSegment(0, led1)
+			setLedSegment(1, led2)
+			spiMutex.Unlock()
+		}
 	}
 }
 
 func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
-	name, _ := os.Hostname()
-	if name != "pilab" {
+	if !REAL {
 		simulateSensors(sensorReader)
 		return
 	}
@@ -141,6 +148,39 @@ func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
 	}
 }
 
+func readAdc(channel byte) int {
+	buffer := []byte{1, (8 + channel) << 4, 0}
+	rpio.SpiExchange(buffer)
+	return ((int(buffer[1]) & 3) << 8) + int(buffer[2])
+}
+
+func setLedSegment(segmentID int, values []c.Led) {
+	selectLed(segmentID)
+	display := make([]byte, 3*len(values))
+	for idx, led := range values {
+		display[3*idx] = byte(math.Round(COLORCORR[0] * float64(led.Red)))
+		display[(3*idx)+1] = byte(math.Round(COLORCORR[1] * float64(led.Green)))
+		display[(3*idx)+2] = byte(math.Round(COLORCORR[2] * float64(led.Blue)))
+	}
+	rpio.SpiExchange(display)
+}
+
+func selectLed(index int) {
+	if index == 0 {
+		pin22.High()
+		pin17.Low()
+		pin23.High()
+		pin24.High()
+	} else if index == 1 {
+		pin22.Low()
+		pin17.High()
+		pin23.High()
+		pin24.High()
+	} else {
+		panic("No LED")
+	}
+}
+
 func selectAdc(index int) {
 	if index == 0 {
 		pin22.Low()
@@ -157,16 +197,7 @@ func selectAdc(index int) {
 	}
 }
 
-func readAdc(channel byte) int {
-	buffer := []byte{1, (8 + channel) << 4, 0}
-	rpio.SpiExchange(buffer)
-	return ((int(buffer[1]) & 3) << 8) + int(buffer[2])
-}
-
-// *****
-// TODO:  real hardware implementation
-// *****
-func setLedSegment(segementID int, values []c.Led) {
+func simulateLed(segmentID int, values []c.Led) {
 	var buf strings.Builder
 	buf.Grow(len(values))
 
@@ -181,11 +212,12 @@ func setLedSegment(segementID int, values []c.Led) {
 		}
 	}
 	fmt.Print(buf.String())
-	if segementID == 0 {
+	if segmentID == 0 {
 		fmt.Print("]       ")
 	} else {
 		fmt.Print("]\r")
 	}
+
 }
 
 func intensity(s c.Led) byte {
