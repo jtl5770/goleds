@@ -105,21 +105,21 @@ func intensity(s c.Led) byte {
 func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
 	sensorReader <- "_s0"
 	time.Sleep(15 * time.Second)
-	sensorReader <- "_s1"
-	time.Sleep(15 * time.Second)
-	sensorReader <- "_s2"
-	time.Sleep(11 * time.Second)
 	sensorReader <- "_s3"
-	time.Sleep(13 * time.Second)
-	sensorReader <- "_s0"
-	time.Sleep(1 * time.Second)
-	sensorReader <- "_s3"
-	time.Sleep(10 * time.Second)
-	sensorReader <- "_s1"
-	time.Sleep(8 * time.Second)
-	sensorReader <- "_s0"
 	time.Sleep(20 * time.Second)
-	sensorReader <- "_s3"
+	sensorReader <- "_s1"
+	// time.Sleep(20 * time.Second)
+	// sensorReader <- "_s3"
+	// time.Sleep(13 * time.Second)
+	// sensorReader <- "_s0"
+	// time.Sleep(1 * time.Second)
+	// sensorReader <- "_s3"
+	// time.Sleep(10 * time.Second)
+	// sensorReader <- "_s1"
+	// time.Sleep(8 * time.Second)
+	// sensorReader <- "_s0"
+	// time.Sleep(20 * time.Second)
+	// sensorReader <- "_s3"
 }
 
 // Local Variables:
