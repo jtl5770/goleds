@@ -20,10 +20,10 @@ const (
 )
 
 var Sensors = map[string]Sensor{
-	"_s0": NewSensor(0, 0, 0, 80),
-	"_s1": NewSensor(69, 0, 7, 80),
-	"_s2": NewSensor(70, 1, 0, 80),
-	"_s3": NewSensor(124, 1, 5, 80),
+	"_s0": NewSensor(0, 0, 0, 60),
+	"_s1": NewSensor(69, 0, 7, 60),
+	"_s2": NewSensor(70, 1, 0, 60),
+	"_s3": NewSensor(124, 1, 5, 60),
 }
 
 var COLORCORR = []float64{1.0, 0.18, 0.02}
