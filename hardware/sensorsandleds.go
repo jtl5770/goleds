@@ -13,11 +13,8 @@ import (
 )
 
 // constants and other values describing the hardware.
-const (
-	LEDS_TOTAL      = 125
-	_LEDS_SPLIT     = 70
-	_SMOOTHING_SIZE = 3
-)
+
+var COLORCORR = []float64{1.0, 0.18, 0.02}
 
 var Sensors = map[string]Sensor{
 	"_s0": NewSensor(0, 0, 0, 60),
@@ -26,12 +23,19 @@ var Sensors = map[string]Sensor{
 	"_s3": NewSensor(124, 1, 5, 60),
 }
 
-var COLORCORR = []float64{1.0, 0.18, 0.02}
+const (
+	LEDS_TOTAL           = 125
+	LEDS_SPLIT           = 70
+	SMOOTHING_SIZE       = 3
+	SENSOR_LOOP_DELAY_MS = 5
+	SPI_SPEED            = 15000000
+)
 
-// end of tuneable part
+// *** end of tuneable part ***
 
 var pin17, pin22, pin23, pin24 rpio.Pin
 var REAL bool = false
+var spiMutex sync.Mutex
 
 func init() {
 	args := os.Args
@@ -43,6 +47,15 @@ func init() {
 		if err := rpio.SpiBegin(rpio.Spi0); err != nil {
 			panic(err)
 		}
+		rpio.SpiSpeed(SPI_SPEED)
+
+		pin17 = rpio.Pin(17)
+		pin17.Output()
+		pin17.Low()
+
+		pin22 = rpio.Pin(22)
+		pin22.Output()
+		pin22.Low()
 
 		pin23 = rpio.Pin(23)
 		pin23.Output()
@@ -51,14 +64,6 @@ func init() {
 		pin24 = rpio.Pin(24)
 		pin24.Output()
 		pin24.High()
-
-		pin22 = rpio.Pin(22)
-		pin22.Output()
-		pin22.Low()
-
-		pin17 = rpio.Pin(17)
-		pin17.Output()
-		pin17.Low()
 	}
 }
 
@@ -70,34 +75,32 @@ type Sensor struct {
 	values       []int
 }
 
-var spiMutex sync.Mutex
-
 func NewSensor(ledIndex int, adc int, adcIndex byte, triggerLevel int) Sensor {
 	return Sensor{
 		LedIndex:     ledIndex,
 		adc:          adc,
 		adcIndex:     adcIndex,
 		triggerLevel: triggerLevel,
-		values:       make([]int, _SMOOTHING_SIZE, _SMOOTHING_SIZE+1),
+		values:       make([]int, SMOOTHING_SIZE, SMOOTHING_SIZE+1),
 	}
 }
 
 func (s *Sensor) smoothValue(val int) int {
 	var ret int
-	newValues := make([]int, _SMOOTHING_SIZE, _SMOOTHING_SIZE+1)
+	newValues := make([]int, SMOOTHING_SIZE, SMOOTHING_SIZE+1)
 	for index, curr := range append(s.values, val)[1:] {
 		newValues[index] = curr
 		ret += curr
 	}
 	s.values = newValues
-	return ret / _SMOOTHING_SIZE
+	return ret / SMOOTHING_SIZE
 }
 
 func DisplayDriver(display chan ([]c.Led)) {
 	for {
 		sumLeds := <-display
-		led1 := sumLeds[:_LEDS_SPLIT]
-		led2 := sumLeds[_LEDS_SPLIT:]
+		led1 := sumLeds[:LEDS_SPLIT]
+		led2 := sumLeds[LEDS_SPLIT:]
 		if !REAL {
 			simulateLed(0, led1)
 			simulateLed(1, led2)
@@ -144,7 +147,7 @@ func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
 		// }
 		// fmt.Fprintf(&buf, "\r")
 		// fmt.Print(buf.String())
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(SENSOR_LOOP_DELAY_MS * time.Millisecond)
 	}
 }
 
@@ -167,13 +170,13 @@ func setLedSegment(segmentID int, values []c.Led) {
 
 func selectLed(index int) {
 	if index == 0 {
-		pin22.High()
 		pin17.Low()
+		pin22.High()
 		pin23.High()
 		pin24.High()
 	} else if index == 1 {
-		pin22.Low()
 		pin17.High()
+		pin22.Low()
 		pin23.High()
 		pin24.High()
 	} else {
@@ -183,13 +186,13 @@ func selectLed(index int) {
 
 func selectAdc(index int) {
 	if index == 0 {
-		pin22.Low()
 		pin17.Low()
+		pin22.Low()
 		pin23.Low()
 		pin24.High()
 	} else if index == 1 {
-		pin22.Low()
 		pin17.Low()
+		pin22.Low()
 		pin23.High()
 		pin24.Low()
 	} else {
@@ -217,7 +220,6 @@ func simulateLed(segmentID int, values []c.Led) {
 	} else {
 		fmt.Print("]\r")
 	}
-
 }
 
 func intensity(s c.Led) byte {
