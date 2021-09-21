@@ -144,7 +144,7 @@ func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
 		// }
 		// fmt.Fprintf(&buf, "\r")
 		// fmt.Print(buf.String())
-		time.Sleep(2 * time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 	}
 }
 
@@ -163,6 +163,7 @@ func setLedSegment(segmentID int, values []c.Led) {
 		display[(3*idx)+2] = byte(math.Round(COLORCORR[2] * float64(led.Blue)))
 	}
 	rpio.SpiExchange(display)
+	//time.Sleep(time.Millisecond)
 }
 
 func selectLed(index int) {
