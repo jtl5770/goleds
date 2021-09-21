@@ -24,7 +24,7 @@ const LED_ON_SLP = 80
 const LAT = 49.014
 const LONG = 8.4043
 
-var NIGHT_LED = c.Led{Red: 10, Green: 0, Blue: 0}
+var NIGHT_LED = c.Led{Red: 5, Green: 0, Blue: 0}
 
 func main() {
 	ledproducers := make(map[string]c.LedProducer)
