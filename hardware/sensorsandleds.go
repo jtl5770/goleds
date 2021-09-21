@@ -102,35 +102,6 @@ func DisplayDriver(display chan ([]c.Led)) {
 	}
 }
 
-// *****
-// TODO:  real hardware implementation
-// *****
-func setLedSegment(segementID int, values []c.Led) {
-	var buf strings.Builder
-	buf.Grow(len(values))
-
-	fmt.Print("[")
-	for _, v := range values {
-		if v.IsEmpty() {
-			buf.WriteString(" ")
-		} else if intensity(v) > 50 {
-			buf.WriteString("*")
-		} else {
-			buf.WriteString("_")
-		}
-	}
-	fmt.Print(buf.String())
-	if segementID == 0 {
-		fmt.Print("]       ")
-	} else {
-		fmt.Print("]\r")
-	}
-}
-
-func intensity(s c.Led) byte {
-	return byte(math.Round(float64(s.Red+s.Green+s.Blue) / 3.0))
-}
-
 func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
 	name, _ := os.Hostname()
 	if name != "pilab" {
@@ -166,7 +137,7 @@ func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
 		// }
 		// fmt.Fprintf(&buf, "\r")
 		// fmt.Print(buf.String())
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
 	}
 }
 
@@ -190,6 +161,35 @@ func readAdc(channel byte) int {
 	buffer := []byte{1, (8 + channel) << 4, 0}
 	rpio.SpiExchange(buffer)
 	return ((int(buffer[1]) & 3) << 8) + int(buffer[2])
+}
+
+// *****
+// TODO:  real hardware implementation
+// *****
+func setLedSegment(segementID int, values []c.Led) {
+	var buf strings.Builder
+	buf.Grow(len(values))
+
+	fmt.Print("[")
+	for _, v := range values {
+		if v.IsEmpty() {
+			buf.WriteString(" ")
+		} else if intensity(v) > 50 {
+			buf.WriteString("*")
+		} else {
+			buf.WriteString("_")
+		}
+	}
+	fmt.Print(buf.String())
+	if segementID == 0 {
+		fmt.Print("]       ")
+	} else {
+		fmt.Print("]\r")
+	}
+}
+
+func intensity(s c.Led) byte {
+	return byte(math.Round(float64(s.Red+s.Green+s.Blue) / 3.0))
 }
 
 func simulateSensors(sensorReader chan string) {
