@@ -104,6 +104,7 @@ func DisplayDriver(display chan ([]c.Led)) {
 		} else {
 			spiMutex.Lock()
 			setLedSegment(0, led1)
+			time.Sleep(time.Millisecond)
 			setLedSegment(1, led2)
 			spiMutex.Unlock()
 		}
@@ -163,7 +164,6 @@ func setLedSegment(segmentID int, values []c.Led) {
 		display[(3*idx)+2] = byte(math.Round(COLORCORR[2] * float64(led.Blue)))
 	}
 	rpio.SpiExchange(display)
-	//time.Sleep(time.Millisecond)
 }
 
 func selectLed(index int) {
