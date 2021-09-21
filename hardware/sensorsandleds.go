@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/stianeikeland/go-rpio/v4"
 	c "lautenbacher.net/goleds/controller"
 )
 
@@ -27,17 +28,44 @@ var Sensors = map[string]Sensor{
 
 // end of tuneable part
 
+var pin17, pin22, pin23, pin24 rpio.Pin
+
+func init() {
+	name, _ := os.Hostname()
+	if name == "pilab" {
+		if err := rpio.Open(); err != nil {
+			panic(err)
+		}
+
+		pin23 = rpio.Pin(23)
+		pin23.Output()
+		pin23.High()
+
+		pin24 = rpio.Pin(24)
+		pin24.Output()
+		pin24.High()
+
+		pin22 = rpio.Pin(22)
+		pin22.Output()
+		pin22.Low()
+
+		pin17 = rpio.Pin(17)
+		pin17.Output()
+		pin17.Low()
+	}
+}
+
 type Sensor struct {
 	LedIndex     int
 	adc          int
-	adcIndex     int
+	adcIndex     byte
 	triggerLevel int
 	values       []int
 }
 
 var spiMutex sync.Mutex
 
-func NewSensor(ledIndex int, adc int, adcIndex int, triggerLevel int) Sensor {
+func NewSensor(ledIndex int, adc int, adcIndex byte, triggerLevel int) Sensor {
 	return Sensor{
 		LedIndex:     ledIndex,
 		adc:          adc,
@@ -109,6 +137,50 @@ func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
 		simulateSensors(sensorReader)
 		return
 	}
+	if err := rpio.SpiBegin(rpio.Spi0); err != nil {
+		panic(err)
+	}
+	defer rpio.SpiEnd(rpio.Spi0)
+	sensorvalues := make(map[string]int)
+	for {
+		spiMutex.Lock()
+		for name, sensor := range sensors {
+			adc := sensor.adc
+			channel := sensor.adcIndex
+			selectAdc(adc)
+			value := readAdc(channel)
+			sensorvalues[name] = sensor.smoothValue(value)
+		}
+		spiMutex.Unlock()
+		for name, value := range sensorvalues {
+			if value > sensors[name].triggerLevel {
+				sensorReader <- name
+			}
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+func selectAdc(index int) {
+	if index == 0 {
+		pin22.Low()
+		pin17.Low()
+		pin23.Low()
+		pin24.High()
+	} else if index == 1 {
+		pin22.Low()
+		pin17.Low()
+		pin23.High()
+		pin24.Low()
+	} else {
+		panic("No ADC")
+	}
+}
+
+func readAdc(channel byte) int {
+	buffer := []byte{1, (8 + channel) << 4, 0}
+	rpio.SpiExchange(buffer)
+	return ((int(buffer[1]) & 3) << 8) + int(buffer[2])
 }
 
 func simulateSensors(sensorReader chan string) {

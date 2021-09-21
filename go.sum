@@ -1,2 +1,4 @@
 github.com/nathan-osman/go-sunrise v1.0.0 h1:mvjoVmXjmiHDSwKRA5t4T/1rNuHQDhodfQoxrUU39ck=
 github.com/nathan-osman/go-sunrise v1.0.0/go.mod h1:RcWqhT+5ShCZDev79GuWLayetpJp78RSjSWxiDowmlM=
+github.com/stianeikeland/go-rpio/v4 v4.5.1 h1:sLzl5w1HS+4726C5kfvpIgjXULrLCCM82vDpAFefGQI=
+github.com/stianeikeland/go-rpio/v4 v4.5.1/go.mod h1:A3GvHxC1Om5zaId+HqB3HKqx4K/AqeckxB7qRjxMK7o=
