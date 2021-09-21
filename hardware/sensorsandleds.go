@@ -47,7 +47,7 @@ func init() {
 		if err := rpio.SpiBegin(rpio.Spi0); err != nil {
 			panic(err)
 		}
-		rpio.SpiSpeed(SPI_SPEED)
+		//rpio.SpiSpeed(SPI_SPEED)
 
 		pin17 = rpio.Pin(17)
 		pin17.Output()
