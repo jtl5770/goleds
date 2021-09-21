@@ -28,7 +28,7 @@ const (
 	LEDS_SPLIT           = 70
 	SMOOTHING_SIZE       = 3
 	SENSOR_LOOP_DELAY_MS = 5
-	SPI_SPEED            = 15000000
+	SPI_SPEED            = 976562
 )
 
 // *** end of tuneable part ***
@@ -47,7 +47,7 @@ func init() {
 		if err := rpio.SpiBegin(rpio.Spi0); err != nil {
 			panic(err)
 		}
-		//rpio.SpiSpeed(SPI_SPEED)
+		rpio.SpiSpeed(SPI_SPEED)
 
 		pin17 = rpio.Pin(17)
 		pin17.Output()
