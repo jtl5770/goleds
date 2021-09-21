@@ -104,7 +104,6 @@ func DisplayDriver(display chan ([]c.Led)) {
 		} else {
 			spiMutex.Lock()
 			setLedSegment(0, led1)
-			time.Sleep(time.Millisecond)
 			setLedSegment(1, led2)
 			spiMutex.Unlock()
 		}
