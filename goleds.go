@@ -100,6 +100,7 @@ func fireController(sensor chan (hw.Trigger), producers map[string]c.LedProducer
 				firstSameTrigger = trigger
 			} else if newStamp.Sub(oldStamp) > HOLD_TRIGGER_DELAY {
 				firstSameTrigger = hw.Trigger{}
+				// Don't want to compare against too old timestamps
 				if newStamp.Sub(oldStamp) < (HOLD_TRIGGER_DELAY + (1 * time.Second)) {
 					producers[HOLD_LED_UID].Fire()
 				}
