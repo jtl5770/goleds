@@ -24,7 +24,7 @@ const LED_ON_HOLD = 200
 const HOLD_LED_UID = "hold_led"
 const FULL_HIGH_HOLD = 5 * time.Minute
 const HOLD_TRIGGER_DELAY = 5 * time.Second
-const HOLD_TRIGGER_VALUE = 180
+const HOLD_TRIGGER_VALUE = 160
 
 // Karlsruhe
 const LAT = 49.014
