@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"time"
 
-	c "lautenbacher.net/goleds/controller"
 	hw "lautenbacher.net/goleds/hardware"
+	c "lautenbacher.net/goleds/producer"
 )
 
 const HOLD_T = 10 * time.Second

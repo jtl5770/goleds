@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/stianeikeland/go-rpio/v4"
-	c "lautenbacher.net/goleds/controller"
+	c "lautenbacher.net/goleds/producer"
 )
 
 // constants and other values describing the hardware.

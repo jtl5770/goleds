@@ -1,4 +1,4 @@
-package ledcontroller
+package producer
 
 import (
 	"sync"
