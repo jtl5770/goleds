@@ -20,10 +20,10 @@ const RUN_DOWN_T = 30 * time.Millisecond
 // used for all three compnents red, green, blue)
 const LED_ON_SLP = 80
 
-const LED_ON_HOLD = 200
+const LED_ON_HOLD = 160
 const HOLD_LED_UID = "hold_led"
 const FULL_HIGH_HOLD = 5 * time.Minute
-const HOLD_TRIGGER_DELAY = 5 * time.Second
+const HOLD_TRIGGER_DELAY = 3 * time.Second
 const HOLD_TRIGGER_VALUE = 160
 
 // Karlsruhe
@@ -104,16 +104,14 @@ func fireController(sensor chan (hw.Trigger), producers map[string]c.LedProducer
 				if newStamp.Sub(oldStamp) < (HOLD_TRIGGER_DELAY + (1 * time.Second)) {
 					producers[HOLD_LED_UID].Fire()
 				}
-				break
 			}
 		} else {
 			firstSameTrigger = hw.Trigger{}
-		}
-
-		if producer, ok := producers[trigger.ID]; ok {
-			producer.Fire()
-		} else {
-			log.Printf("Unknown UID %s", trigger.ID)
+			if producer, ok := producers[trigger.ID]; ok {
+				producer.Fire()
+			} else {
+				log.Printf("Unknown UID %s", trigger.ID)
+			}
 		}
 	}
 }
