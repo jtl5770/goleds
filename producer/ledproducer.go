@@ -57,6 +57,14 @@ type AbstractProducer struct {
 	runfunc func()
 }
 
+// Sets a single LED at index index to value
+// Guarded by s.ledsMutex
+func (s *AbstractProducer) setLed(index int, value Led) {
+	s.ledsMutex.Lock()
+	defer s.ledsMutex.Unlock()
+	s.leds[index] = value
+}
+
 // Returns a slice with the current values of all the LEDs.
 // Guarded by s.ledsMutex
 func (s *AbstractProducer) GetLeds() []Led {

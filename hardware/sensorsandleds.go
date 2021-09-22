@@ -75,6 +75,12 @@ type Sensor struct {
 	values       []int
 }
 
+type Trigger struct {
+	ID        string
+	Value     int
+	Timestamp time.Time
+}
+
 func NewSensor(ledIndex int, adc int, adcIndex byte, triggerLevel int) Sensor {
 	return Sensor{
 		LedIndex:     ledIndex,
@@ -113,7 +119,7 @@ func DisplayDriver(display chan ([]c.Led)) {
 	}
 }
 
-func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
+func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor) {
 	if !REAL {
 		simulateSensors(sensorReader)
 		return
@@ -139,7 +145,7 @@ func SensorDriver(sensorReader chan string, sensors map[string]Sensor) {
 			// 	sensormax[name] = value
 			// }
 			if value > sensors[name].triggerLevel {
-				sensorReader <- name
+				sensorReader <- Trigger{name, value, time.Now()}
 			}
 		}
 		// for _, idx := range ordered {
@@ -226,12 +232,12 @@ func intensity(s c.Led) byte {
 	return byte(math.Round(float64(s.Red+s.Green+s.Blue) / 3.0))
 }
 
-func simulateSensors(sensorReader chan string) {
-	sensorReader <- "_s0"
+func simulateSensors(sensorReader chan Trigger) {
+	sensorReader <- Trigger{"_s0", 80, time.Now()}
 	time.Sleep(15 * time.Second)
-	sensorReader <- "_s3"
+	sensorReader <- Trigger{"_s3", 80, time.Now()}
 	time.Sleep(20 * time.Second)
-	sensorReader <- "_s1"
+	sensorReader <- Trigger{"_s1", 80, time.Now()}
 }
 
 // Local Variables:

@@ -6,17 +6,17 @@ import (
 	"github.com/nathan-osman/go-sunrise"
 )
 
-type NightlightLedProducter struct {
+type NightlightProducter struct {
 	AbstractProducer
 	latitude  float64
 	longitude float64
 	ledNight  Led
 }
 
-func NewNightlightLedProducter(uid string, size int, ledsChanged chan (LedProducer),
-	ledNight Led, latitude float64, longitude float64) *NightlightLedProducter {
+func NewNightlightProducter(uid string, size int, ledsChanged chan (LedProducer),
+	ledNight Led, latitude float64, longitude float64) *NightlightProducter {
 	leds := make([]Led, size)
-	inst := &NightlightLedProducter{
+	inst := &NightlightProducter{
 		AbstractProducer: AbstractProducer{
 			leds:        leds,
 			uid:         uid,
@@ -29,7 +29,7 @@ func NewNightlightLedProducter(uid string, size int, ledsChanged chan (LedProduc
 	return inst
 }
 
-func (s *NightlightLedProducter) setLed(on bool) {
+func (s *NightlightProducter) setLed(on bool) {
 	s.ledsMutex.Lock()
 	defer s.ledsMutex.Unlock()
 	if on {
@@ -43,7 +43,7 @@ func (s *NightlightLedProducter) setLed(on bool) {
 	}
 }
 
-func (s *NightlightLedProducter) runner() {
+func (s *NightlightProducter) runner() {
 	for {
 		now := time.Now()
 		next := now.Add(24 * time.Hour) // tomorrow

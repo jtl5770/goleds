@@ -32,14 +32,6 @@ func NewSensorLedProducer(uid string, size int, index int, ledsChanged chan (Led
 	return inst
 }
 
-// Sets a single LED at index index to value
-// Guarded by s.ledsMutex
-func (s *SensorLedProducer) setLed(index int, value Led) {
-	s.ledsMutex.Lock()
-	defer s.ledsMutex.Unlock()
-	s.leds[index] = value
-}
-
 // The main worker, doing a run-up, hold, and run-down cycle (if
 // undisturbed by intermediate Fire() events). It checks for these
 // intermediate Fire() events during hold time (to prolong the hold

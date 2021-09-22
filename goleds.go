@@ -20,6 +20,12 @@ const RUN_DOWN_T = 30 * time.Millisecond
 // used for all three compnents red, green, blue)
 const LED_ON_SLP = 80
 
+const LED_ON_HOLD = 150
+const HOLD_LED_UID = "hold_led"
+const FULL_HIGH_HOLD = 5 * time.Minute
+const HOLD_TRIGGER_DELAY = 5 * time.Second
+const HOLD_TRIGGER_VALUE = 400
+
 // Karlsruhe
 const LAT = 49.014
 const LONG = 8.4043
@@ -30,7 +36,7 @@ func main() {
 	ledproducers := make(map[string]c.LedProducer)
 	ledReader := make(chan (c.LedProducer))
 	ledWriter := make(chan []c.Led, hw.LEDS_TOTAL)
-	sensorReader := make(chan string)
+	sensorReader := make(chan hw.Trigger)
 	sigchan := make(chan os.Signal)
 	signal.Notify(sigchan, os.Interrupt)
 
@@ -39,9 +45,14 @@ func main() {
 			ledReader, HOLD_T, RUN_UP_T, RUN_DOWN_T, c.Led{Red: LED_ON_SLP, Green: LED_ON_SLP, Blue: LED_ON_SLP})
 	}
 	// The Nightlight producer makes a permanent red glow (by default) during night time
-	prod := c.NewNightlightLedProducter("night_led", hw.LEDS_TOTAL, ledReader, NIGHT_LED, LAT, LONG)
-	ledproducers["night_led"] = prod
-	prod.Fire()
+	prodnight := c.NewNightlightProducter("night_led", hw.LEDS_TOTAL, ledReader, NIGHT_LED, LAT, LONG)
+	ledproducers["night_led"] = prodnight
+	prodnight.Fire()
+
+	prodhold := c.NewHoldProducer(HOLD_LED_UID, hw.LEDS_TOTAL, ledReader,
+		c.Led{Red: LED_ON_HOLD, Green: LED_ON_HOLD, Blue: LED_ON_HOLD}, FULL_HIGH_HOLD)
+	ledproducers[HOLD_LED_UID] = prodhold
+
 	// *FUTURE* init more types of ledproducers if needed/wanted
 
 	go combineAndupdateDisplay(ledReader, ledWriter)
@@ -77,13 +88,31 @@ func combineAndupdateDisplay(r chan (c.LedProducer), w chan ([]c.Led)) {
 	}
 }
 
-func fireController(sensor chan (string), producers map[string]c.LedProducer) {
+func fireController(sensor chan (hw.Trigger), producers map[string]c.LedProducer) {
+	var firstSameTrigger hw.Trigger
 	for {
-		sensorUid := <-sensor
-		if producer, ok := producers[sensorUid]; ok {
+		trigger := <-sensor
+		oldStamp := firstSameTrigger.Timestamp
+		newStamp := trigger.Timestamp
+
+		if trigger.Value >= HOLD_TRIGGER_VALUE {
+			if trigger.ID != firstSameTrigger.ID {
+				firstSameTrigger = trigger
+			} else if newStamp.Sub(oldStamp) > HOLD_TRIGGER_DELAY {
+				firstSameTrigger = hw.Trigger{}
+				if newStamp.Sub(oldStamp) < (HOLD_TRIGGER_DELAY + (1 * time.Second)) {
+					producers[HOLD_LED_UID].Fire()
+				}
+				break
+			}
+		} else {
+			firstSameTrigger = hw.Trigger{}
+		}
+
+		if producer, ok := producers[trigger.ID]; ok {
 			producer.Fire()
 		} else {
-			log.Printf("Unknown UID %s", sensorUid)
+			log.Printf("Unknown UID %s", trigger.ID)
 		}
 	}
 }
