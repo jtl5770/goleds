@@ -49,6 +49,9 @@ func main() {
 	ledproducers["night_led"] = prodnight
 	prodnight.Fire()
 
+	// The HoldLight producer will be fired whenever a sensor produces for HOLD_TRIGGER_DELAY a signal > HOLD_TRIGGER_VALUE
+	// It will hold generate a brighter, full lit LED stripe and keep it for FULL_HIGH_HOLD time, if not being triggered again
+	// in this time - then it will shut of earlier
 	prodhold := c.NewHoldProducer(HOLD_LED_UID, hw.LEDS_TOTAL, ledReader,
 		c.Led{Red: LED_ON_HOLD, Green: LED_ON_HOLD, Blue: LED_ON_HOLD}, FULL_HIGH_HOLD)
 	ledproducers[HOLD_LED_UID] = prodhold
