@@ -1,6 +1,9 @@
 package producer
 
-import "time"
+import (
+	"log"
+	"time"
+)
 
 type HoldProducer struct {
 	AbstractProducer
@@ -21,6 +24,11 @@ func NewHoldProducer(uid string, size int, ledsChanged chan (LedProducer),
 		holdT:     holdT}
 	inst.runfunc = inst.runner
 	return inst
+}
+
+func (s *HoldProducer) Fire() {
+	log.Print(".... in Fire ....")
+	s.AbstractProducer.Fire()
 }
 
 func (s *HoldProducer) runner() {
