@@ -20,11 +20,11 @@ const RUN_DOWN_T = 30 * time.Millisecond
 // used for all three compnents red, green, blue)
 const LED_ON_SLP = 80
 
-const LED_ON_HOLD = 150
+const LED_ON_HOLD = 200
 const HOLD_LED_UID = "hold_led"
 const FULL_HIGH_HOLD = 5 * time.Minute
 const HOLD_TRIGGER_DELAY = 5 * time.Second
-const HOLD_TRIGGER_VALUE = 400
+const HOLD_TRIGGER_VALUE = 180
 
 // Karlsruhe
 const LAT = 49.014
@@ -96,7 +96,6 @@ func fireController(sensor chan (hw.Trigger), producers map[string]c.LedProducer
 		newStamp := trigger.Timestamp
 
 		if trigger.Value >= HOLD_TRIGGER_VALUE {
-			log.Print("Hold trigger: ", trigger.ID)
 			if trigger.ID != firstSameTrigger.ID {
 				firstSameTrigger = trigger
 			} else if newStamp.Sub(oldStamp) > HOLD_TRIGGER_DELAY {
