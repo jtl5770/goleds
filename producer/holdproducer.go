@@ -33,4 +33,7 @@ func (s *HoldProducer) runner() {
 		s.setLed(idx, NULL_LED)
 	}
 	s.ledsChanged <- s
+	s.updateMutex.Lock()
+	defer s.updateMutex.Unlock()
+	s.isRunning = false
 }
