@@ -86,6 +86,9 @@ func combineAndupdateDisplay(r chan (c.LedProducer), w chan ([]c.Led)) {
 			}
 			oldSumLeds = sumLeds
 		case <-ticker.C:
+			// We do this purely because there occasionally come
+			// artifacts from - maybe/somehow - electrical distortions
+			// So we make sure to regularily update the Led stripe
 			w <- combineLeds(allLedRanges)
 		}
 	}
