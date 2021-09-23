@@ -51,8 +51,8 @@ func main() {
 	prodnight.Fire()
 
 	// The HoldLight producer will be fired whenever a sensor produces for HOLD_TRIGGER_DELAY a signal > HOLD_TRIGGER_VALUE
-	// It will hold generate a brighter, full lit LED stripe and keep it for FULL_HIGH_HOLD time, if not being triggered again
-	// in this time - then it will shut of earlier
+	// It will generate a brighter, full lit LED stripe and keep it for FULL_HIGH_HOLD time, if not being triggered again
+	// in this time - then it will shut off earlier
 	prodhold := c.NewHoldProducer(HOLD_LED_UID, hw.LEDS_TOTAL, ledReader,
 		c.Led{Red: LED_ON_HOLD, Green: LED_ON_HOLD, Blue: LED_ON_HOLD}, FULL_HIGH_HOLD)
 	ledproducers[HOLD_LED_UID] = prodhold
@@ -71,7 +71,7 @@ func main() {
 
 func combineAndupdateDisplay(r chan (c.LedProducer), w chan ([]c.Led)) {
 	var oldSumLeds []c.Led
-	var allLedRanges = make(map[string][]c.Led)
+	allLedRanges := make(map[string][]c.Led)
 	ticker := time.NewTicker(FORCED_UPDATE_INTERVAL)
 	for uid := range hw.Sensors {
 		allLedRanges[uid] = make([]c.Led, hw.LEDS_TOTAL)
