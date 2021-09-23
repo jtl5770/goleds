@@ -25,6 +25,7 @@ const HOLD_LED_UID = "hold_led"
 const FULL_HIGH_HOLD = 5 * time.Minute
 const HOLD_TRIGGER_DELAY = 3 * time.Second
 const HOLD_TRIGGER_VALUE = 160
+const FORCED_UPDATE_INTERVAL = 5 * time.Second
 
 // Karlsruhe
 const LAT = 49.014
@@ -71,24 +72,33 @@ func main() {
 func combineAndupdateDisplay(r chan (c.LedProducer), w chan ([]c.Led)) {
 	var oldSumLeds []c.Led
 	var allLedRanges = make(map[string][]c.Led)
+	ticker := time.NewTicker(FORCED_UPDATE_INTERVAL)
 	for uid := range hw.Sensors {
 		allLedRanges[uid] = make([]c.Led, hw.LEDS_TOTAL)
 	}
 	for {
-		s := <-r
-		allLedRanges[s.GetUID()] = s.GetLeds()
-
-		sumLeds := make([]c.Led, hw.LEDS_TOTAL)
-		for _, currleds := range allLedRanges {
-			for j, v := range currleds {
-				sumLeds[j] = v.Max(sumLeds[j])
+		select {
+		case s := <-r:
+			allLedRanges[s.GetUID()] = s.GetLeds()
+			sumLeds := combineLeds(allLedRanges)
+			if !reflect.DeepEqual(sumLeds, oldSumLeds) {
+				w <- sumLeds
 			}
+			oldSumLeds = sumLeds
+		case <-ticker.C:
+			w <- combineLeds(allLedRanges)
 		}
-		if !reflect.DeepEqual(sumLeds, oldSumLeds) {
-			w <- sumLeds
-		}
-		oldSumLeds = sumLeds
 	}
+}
+
+func combineLeds(allLedRanges map[string][]c.Led) []c.Led {
+	sumLeds := make([]c.Led, hw.LEDS_TOTAL)
+	for _, currleds := range allLedRanges {
+		for j, v := range currleds {
+			sumLeds[j] = v.Max(sumLeds[j])
+		}
+	}
+	return sumLeds
 }
 
 func fireController(sensor chan (hw.Trigger), producers map[string]c.LedProducer) {
