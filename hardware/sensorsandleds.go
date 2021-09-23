@@ -28,8 +28,7 @@ const (
 	LEDS_SPLIT           = 70
 	SMOOTHING_SIZE       = 3
 	SENSOR_LOOP_DELAY_MS = 5
-	//SPI_SPEED            = 976562
-	SPI_SPEED = 976562 / 2
+	SPI_SPEED            = 976562
 )
 
 // *** end of tuneable part ***
