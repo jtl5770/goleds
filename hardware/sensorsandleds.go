@@ -125,12 +125,6 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor) {
 		return
 	}
 	sensorvalues := make(map[string]int)
-	// sensormax := make(map[string]int)
-	// var ordered []string
-	// for idx, _ := range sensors {
-	// 	ordered = append(ordered, idx)
-	// }
-	// ordered = sort.StringSlice(ordered)
 	for {
 		spiMutex.Lock()
 		for name, sensor := range sensors {
@@ -138,21 +132,11 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor) {
 			sensorvalues[name] = sensor.smoothValue(readAdc(sensor.adcIndex))
 		}
 		spiMutex.Unlock()
-		// var buf strings.Builder
 		for name, value := range sensorvalues {
-			// max := sensormax[name]
-			// if value > max {
-			// 	sensormax[name] = value
-			// }
 			if value > sensors[name].triggerLevel {
 				sensorReader <- Trigger{name, value, time.Now()}
 			}
 		}
-		// for _, idx := range ordered {
-		// 	fmt.Fprintf(&buf, "%4d ", sensormax[idx])
-		// }
-		// fmt.Fprintf(&buf, "\r")
-		// fmt.Print(buf.String())
 		time.Sleep(SENSOR_LOOP_DELAY_MS * time.Millisecond)
 	}
 }
