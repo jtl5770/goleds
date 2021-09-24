@@ -13,44 +13,50 @@ type HoldProducer struct {
 
 func NewHoldProducer(uid string, size int, ledsChanged chan (LedProducer)) *HoldProducer {
 	leds := make([]Led, size)
-	inst := &HoldProducer{
+	inst := HoldProducer{
 		AbstractProducer: AbstractProducer{
 			leds:        leds,
 			uid:         uid,
 			isRunning:   false,
-			ledsChanged: ledsChanged},
+			ledsChanged: ledsChanged,
+			stop:        make(chan bool, 1)},
 		ledOnHold: Led{Red: CONFIG.HoldLED.LedRed, Green: CONFIG.HoldLED.LedGreen, Blue: CONFIG.HoldLED.LedBlue},
 		holdT:     CONFIG.HoldLED.HoldMinutes * time.Second}
 	inst.runfunc = inst.runner
-	return inst
-}
-
-func (s *HoldProducer) Fire() {
-	log.Print(".... in Fire ....")
-	s.AbstractProducer.Fire()
+	return &inst
 }
 
 func (s *HoldProducer) runner() {
+	defer func() {
+		s.updateMutex.Lock()
+		s.isRunning = false
+		s.updateMutex.Unlock()
+	}()
+
 	initial := s.getLastFire()
 	for idx := range s.leds {
 		s.setLed(idx, s.ledOnHold)
 	}
 	s.ledsChanged <- s
 	ticker := time.NewTicker(time.Second)
+LOOP:
 	for {
-		<-ticker.C
-		if (time.Now().Sub(initial) >= s.holdT) || s.getLastFire().After(initial) {
+		select {
+		case <-s.stop:
 			ticker.Stop()
-			break
+			log.Println("Stopped HoldProducer...")
+			return
+		case <-ticker.C:
+			if (time.Now().Sub(initial) >= s.holdT) || s.getLastFire().After(initial) {
+				ticker.Stop()
+				break LOOP
+			}
 		}
 	}
 	for idx := range s.leds {
 		s.setLed(idx, NULL_LED)
 	}
 	s.ledsChanged <- s
-	s.updateMutex.Lock()
-	defer s.updateMutex.Unlock()
-	s.isRunning = false
 }
 
 // Local Variables:

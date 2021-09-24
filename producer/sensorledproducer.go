@@ -1,6 +1,7 @@
 package producer
 
 import (
+	"log"
 	"time"
 )
 
@@ -15,20 +16,20 @@ type SensorLedProducer struct {
 
 func NewSensorLedProducer(uid string, size int, index int, ledsChanged chan (LedProducer)) *SensorLedProducer {
 	leds := make([]Led, size)
-	inst := &SensorLedProducer{
+	inst := SensorLedProducer{
 		AbstractProducer: AbstractProducer{
 			leds:        leds,
 			uid:         uid,
 			isRunning:   false,
 			ledsChanged: ledsChanged,
-		},
+			stop:        make(chan bool, 1)},
 		ledIndex: index,
 		holdT:    CONFIG.SensorLED.HoldSeconds * time.Second,
 		runUpT:   CONFIG.SensorLED.RunUpMillis * time.Millisecond,
 		runDownT: CONFIG.SensorLED.RunDownMillis * time.Millisecond,
 		ledOn:    Led{Red: CONFIG.SensorLED.LedRed, Green: CONFIG.SensorLED.LedGreen, Blue: CONFIG.SensorLED.LedBlue}}
 	inst.runfunc = inst.runner
-	return inst
+	return &inst
 }
 
 // The main worker, doing a run-up, hold, and run-down cycle (if
@@ -43,7 +44,6 @@ func (s *SensorLedProducer) runner() {
 	left := s.ledIndex
 	right := s.ledIndex
 
-loop:
 	for {
 		ticker := time.NewTicker(s.runUpT)
 		for {
@@ -60,7 +60,14 @@ loop:
 			}
 			right++
 			left--
-			<-ticker.C
+			select {
+			case <-ticker.C:
+			// continue
+			case <-s.stop:
+				ticker.Stop()
+				log.Println("Stopped SensorLedProducer...")
+				return
+			}
 		}
 		// Now entering HOLD state - always, uconditionally after
 		// RUN_UP is complete. If there have been any Fire() events in
@@ -73,7 +80,13 @@ loop:
 			last_fire := s.getLastFire()
 			hold_until := last_fire.Add(s.holdT)
 			if hold_until.After(now) {
-				time.Sleep(time.Duration(hold_until.Sub(now)))
+				select {
+				case <-time.After(hold_until.Sub(now)):
+					// continue
+				case <-s.stop:
+					log.Println("Stopped SensorLedProducer...")
+					return
+				}
 			} else {
 				// make sure to store the last looked at Fire() event
 				// time so we don't accidentally loose events. If
@@ -122,12 +135,19 @@ loop:
 					// and fire up the go routine again from the start
 					s.isRunning = false
 					s.updateMutex.Unlock()
-					break loop
+					return
 				}
 			}
 			left++
 			right--
-			<-ticker.C
+			select {
+			case <-ticker.C:
+				// continue
+			case <-s.stop:
+				ticker.Stop()
+				log.Println("Stopped SensorLedProducer...")
+				return
+			}
 		}
 	}
 }

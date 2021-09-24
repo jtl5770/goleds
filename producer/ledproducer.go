@@ -1,6 +1,7 @@
 package producer
 
 import (
+	"log"
 	"sync"
 	t "time"
 )
@@ -38,6 +39,7 @@ type LedProducer interface {
 	GetLeds() []Led
 	GetUID() string
 	Fire()
+	Stop()
 }
 
 // Implementation of common and shared functionality between the
@@ -54,7 +56,17 @@ type AbstractProducer struct {
 	ledsChanged chan (LedProducer)
 	// the method Fire() should call. MUST be set by the concrete
 	// implementation upon constructing a new instance
+	stop    chan bool
 	runfunc func()
+}
+
+func (s *AbstractProducer) Stop() {
+	s.updateMutex.Lock()
+	s.runfunc = func() {
+		log.Println("Called Fire() after Stop(). Ignoring...")
+	}
+	s.updateMutex.Unlock()
+	s.stop <- true
 }
 
 // Sets a single LED at index index to value

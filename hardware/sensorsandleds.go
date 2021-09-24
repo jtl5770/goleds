@@ -126,7 +126,7 @@ func DisplayDriver(display chan ([]c.Led), sig chan bool) {
 
 func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan bool) {
 	if !c.CONFIG.RealHW {
-		simulateSensors(sensorReader)
+		simulateSensors(sensorReader, sig)
 		return
 	}
 	sensorvalues := make(map[string]int)
@@ -230,12 +230,35 @@ func intensity(s c.Led) byte {
 	return byte(math.Round(float64(s.Red+s.Green+s.Blue) / 3.0))
 }
 
-func simulateSensors(sensorReader chan Trigger) {
-	sensorReader <- Trigger{"_s0", 80, time.Now()}
-	time.Sleep(15 * time.Second)
-	sensorReader <- Trigger{"_s3", 80, time.Now()}
-	time.Sleep(20 * time.Second)
-	sensorReader <- Trigger{"_s1", 80, time.Now()}
+func simulateSensors(sensorReader chan Trigger, sig chan bool) {
+	for {
+		sensorReader <- Trigger{"_s0", 80, time.Now()}
+		if !waitorbreak(15*time.Second, sig) {
+			return
+		}
+		sensorReader <- Trigger{"_s3", 80, time.Now()}
+		if !waitorbreak(20*time.Second, sig) {
+			return
+		}
+		sensorReader <- Trigger{"_s1", 80, time.Now()}
+		if !waitorbreak(5*time.Second, sig) {
+			return
+		}
+		sensorReader <- Trigger{"_s2", 80, time.Now()}
+		if !waitorbreak(10*time.Second, sig) {
+			return
+		}
+	}
+}
+
+func waitorbreak(wait time.Duration, sig chan bool) bool {
+	select {
+	case <-time.After(wait):
+		return true
+	case <-sig:
+		log.Println("Ending SensorDriver go-routine")
+		return false
+	}
 }
 
 // Local Variables:

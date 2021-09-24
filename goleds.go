@@ -1,11 +1,13 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"reflect"
+	"syscall"
 	"time"
 
 	hw "lautenbacher.net/goleds/hardware"
@@ -14,19 +16,21 @@ import (
 
 const HOLD_LED_UID = "hold_led"
 const HOLD_TRIGGER_VALUE = 160
-
 const FORCED_UPDATE_INTERVAL = 5 * time.Second
 
-func main() {
-	c.ReadConfig()
+var ledproducers map[string]c.LedProducer
+var sigchans [](chan bool)
+
+func Initialise(cfile string, realhw bool) {
+	c.ReadConfig(cfile, realhw)
 	log.Println(c.CONFIG)
+
 	hw.InitGpioAndSensors()
-	ledproducers := make(map[string]c.LedProducer)
+	ledproducers = make(map[string]c.LedProducer)
+	sigchans = make([](chan bool), 0)
 	ledReader := make(chan (c.LedProducer))
 	ledWriter := make(chan []c.Led, hw.LEDS_TOTAL)
 	sensorReader := make(chan hw.Trigger)
-	sigchan := make(chan os.Signal)
-	signal.Notify(sigchan, os.Interrupt)
 
 	if c.CONFIG.SensorLED.Enabled {
 		for uid := range hw.Sensors {
@@ -35,7 +39,7 @@ func main() {
 	}
 	if c.CONFIG.NightLED.Enabled {
 		// The Nightlight producer makes a permanent red glow (by default) during night time
-		prodnight := c.NewNightlightProducter("night_led", hw.LEDS_TOTAL, ledReader)
+		prodnight := c.NewNightlightProducer("night_led", hw.LEDS_TOTAL, ledReader)
 		ledproducers["night_led"] = prodnight
 		prodnight.Fire()
 	}
@@ -54,21 +58,47 @@ func main() {
 	fCsignal := make(chan bool)
 	DDsignal := make(chan bool)
 	SDsignal := make(chan bool)
+	sigchans = append(sigchans, cADsignal, fCsignal, DDsignal, SDsignal)
 	go combineAndupdateDisplay(ledReader, ledWriter, cADsignal)
 	go fireController(sensorReader, ledproducers, fCsignal)
 	go hw.DisplayDriver(ledWriter, DDsignal)
 	go hw.SensorDriver(sensorReader, hw.Sensors, SDsignal)
+}
 
-	<-sigchan
-	if c.CONFIG.RealHW {
-		SDsignal <- true
+func ResetAll() {
+	for _, prod := range ledproducers {
+		prod.Stop()
 	}
-	DDsignal <- true
-	fCsignal <- true
-	cADsignal <- true
 	time.Sleep(2 * time.Second)
-	fmt.Println("\nExiting...")
-	os.Exit(0)
+	for _, sig := range sigchans {
+		sig <- true
+	}
+	time.Sleep(2 * time.Second)
+}
+
+func main() {
+	cfile := flag.String("config", c.CONFILE, "Config file to use")
+	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
+	flag.Parse()
+	osSig := make(chan os.Signal)
+	reload := make(chan os.Signal)
+	signal.Notify(osSig, os.Interrupt)
+	signal.Notify(reload, syscall.SIGHUP)
+
+	Initialise(*cfile, *realp)
+
+	for {
+		select {
+		case <-osSig:
+			fmt.Println("\nExiting...")
+			os.Exit(0)
+		case <-reload:
+			fmt.Println("\nResetting...")
+			ResetAll()
+			fmt.Println("\nInitialising...")
+			Initialise(*cfile, *realp)
+		}
+	}
 }
 
 func combineAndupdateDisplay(r chan (c.LedProducer), w chan ([]c.Led), sig chan bool) {
@@ -140,9 +170,6 @@ func fireController(sensor chan (hw.Trigger), producers map[string]c.LedProducer
 			}
 		case <-sig:
 			log.Println("Ending fireController go-routine")
-			if c.CONFIG.HoldLED.Enabled {
-				// TODO: producers[HOLD_LED_UID].Close()
-			}
 			return
 		}
 	}

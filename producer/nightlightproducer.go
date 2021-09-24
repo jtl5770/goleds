@@ -1,34 +1,36 @@
 package producer
 
 import (
+	"log"
 	"time"
 
 	"github.com/nathan-osman/go-sunrise"
 )
 
-type NightlightProducter struct {
+type NightlightProducer struct {
 	AbstractProducer
 	latitude  float64
 	longitude float64
 	ledNight  Led
 }
 
-func NewNightlightProducter(uid string, size int, ledsChanged chan (LedProducer)) *NightlightProducter {
+func NewNightlightProducer(uid string, size int, ledsChanged chan (LedProducer)) *NightlightProducer {
 	leds := make([]Led, size)
-	inst := &NightlightProducter{
+	inst := NightlightProducer{
 		AbstractProducer: AbstractProducer{
 			leds:        leds,
 			uid:         uid,
 			isRunning:   false,
-			ledsChanged: ledsChanged},
+			ledsChanged: ledsChanged,
+			stop:        make(chan bool, 1)},
 		latitude:  CONFIG.NightLED.Latitude,
 		longitude: CONFIG.NightLED.Longitude,
 		ledNight:  Led{Red: CONFIG.NightLED.LedRed, Green: CONFIG.NightLED.LedGreen, Blue: CONFIG.NightLED.LedBlue}}
 	inst.runfunc = inst.runner
-	return inst
+	return &inst
 }
 
-func (s *NightlightProducter) setLed(on bool) {
+func (s *NightlightProducer) setLed(on bool) {
 	s.ledsMutex.Lock()
 	defer s.ledsMutex.Unlock()
 	if on {
@@ -42,27 +44,41 @@ func (s *NightlightProducter) setLed(on bool) {
 	}
 }
 
-func (s *NightlightProducter) runner() {
+func (s *NightlightProducer) runner() {
+	defer func() {
+		s.updateMutex.Lock()
+		s.isRunning = false
+		s.updateMutex.Unlock()
+	}()
+
 	for {
 		now := time.Now()
 		next := now.Add(24 * time.Hour) // tomorrow
 		rise, set := sunrise.SunriseSunset(s.latitude, s.longitude, now.Year(), now.Month(), now.Day())
 		rise_next, _ := sunrise.SunriseSunset(s.latitude, s.longitude, next.Year(), next.Month(), next.Day())
+		var wakeupAfter time.Duration
 		if now.After(rise) && now.Before(set) {
 			// During the day - between sunrise and sunset
 			s.setLed(false)
 			s.ledsChanged <- s
-			time.Sleep(set.Sub(now))
+			wakeupAfter = set.Sub(now)
 		} else if now.Before(rise) {
 			// in the night after midnight but before sunrise
 			s.setLed(true)
 			s.ledsChanged <- s
-			time.Sleep(rise.Sub(now))
+			wakeupAfter = rise.Sub(now)
 		} else {
 			// in the night before midnight - need to sleep unit rise_next
 			s.setLed(true)
 			s.ledsChanged <- s
-			time.Sleep(rise_next.Sub(now))
+			wakeupAfter = rise_next.Sub(now)
+		}
+		select {
+		case <-time.After(wakeupAfter):
+			// nothing, just continue
+		case <-s.stop:
+			log.Println("Stopped NightlightProducer...")
+			return
 		}
 	}
 }

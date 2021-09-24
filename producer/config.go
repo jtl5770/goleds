@@ -1,7 +1,6 @@
 package producer
 
 import (
-	"flag"
 	"log"
 	"os"
 	"time"
@@ -14,8 +13,9 @@ const CONFILE = "config.yml"
 var CONFIG Config
 
 type Config struct {
-	RealHW  bool
-	Sensors struct {
+	RealHW     bool
+	Configfile string
+	Sensors    struct {
 		TriggerLeft     int `yaml:"TriggerLeft"`
 		TriggerMidLeft  int `yaml:"TriggerMidLeft"`
 		TriggerMidRight int `yaml:"TriggerMidRight"`
@@ -48,24 +48,22 @@ type Config struct {
 	} `yaml:"HoldLED"`
 }
 
-func ReadConfig() {
-	cfile := flag.String("config", CONFILE, "Config file to use")
-	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
-	flag.Parse()
+func ReadConfig(cfile string, realhw bool) {
 
-	f, err := os.Open(*cfile)
+	f, err := os.Open(cfile)
 	if err != nil {
-		log.Fatalf("Can't find config file %s\n%s\n", *cfile, err)
+		log.Fatalf("Can't find config file %s\n%s\n", cfile, err)
 		os.Exit(2)
 	}
 	defer f.Close()
 	decoder := yaml.NewDecoder(f)
 	err = decoder.Decode(&CONFIG)
 	if err != nil {
-		log.Fatalf("Can't decode config file %s\n%s\n", *cfile, err)
+		log.Fatalf("Can't decode config file %s\n%s\n", cfile, err)
 		os.Exit(2)
 	}
-	CONFIG.RealHW = *realp
+	CONFIG.RealHW = realhw
+	CONFIG.Configfile = cfile
 }
 
 // Local Variables:
