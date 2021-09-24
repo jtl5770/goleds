@@ -103,7 +103,7 @@ func fireController(sensor chan (hw.Trigger), producers map[string]c.LedProducer
 		oldStamp := firstSameTrigger.Timestamp
 		newStamp := trigger.Timestamp
 
-		if trigger.Value >= HOLD_TRIGGER_VALUE {
+		if c.CONFIG.HoldLED.Enabled && (trigger.Value >= HOLD_TRIGGER_VALUE) {
 			if trigger.ID != firstSameTrigger.ID {
 				firstSameTrigger = trigger
 			} else if newStamp.Sub(oldStamp) > triggerDelay {
