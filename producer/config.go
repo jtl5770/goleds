@@ -49,20 +49,22 @@ type Config struct {
 }
 
 func ReadConfig() {
-	f, err := os.Open(CONFILE)
+	cfile := flag.String("config", CONFILE, "Config file to use")
+	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
+	flag.Parse()
+
+	f, err := os.Open(*cfile)
 	if err != nil {
-		log.Fatalf("Can't find config file %s\n%s\n", CONFILE, err)
+		log.Fatalf("Can't find config file %s\n%s\n", *cfile, err)
 		os.Exit(2)
 	}
 	defer f.Close()
 	decoder := yaml.NewDecoder(f)
 	err = decoder.Decode(&CONFIG)
 	if err != nil {
-		log.Fatalf("Can't decode config file %s\n%s\n", CONFILE, err)
+		log.Fatalf("Can't decode config file %s\n%s\n", *cfile, err)
 		os.Exit(2)
 	}
-	realp := flag.Bool("real", false, "Set to true if program runs on the real hardware")
-	flag.Parse()
 	CONFIG.RealHW = *realp
 }
 

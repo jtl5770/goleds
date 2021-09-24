@@ -50,17 +50,28 @@ func main() {
 
 	// *FUTURE* init more types of ledproducers if needed/wanted
 
-	go combineAndupdateDisplay(ledReader, ledWriter)
-	go fireController(sensorReader, ledproducers)
-	go hw.DisplayDriver(ledWriter)
-	go hw.SensorDriver(sensorReader, hw.Sensors)
+	cADsignal := make(chan bool)
+	fCsignal := make(chan bool)
+	DDsignal := make(chan bool)
+	SDsignal := make(chan bool)
+	go combineAndupdateDisplay(ledReader, ledWriter, cADsignal)
+	go fireController(sensorReader, ledproducers, fCsignal)
+	go hw.DisplayDriver(ledWriter, DDsignal)
+	go hw.SensorDriver(sensorReader, hw.Sensors, SDsignal)
 
 	<-sigchan
+	if c.CONFIG.RealHW {
+		SDsignal <- true
+	}
+	DDsignal <- true
+	fCsignal <- true
+	cADsignal <- true
+	time.Sleep(2 * time.Second)
 	fmt.Println("\nExiting...")
 	os.Exit(0)
 }
 
-func combineAndupdateDisplay(r chan (c.LedProducer), w chan ([]c.Led)) {
+func combineAndupdateDisplay(r chan (c.LedProducer), w chan ([]c.Led), sig chan bool) {
 	var oldSumLeds []c.Led
 	allLedRanges := make(map[string][]c.Led)
 	ticker := time.NewTicker(FORCED_UPDATE_INTERVAL)
@@ -81,6 +92,10 @@ func combineAndupdateDisplay(r chan (c.LedProducer), w chan ([]c.Led)) {
 			// artifacts from - maybe/somehow - electrical distortions
 			// So we make sure to regularily update the Led stripe
 			w <- combineLeds(allLedRanges)
+		case <-sig:
+			log.Println("Ending combineAndupdateDisplay go-routine")
+			ticker.Stop()
+			return
 		}
 	}
 }
@@ -95,31 +110,40 @@ func combineLeds(allLedRanges map[string][]c.Led) []c.Led {
 	return sumLeds
 }
 
-func fireController(sensor chan (hw.Trigger), producers map[string]c.LedProducer) {
+func fireController(sensor chan (hw.Trigger), producers map[string]c.LedProducer, sig chan bool) {
 	var firstSameTrigger hw.Trigger
 	var triggerDelay = c.CONFIG.HoldLED.TriggerSeconds * time.Second
-	for {
-		trigger := <-sensor
-		oldStamp := firstSameTrigger.Timestamp
-		newStamp := trigger.Timestamp
 
-		if c.CONFIG.HoldLED.Enabled && (trigger.Value >= HOLD_TRIGGER_VALUE) {
-			if trigger.ID != firstSameTrigger.ID {
-				firstSameTrigger = trigger
-			} else if newStamp.Sub(oldStamp) > triggerDelay {
+	for {
+		select {
+		case trigger := <-sensor:
+			oldStamp := firstSameTrigger.Timestamp
+			newStamp := trigger.Timestamp
+
+			if c.CONFIG.HoldLED.Enabled && (trigger.Value >= HOLD_TRIGGER_VALUE) {
+				if trigger.ID != firstSameTrigger.ID {
+					firstSameTrigger = trigger
+				} else if newStamp.Sub(oldStamp) > triggerDelay {
+					firstSameTrigger = hw.Trigger{}
+					// Don't want to compare against too old timestamps
+					if newStamp.Sub(oldStamp) < (triggerDelay + (1 * time.Second)) {
+						producers[HOLD_LED_UID].Fire()
+					}
+				}
+			} else {
 				firstSameTrigger = hw.Trigger{}
-				// Don't want to compare against too old timestamps
-				if newStamp.Sub(oldStamp) < (triggerDelay + (1 * time.Second)) {
-					producers[HOLD_LED_UID].Fire()
+				if producer, ok := producers[trigger.ID]; ok {
+					producer.Fire()
+				} else {
+					log.Printf("Unknown UID %s", trigger.ID)
 				}
 			}
-		} else {
-			firstSameTrigger = hw.Trigger{}
-			if producer, ok := producers[trigger.ID]; ok {
-				producer.Fire()
-			} else {
-				log.Printf("Unknown UID %s", trigger.ID)
+		case <-sig:
+			log.Println("Ending fireController go-routine")
+			if c.CONFIG.HoldLED.Enabled {
+				// TODO: producers[HOLD_LED_UID].Close()
 			}
+			return
 		}
 	}
 }

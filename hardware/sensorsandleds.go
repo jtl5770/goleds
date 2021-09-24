@@ -2,6 +2,7 @@ package hardware
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"strings"
 	"sync"
@@ -100,42 +101,54 @@ func (s *Sensor) smoothValue(val int) int {
 	return ret / SMOOTHING_SIZE
 }
 
-func DisplayDriver(display chan ([]c.Led)) {
+func DisplayDriver(display chan ([]c.Led), sig chan bool) {
 	for {
-		sumLeds := <-display
-		led1 := sumLeds[:LEDS_SPLIT]
-		led2 := sumLeds[LEDS_SPLIT:]
-		if !c.CONFIG.RealHW {
-			simulateLed(0, led1)
-			simulateLed(1, led2)
-		} else {
-			spiMutex.Lock()
-			setLedSegment(0, led1)
-			setLedSegment(1, led2)
-			spiMutex.Unlock()
+		select {
+		case <-sig:
+			log.Println("Ending DisplayDriver go-routine")
+			return
+		case sumLeds := <-display:
+			led1 := sumLeds[:LEDS_SPLIT]
+			led2 := sumLeds[LEDS_SPLIT:]
+			if !c.CONFIG.RealHW {
+				simulateLed(0, led1)
+				simulateLed(1, led2)
+			} else {
+				spiMutex.Lock()
+				setLedSegment(0, led1)
+				setLedSegment(1, led2)
+				spiMutex.Unlock()
+			}
 		}
 	}
 }
 
-func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor) {
+func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan bool) {
 	if !c.CONFIG.RealHW {
 		simulateSensors(sensorReader)
 		return
 	}
 	sensorvalues := make(map[string]int)
+	ticker := time.NewTicker(SENSOR_LOOP_DELAY_MS * time.Millisecond)
 	for {
-		spiMutex.Lock()
-		for name, sensor := range sensors {
-			selectAdc(sensor.adc)
-			sensorvalues[name] = sensor.smoothValue(readAdc(sensor.adcIndex))
-		}
-		spiMutex.Unlock()
-		for name, value := range sensorvalues {
-			if value > sensors[name].triggerLevel {
-				sensorReader <- Trigger{name, value, time.Now()}
+		select {
+		case <-sig:
+			log.Println("Ending SensorDriver go-routine")
+			ticker.Stop()
+			return
+		case <-ticker.C:
+			spiMutex.Lock()
+			for name, sensor := range sensors {
+				selectAdc(sensor.adc)
+				sensorvalues[name] = sensor.smoothValue(readAdc(sensor.adcIndex))
+			}
+			spiMutex.Unlock()
+			for name, value := range sensorvalues {
+				if value > sensors[name].triggerLevel {
+					sensorReader <- Trigger{name, value, time.Now()}
+				}
 			}
 		}
-		time.Sleep(SENSOR_LOOP_DELAY_MS * time.Millisecond)
 	}
 }
 
