@@ -11,8 +11,7 @@ type HoldProducer struct {
 	holdT     time.Duration
 }
 
-func NewHoldProducer(uid string, size int, ledsChanged chan (LedProducer),
-	ledOnHold Led, holdT time.Duration) *HoldProducer {
+func NewHoldProducer(uid string, size int, ledsChanged chan (LedProducer)) *HoldProducer {
 	leds := make([]Led, size)
 	inst := &HoldProducer{
 		AbstractProducer: AbstractProducer{
@@ -20,8 +19,8 @@ func NewHoldProducer(uid string, size int, ledsChanged chan (LedProducer),
 			uid:         uid,
 			isRunning:   false,
 			ledsChanged: ledsChanged},
-		ledOnHold: ledOnHold,
-		holdT:     holdT}
+		ledOnHold: Led{Red: CONFIG.HoldLED.LedRed, Green: CONFIG.HoldLED.LedGreen, Blue: CONFIG.HoldLED.LedBlue},
+		holdT:     CONFIG.HoldLED.HoldMinutes * time.Second}
 	inst.runfunc = inst.runner
 	return inst
 }

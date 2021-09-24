@@ -15,13 +15,7 @@ import (
 // constants and other values describing the hardware.
 
 var COLORCORR = []float64{1.0, 0.18, 0.02}
-
-var Sensors = map[string]Sensor{
-	"_s0": NewSensor(0, 0, 0, 60),
-	"_s1": NewSensor(69, 0, 7, 60),
-	"_s2": NewSensor(70, 1, 0, 60),
-	"_s3": NewSensor(124, 1, 5, 55),
-}
+var Sensors map[string]Sensor
 
 const (
 	LEDS_TOTAL           = 125
@@ -65,6 +59,14 @@ func init() {
 		pin24.Output()
 		pin24.High()
 	}
+}
+
+func InitSensors() {
+	Sensors = map[string]Sensor{
+		"_s0": NewSensor(0, 0, 0, c.CONFIG.Sensors.TriggerLeft),
+		"_s1": NewSensor(69, 0, 7, c.CONFIG.Sensors.TriggerMidLeft),
+		"_s2": NewSensor(70, 1, 0, c.CONFIG.Sensors.TriggerMidRight),
+		"_s3": NewSensor(124, 1, 5, c.CONFIG.Sensors.TriggerRight)}
 }
 
 type Sensor struct {
@@ -189,6 +191,8 @@ func selectAdc(index int) {
 		panic("No ADC")
 	}
 }
+
+// This rest of the file is used to simulate Led runs without hardware
 
 func simulateLed(segmentID int, values []c.Led) {
 	var buf strings.Builder

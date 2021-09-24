@@ -1,0 +1,31 @@
+SensorLED:
+  Enabled: true
+  RunUpMillis: 5
+  RunDownMillis: 30
+  HoldSeconds: 10
+  LedRed: 80
+  LedGreen: 80
+  LedBlue: 80
+
+NightLED:
+  Enabled: true
+  Latitude: 49.014
+  Longitude: 8.4043
+  LedRed: 3
+  LedGreen: 0
+  LedBlue: 0
+
+HoldLED:
+  Enabled: true
+  HoldMinutes: 5
+  TriggerSeconds: 3
+  LedRed: 160
+  LedGreen: 160
+  LedBlue: 160
+
+Sensors:
+  TriggerLeft: 60
+  TriggerMidLeft: 60
+  TriggerMidRight: 60
+  TriggerRight: 55
+  

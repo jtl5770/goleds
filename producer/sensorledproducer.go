@@ -13,8 +13,7 @@ type SensorLedProducer struct {
 	ledOn    Led
 }
 
-func NewSensorLedProducer(uid string, size int, index int, ledsChanged chan (LedProducer),
-	hold time.Duration, runup time.Duration, rundown time.Duration, ledOn Led) *SensorLedProducer {
+func NewSensorLedProducer(uid string, size int, index int, ledsChanged chan (LedProducer)) *SensorLedProducer {
 	leds := make([]Led, size)
 	inst := &SensorLedProducer{
 		AbstractProducer: AbstractProducer{
@@ -24,10 +23,10 @@ func NewSensorLedProducer(uid string, size int, index int, ledsChanged chan (Led
 			ledsChanged: ledsChanged,
 		},
 		ledIndex: index,
-		holdT:    hold,
-		runUpT:   runup,
-		runDownT: rundown,
-		ledOn:    ledOn}
+		holdT:    CONFIG.SensorLED.HoldSeconds * time.Second,
+		runUpT:   CONFIG.SensorLED.RunUpMillis * time.Millisecond,
+		runDownT: CONFIG.SensorLED.RunDownMillis * time.Millisecond,
+		ledOn:    Led{Red: CONFIG.SensorLED.LedRed, Green: CONFIG.SensorLED.LedGreen, Blue: CONFIG.SensorLED.LedBlue}}
 	inst.runfunc = inst.runner
 	return inst
 }

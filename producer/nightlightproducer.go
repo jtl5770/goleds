@@ -13,8 +13,7 @@ type NightlightProducter struct {
 	ledNight  Led
 }
 
-func NewNightlightProducter(uid string, size int, ledsChanged chan (LedProducer),
-	ledNight Led, latitude float64, longitude float64) *NightlightProducter {
+func NewNightlightProducter(uid string, size int, ledsChanged chan (LedProducer)) *NightlightProducter {
 	leds := make([]Led, size)
 	inst := &NightlightProducter{
 		AbstractProducer: AbstractProducer{
@@ -22,9 +21,9 @@ func NewNightlightProducter(uid string, size int, ledsChanged chan (LedProducer)
 			uid:         uid,
 			isRunning:   false,
 			ledsChanged: ledsChanged},
-		latitude:  latitude,
-		longitude: longitude,
-		ledNight:  ledNight}
+		latitude:  CONFIG.NightLED.Latitude,
+		longitude: CONFIG.NightLED.Longitude,
+		ledNight:  Led{Red: CONFIG.NightLED.LedRed, Green: CONFIG.NightLED.LedGreen, Blue: CONFIG.NightLED.LedBlue}}
 	inst.runfunc = inst.runner
 	return inst
 }
