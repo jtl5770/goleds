@@ -19,6 +19,7 @@ const FORCED_UPDATE_INTERVAL = 5 * time.Second
 
 func main() {
 	c.ReadConfig()
+	log.Println(c.CONFIG)
 	hw.InitSensors()
 	ledproducers := make(map[string]c.LedProducer)
 	ledReader := make(chan (c.LedProducer))
@@ -27,19 +28,25 @@ func main() {
 	sigchan := make(chan os.Signal)
 	signal.Notify(sigchan, os.Interrupt)
 
-	for uid := range hw.Sensors {
-		ledproducers[uid] = c.NewSensorLedProducer(uid, hw.LEDS_TOTAL, hw.Sensors[uid].LedIndex, ledReader)
+	if c.CONFIG.SensorLED.Enabled {
+		for uid := range hw.Sensors {
+			ledproducers[uid] = c.NewSensorLedProducer(uid, hw.LEDS_TOTAL, hw.Sensors[uid].LedIndex, ledReader)
+		}
 	}
-	// The Nightlight producer makes a permanent red glow (by default) during night time
-	prodnight := c.NewNightlightProducter("night_led", hw.LEDS_TOTAL, ledReader)
-	ledproducers["night_led"] = prodnight
-	prodnight.Fire()
+	if c.CONFIG.NightLED.Enabled {
+		// The Nightlight producer makes a permanent red glow (by default) during night time
+		prodnight := c.NewNightlightProducter("night_led", hw.LEDS_TOTAL, ledReader)
+		ledproducers["night_led"] = prodnight
+		prodnight.Fire()
+	}
 
-	// The HoldLight producer will be fired whenever a sensor produces for HOLD_TRIGGER_DELAY a signal > HOLD_TRIGGER_VALUE
-	// It will generate a brighter, full lit LED stripe and keep it for FULL_HIGH_HOLD time, if not being triggered again
-	// in this time - then it will shut off earlier
-	prodhold := c.NewHoldProducer(HOLD_LED_UID, hw.LEDS_TOTAL, ledReader)
-	ledproducers[HOLD_LED_UID] = prodhold
+	if c.CONFIG.HoldLED.Enabled {
+		// The HoldLight producer will be fired whenever a sensor produces for HOLD_TRIGGER_DELAY a signal > HOLD_TRIGGER_VALUE
+		// It will generate a brighter, full lit LED stripe and keep it for FULL_HIGH_HOLD time, if not being triggered again
+		// in this time - then it will shut off earlier
+		prodhold := c.NewHoldProducer(HOLD_LED_UID, hw.LEDS_TOTAL, ledReader)
+		ledproducers[HOLD_LED_UID] = prodhold
+	}
 
 	// *FUTURE* init more types of ledproducers if needed/wanted
 

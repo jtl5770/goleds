@@ -3,7 +3,6 @@ package hardware
 import (
 	"fmt"
 	"math"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -28,13 +27,10 @@ const (
 // *** end of tuneable part ***
 
 var pin17, pin22, pin23, pin24 rpio.Pin
-var REAL bool = false
 var spiMutex sync.Mutex
 
 func init() {
-	args := os.Args
-	if len(args) == 2 && args[1] == "REAL" {
-		REAL = true
+	if c.CONFIG.RealHW {
 		if err := rpio.Open(); err != nil {
 			panic(err)
 		}
@@ -109,7 +105,7 @@ func DisplayDriver(display chan ([]c.Led)) {
 		sumLeds := <-display
 		led1 := sumLeds[:LEDS_SPLIT]
 		led2 := sumLeds[LEDS_SPLIT:]
-		if !REAL {
+		if !c.CONFIG.RealHW {
 			simulateLed(0, led1)
 			simulateLed(1, led2)
 		} else {
@@ -122,7 +118,7 @@ func DisplayDriver(display chan ([]c.Led)) {
 }
 
 func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor) {
-	if !REAL {
+	if !c.CONFIG.RealHW {
 		simulateSensors(sensorReader)
 		return
 	}

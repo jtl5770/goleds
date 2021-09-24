@@ -1,6 +1,7 @@
 package producer
 
 import (
+	"flag"
 	"log"
 	"os"
 	"time"
@@ -13,6 +14,7 @@ const CONFILE = "config.yml"
 var CONFIG Config
 
 type Config struct {
+	RealHW  bool
 	Sensors struct {
 		TriggerLeft     int `yaml:"TriggerLeft"`
 		TriggerMidLeft  int `yaml:"TriggerMidLeft"`
@@ -59,6 +61,9 @@ func ReadConfig() {
 		log.Fatalf("Can't decode config file %s\n%s\n", CONFILE, err)
 		os.Exit(2)
 	}
+	realp := flag.Bool("real", false, "Set to true if program runs on the real hardware")
+	flag.Parse()
+	CONFIG.RealHW = *realp
 }
 
 // Local Variables:
