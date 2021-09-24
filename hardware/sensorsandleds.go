@@ -39,7 +39,11 @@ func init() {
 			panic(err)
 		}
 		rpio.SpiSpeed(SPI_SPEED)
+	}
+}
 
+func InitGpioAndSensors() {
+	if c.CONFIG.RealHW {
 		pin17 = rpio.Pin(17)
 		pin17.Output()
 		pin17.Low()
@@ -56,9 +60,6 @@ func init() {
 		pin24.Output()
 		pin24.High()
 	}
-}
-
-func InitSensors() {
 	Sensors = map[string]Sensor{
 		"_s0": NewSensor(0, 0, 0, c.CONFIG.Sensors.TriggerLeft),
 		"_s1": NewSensor(69, 0, 7, c.CONFIG.Sensors.TriggerMidLeft),

@@ -20,7 +20,7 @@ const FORCED_UPDATE_INTERVAL = 5 * time.Second
 func main() {
 	c.ReadConfig()
 	log.Println(c.CONFIG)
-	hw.InitSensors()
+	hw.InitGpioAndSensors()
 	ledproducers := make(map[string]c.LedProducer)
 	ledReader := make(chan (c.LedProducer))
 	ledWriter := make(chan []c.Led, hw.LEDS_TOTAL)

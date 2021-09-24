@@ -43,7 +43,7 @@ type Config struct {
 		HoldMinutes    time.Duration `yaml:"HoldMinutes"`
 		TriggerSeconds time.Duration `yaml:"TriggerSeconds"`
 		LedRed         byte          `yaml:"LedRed"`
-		LedGreen       byte          `yaml:"Geen"`
+		LedGreen       byte          `yaml:"LedGreen"`
 		LedBlue        byte          `yaml:"LedBlue"`
 	} `yaml:"HoldLED"`
 }
