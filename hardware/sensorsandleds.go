@@ -30,20 +30,18 @@ const (
 var pin17, pin22, pin23, pin24 rpio.Pin
 var spiMutex sync.Mutex
 
-func init() {
+func InitGpioAndSensors(firsttime bool) {
 	if c.CONFIG.RealHW {
-		if err := rpio.Open(); err != nil {
-			panic(err)
+		if firsttime {
+			if err := rpio.Open(); err != nil {
+				panic(err)
+			}
+			if err := rpio.SpiBegin(rpio.Spi0); err != nil {
+				panic(err)
+			}
 		}
-		if err := rpio.SpiBegin(rpio.Spi0); err != nil {
-			panic(err)
-		}
-		rpio.SpiSpeed(SPI_SPEED)
-	}
-}
 
-func InitGpioAndSensors() {
-	if c.CONFIG.RealHW {
+		rpio.SpiSpeed(SPI_SPEED)
 		pin17 = rpio.Pin(17)
 		pin17.Output()
 		pin17.Low()

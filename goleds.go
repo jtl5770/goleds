@@ -21,11 +21,11 @@ const FORCED_UPDATE_INTERVAL = 5 * time.Second
 var ledproducers map[string]c.LedProducer
 var sigchans [](chan bool)
 
-func Initialise(cfile string, realhw bool) {
+func Initialise(cfile string, realhw bool, firsttime bool) {
 	c.ReadConfig(cfile, realhw)
 	log.Println(c.CONFIG)
 
-	hw.InitGpioAndSensors()
+	hw.InitGpioAndSensors(firsttime)
 	ledproducers = make(map[string]c.LedProducer)
 	sigchans = make([](chan bool), 0)
 	ledReader := make(chan (c.LedProducer))
@@ -85,7 +85,7 @@ func main() {
 	signal.Notify(osSig, os.Interrupt)
 	signal.Notify(reload, syscall.SIGHUP)
 
-	Initialise(*cfile, *realp)
+	Initialise(*cfile, *realp, true)
 
 	for {
 		select {
@@ -96,7 +96,7 @@ func main() {
 			fmt.Println("\nResetting...")
 			ResetAll()
 			fmt.Println("\nInitialising...")
-			Initialise(*cfile, *realp)
+			Initialise(*cfile, *realp, false)
 		}
 	}
 }
