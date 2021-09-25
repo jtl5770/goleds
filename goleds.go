@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"reflect"
 	"syscall"
 	"time"
@@ -22,7 +23,12 @@ var ledproducers map[string]p.LedProducer
 var sigchans [](chan bool)
 
 func main() {
-	cfile := flag.String("config", c.CONFILE, "Config file to use")
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exPath := filepath.Dir(ex)
+	cfile := flag.String("config", exPath+"/"+c.CONFILE, "Config file to use")
 	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
 	flag.Parse()
 	osSig := make(chan os.Signal)

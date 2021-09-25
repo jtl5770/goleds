@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 	"time"
 
@@ -63,15 +62,13 @@ func ReadConfig(cfile string, realhw bool) {
 
 	f, err := os.Open(cfile)
 	if err != nil {
-		log.Fatalf("Can't find config file %s\n%s\n", cfile, err)
-		os.Exit(2)
+		panic(err)
 	}
 	defer f.Close()
 	decoder := yaml.NewDecoder(f)
 	err = decoder.Decode(&CONFIG)
 	if err != nil {
-		log.Fatalf("Can't decode config file %s\n%s\n", cfile, err)
-		os.Exit(2)
+		panic(err)
 	}
 	CONFIG.RealHW = realhw
 	CONFIG.Configfile = cfile
