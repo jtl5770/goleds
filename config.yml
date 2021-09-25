@@ -31,8 +31,8 @@ Hardware:
     ColorCorrGreen: 0.18
     ColorCorrBlue: 0.02
   Sensors:
-    TriggerLeft: 60
-    TriggerMidLeft: 60
+    TriggerLeft: 40
+    TriggerMidLeft: 50
     TriggerMidRight: 60
     TriggerRight: 55
     SmoothingSize: 3
