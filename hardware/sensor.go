@@ -65,7 +65,7 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan
 	for {
 		select {
 		case <-statistics:
-			printstatistics(sensormax)
+			printstatistics(&sensormax)
 			for k := range sensormax {
 				delete(sensormax, k)
 			}
@@ -93,9 +93,9 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan
 	}
 }
 
-func printstatistics(max map[string]int) {
-	keys := make([]string, 0, len(max))
-	for k := range max {
+func printstatistics(max *map[string]int) {
+	keys := make([]string, 0, len(*max))
+	for k := range *max {
 		keys = append(keys, k)
 	}
 	sort.Slice(keys, func(i, j int) bool {
@@ -107,7 +107,7 @@ func printstatistics(max map[string]int) {
 	})
 	var output string
 	for _, v := range keys {
-		output = output + fmt.Sprintf("%s:%3d ", v, max[v])
+		output = output + fmt.Sprintf("[%3d] ", (*max)[v])
 	}
 	log.Print(output)
 }
