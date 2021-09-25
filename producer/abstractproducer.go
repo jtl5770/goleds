@@ -96,6 +96,21 @@ func (s *AbstractProducer) Fire() {
 	}
 }
 
+func (s *AbstractProducer) stopRunningIfNoNewFire(last_fire t.Time) bool {
+	s.updateMutex.Lock()
+	defer s.updateMutex.Unlock()
+	if s.lastFire.After(last_fire) {
+		// again back into running up again
+		return false
+	} else {
+		// we are finally ready and can set s.isRunning to
+		// false so the next fire event can pass the mutex
+		// and fire up the go routine again from the start
+		s.isRunning = false
+		return true
+	}
+}
+
 // Local Variables:
 // compile-command: "cd .. && go build"
 // End:

@@ -231,6 +231,10 @@ func intensity(s c.Led) byte {
 func simulateSensors(sensorReader chan Trigger, sig chan bool) {
 	for {
 		sensorReader <- Trigger{"_s0", 80, time.Now()}
+		if !waitorbreak(12*time.Second, sig) {
+			return
+		}
+		sensorReader <- Trigger{"_s0", 80, time.Now()}
 		if !waitorbreak(15*time.Second, sig) {
 			return
 		}
