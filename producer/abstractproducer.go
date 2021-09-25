@@ -4,6 +4,8 @@ import (
 	"log"
 	"sync"
 	t "time"
+
+	c "lautenbacher.net/goleds/config"
 )
 
 // Implementation of common and shared functionality between the
@@ -25,10 +27,10 @@ type AbstractProducer struct {
 	stop chan bool
 }
 
-func NewAbstractProducer(uid string, size int, ledsChanged chan LedProducer) *AbstractProducer {
+func NewAbstractProducer(uid string, ledsChanged chan LedProducer) *AbstractProducer {
 	inst := AbstractProducer{
 		uid:         uid,
-		leds:        make([]Led, size),
+		leds:        make([]Led, c.CONFIG.Hardware.Display.LedsTotal),
 		ledsChanged: ledsChanged,
 		stop:        make(chan bool, 1)}
 	return &inst

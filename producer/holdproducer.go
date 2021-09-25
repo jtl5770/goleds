@@ -3,6 +3,8 @@ package producer
 import (
 	"log"
 	"time"
+
+	c "lautenbacher.net/goleds/config"
 )
 
 type HoldProducer struct {
@@ -11,11 +13,11 @@ type HoldProducer struct {
 	holdT     time.Duration
 }
 
-func NewHoldProducer(uid string, size int, ledsChanged chan LedProducer) *HoldProducer {
+func NewHoldProducer(uid string, ledsChanged chan LedProducer) *HoldProducer {
 	inst := HoldProducer{
-		AbstractProducer: NewAbstractProducer(uid, size, ledsChanged),
-		ledOnHold:        Led{Red: CONFIG.HoldLED.LedRed, Green: CONFIG.HoldLED.LedGreen, Blue: CONFIG.HoldLED.LedBlue},
-		holdT:            CONFIG.HoldLED.HoldMinutes * time.Second}
+		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
+		ledOnHold:        Led{Red: c.CONFIG.HoldLED.LedRed, Green: c.CONFIG.HoldLED.LedGreen, Blue: c.CONFIG.HoldLED.LedBlue},
+		holdT:            c.CONFIG.HoldLED.HoldMinutes * time.Second}
 	inst.runfunc = inst.runner
 	return &inst
 }

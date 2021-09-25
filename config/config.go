@@ -1,4 +1,4 @@
-package producer
+package config
 
 import (
 	"log"
@@ -15,20 +15,14 @@ var CONFIG Config
 type Config struct {
 	RealHW     bool
 	Configfile string
-	Sensors    struct {
-		TriggerLeft     int `yaml:"TriggerLeft"`
-		TriggerMidLeft  int `yaml:"TriggerMidLeft"`
-		TriggerMidRight int `yaml:"TriggerMidRight"`
-		TriggerRight    int `yaml:"TriggerRight"`
-	} `yaml:"Sensors"`
-	SensorLED struct {
+	SensorLED  struct {
 		Enabled       bool          `yaml:"Enabled"`
 		RunUpMillis   time.Duration `yaml:"RunUpMillis"`
 		RunDownMillis time.Duration `yaml:"RunDownMillis"`
 		HoldSeconds   time.Duration `yaml:"HoldSeconds"`
 		LedRed        byte          `yaml:"LedRed"`
 		LedGreen      byte          `yaml:"LedGreen"`
-		LedBlue       byte          `yaml:"LedBlue"`
+		LedBlue       byte          `yaml:"LedBue"`
 	} `yaml:"SensorLED"`
 	NightLED struct {
 		Enabled   bool    `yaml:"Enabled"`
@@ -42,10 +36,27 @@ type Config struct {
 		Enabled        bool          `yaml:"Enabled"`
 		HoldMinutes    time.Duration `yaml:"HoldMinutes"`
 		TriggerSeconds time.Duration `yaml:"TriggerSeconds"`
+		TriggerValue   int           `yaml:"TriggerValue"`
 		LedRed         byte          `yaml:"LedRed"`
 		LedGreen       byte          `yaml:"LedGreen"`
 		LedBlue        byte          `yaml:"LedBlue"`
 	} `yaml:"HoldLED"`
+	Hardware struct {
+		Display struct {
+			LedsTotal      int     `yaml:"LedsTotal"`
+			ColorCorrRed   float64 `yaml:"ColorCorrRed"`
+			ColorCorrGreen float64 `yaml:"ColorCorrGreen"`
+			ColorCorrBlue  float64 `yaml:"ColorCorrBlue"`
+		} `yaml:"Display"`
+		Sensors struct {
+			TriggerLeft     int           `yaml:"TriggerLeft"`
+			TriggerMidLeft  int           `yaml:"TriggerMidLeft"`
+			TriggerMidRight int           `yaml:"TriggerMidRight"`
+			TriggerRight    int           `yaml:"TriggerRight"`
+			SmoothingSize   int           `yaml:"SmoothingSize"`
+			LoopDelayMillis time.Duration `yaml:"LoopDelayMillis"`
+		} `yaml:"Sensors"`
+	} `yaml:"Hardware"`
 }
 
 func ReadConfig(cfile string, realhw bool) {

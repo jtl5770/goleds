@@ -3,6 +3,8 @@ package producer
 import (
 	"log"
 	"time"
+
+	c "lautenbacher.net/goleds/config"
 )
 
 type SensorLedProducer struct {
@@ -14,14 +16,14 @@ type SensorLedProducer struct {
 	ledOn    Led
 }
 
-func NewSensorLedProducer(uid string, size int, index int, ledsChanged chan (LedProducer)) *SensorLedProducer {
+func NewSensorLedProducer(uid string, index int, ledsChanged chan (LedProducer)) *SensorLedProducer {
 	inst := SensorLedProducer{
-		AbstractProducer: NewAbstractProducer(uid, size, ledsChanged),
+		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
 		ledIndex:         index,
-		holdT:            CONFIG.SensorLED.HoldSeconds * time.Second,
-		runUpT:           CONFIG.SensorLED.RunUpMillis * time.Millisecond,
-		runDownT:         CONFIG.SensorLED.RunDownMillis * time.Millisecond,
-		ledOn:            Led{Red: CONFIG.SensorLED.LedRed, Green: CONFIG.SensorLED.LedGreen, Blue: CONFIG.SensorLED.LedBlue}}
+		holdT:            c.CONFIG.SensorLED.HoldSeconds * time.Second,
+		runUpT:           c.CONFIG.SensorLED.RunUpMillis * time.Millisecond,
+		runDownT:         c.CONFIG.SensorLED.RunDownMillis * time.Millisecond,
+		ledOn:            Led{Red: c.CONFIG.SensorLED.LedRed, Green: c.CONFIG.SensorLED.LedGreen, Blue: c.CONFIG.SensorLED.LedBlue}}
 	inst.runfunc = inst.runner
 	return &inst
 }

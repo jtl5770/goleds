@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	c "lautenbacher.net/goleds/producer"
+	p "lautenbacher.net/goleds/producer"
 )
 
-func simulateLed(segmentID int, values []c.Led) {
+func simulateLed(segmentID int, values []p.Led) {
 	var buf strings.Builder
 	buf.Grow(len(values))
 
@@ -32,7 +32,7 @@ func simulateLed(segmentID int, values []c.Led) {
 	}
 }
 
-func intensity(s c.Led) byte {
+func intensity(s p.Led) byte {
 	return byte(math.Round(float64(s.Red+s.Green+s.Blue) / 3.0))
 }
 

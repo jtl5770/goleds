@@ -19,13 +19,21 @@ HoldLED:
   Enabled: true
   HoldMinutes: 5
   TriggerSeconds: 3
+  TriggerValue: 155
   LedRed: 160
   LedGreen: 160
   LedBlue: 160
 
-Sensors:
-  TriggerLeft: 60
-  TriggerMidLeft: 60
-  TriggerMidRight: 60
-  TriggerRight: 55
-
+Hardware:
+  Display:
+    LedsTotal: 125
+    ColorCorrRed: 1.0
+    ColorCorrGreen: 0.18
+    ColorCorrBlue: 0.02
+  Sensors:
+    TriggerLeft: 60
+    TriggerMidLeft: 60
+    TriggerMidRight: 60
+    TriggerRight: 55
+    SmoothingSize: 3
+    LoopDelayMillis: 5 

@@ -4,6 +4,8 @@ import (
 	"log"
 	"time"
 
+	c "lautenbacher.net/goleds/config"
+
 	"github.com/nathan-osman/go-sunrise"
 )
 
@@ -14,12 +16,12 @@ type NightlightProducer struct {
 	ledNight  Led
 }
 
-func NewNightlightProducer(uid string, size int, ledsChanged chan (LedProducer)) *NightlightProducer {
+func NewNightlightProducer(uid string, ledsChanged chan (LedProducer)) *NightlightProducer {
 	inst := NightlightProducer{
-		AbstractProducer: NewAbstractProducer(uid, size, ledsChanged),
-		latitude:         CONFIG.NightLED.Latitude,
-		longitude:        CONFIG.NightLED.Longitude,
-		ledNight:         Led{Red: CONFIG.NightLED.LedRed, Green: CONFIG.NightLED.LedGreen, Blue: CONFIG.NightLED.LedBlue}}
+		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
+		latitude:         c.CONFIG.NightLED.Latitude,
+		longitude:        c.CONFIG.NightLED.Longitude,
+		ledNight:         Led{Red: c.CONFIG.NightLED.LedRed, Green: c.CONFIG.NightLED.LedGreen, Blue: c.CONFIG.NightLED.LedBlue}}
 	inst.runfunc = inst.runner
 	return &inst
 }
