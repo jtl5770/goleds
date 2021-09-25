@@ -20,9 +20,9 @@ HoldLED:
   HoldMinutes: 5
   TriggerSeconds: 3
   TriggerValue: 160
-  LedRed: 120
-  LedGreen: 120
-  LedBlue: 120
+  LedRed: 140
+  LedGreen: 140
+  LedBlue: 140
 
 Hardware:
   Display:
