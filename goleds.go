@@ -22,15 +22,15 @@ var ledproducers map[string]p.LedProducer
 var sigchans [](chan bool)
 
 func main() {
-	cfile := *flag.String("config", c.CONFILE, "Config file to use")
-	realp := *flag.Bool("real", false, "Set to true if program runs on real hardware")
+	cfile := flag.String("config", c.CONFILE, "Config file to use")
+	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
 	flag.Parse()
 	osSig := make(chan os.Signal)
 	reload := make(chan os.Signal)
 	signal.Notify(osSig, os.Interrupt)
 	signal.Notify(reload, syscall.SIGHUP)
 
-	Initialise(cfile, realp, true)
+	Initialise(*cfile, *realp, true)
 
 	for {
 		select {
@@ -41,7 +41,7 @@ func main() {
 			fmt.Println("\nResetting...")
 			ResetAll()
 			fmt.Println("\nInitialising...")
-			Initialise(cfile, realp, false)
+			Initialise(*cfile, *realp, false)
 		}
 	}
 }
