@@ -107,7 +107,7 @@ func printstatistics(max map[string]int) {
 	})
 	var output string
 	for _, v := range keys {
-		output = output + fmt.Sprintf("%s=%4d ", v, max[v])
+		output = output + fmt.Sprintf("%s:%3d ", v, max[v])
 	}
 	log.Print(output)
 }
