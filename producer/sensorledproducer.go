@@ -23,7 +23,7 @@ func NewSensorLedProducer(uid string, index int, ledsChanged chan (LedProducer))
 		holdT:            c.CONFIG.SensorLED.HoldSeconds * time.Second,
 		runUpT:           c.CONFIG.SensorLED.RunUpMillis * time.Millisecond,
 		runDownT:         c.CONFIG.SensorLED.RunDownMillis * time.Millisecond,
-		ledOn:            Led{Red: c.CONFIG.SensorLED.LedRed, Green: c.CONFIG.SensorLED.LedGreen, Blue: c.CONFIG.SensorLED.LedBlue}}
+		ledOn:            Led{Red: c.CONFIG.SensorLED.LedRGB[0], Green: c.CONFIG.SensorLED.LedRGB[1], Blue: c.CONFIG.SensorLED.LedRGB[2]}}
 	inst.runfunc = inst.runner
 	return &inst
 }

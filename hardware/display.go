@@ -2,7 +2,6 @@ package hardware
 
 import (
 	"log"
-	"math"
 
 	"github.com/stianeikeland/go-rpio/v4"
 	c "lautenbacher.net/goleds/config"
@@ -34,9 +33,9 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 func setLedSegment(segmentID int, values []p.Led) {
 	display := make([]byte, 3*len(values))
 	for idx, led := range values {
-		display[3*idx] = byte(math.Round(c.CONFIG.Hardware.Display.ColorCorrRed * float64(led.Red)))
-		display[(3*idx)+1] = byte(math.Round(c.CONFIG.Hardware.Display.ColorCorrGreen * float64(led.Green)))
-		display[(3*idx)+2] = byte(math.Round(c.CONFIG.Hardware.Display.ColorCorrBlue * float64(led.Blue)))
+		display[3*idx] = led.Red
+		display[(3*idx)+1] = led.Green
+		display[(3*idx)+2] = led.Blue
 	}
 	spiMutex.Lock()
 	selectLed(segmentID)

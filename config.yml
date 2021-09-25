@@ -3,33 +3,24 @@ SensorLED:
   RunUpMillis: 5
   RunDownMillis: 30
   HoldSeconds: 10
-  LedRed: 80
-  LedGreen: 80
-  LedBlue: 80
+  LedRGB: [80, 15, 3]
 
 NightLED:
   Enabled: true
   Latitude: 49.014
   Longitude: 8.4043
-  LedRed: 4
-  LedGreen: 0
-  LedBlue: 0
+  LedRGB: [4, 0, 0]
 
 HoldLED:
   Enabled: true
   HoldMinutes: 5
   TriggerSeconds: 3
   TriggerValue: 160
-  LedRed: 140
-  LedGreen: 140
-  LedBlue: 140
+  LedRGB: [140, 25, 6]
 
 Hardware:
   Display:
     LedsTotal: 125
-    ColorCorrRed: 1.0
-    ColorCorrGreen: 0.18
-    ColorCorrBlue: 0.04
   Sensors:
     TriggerLeft: 40
     TriggerMidLeft: 50

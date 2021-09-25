@@ -19,33 +19,24 @@ type Config struct {
 		RunUpMillis   time.Duration `yaml:"RunUpMillis"`
 		RunDownMillis time.Duration `yaml:"RunDownMillis"`
 		HoldSeconds   time.Duration `yaml:"HoldSeconds"`
-		LedRed        byte          `yaml:"LedRed"`
-		LedGreen      byte          `yaml:"LedGreen"`
-		LedBlue       byte          `yaml:"LedBue"`
+		LedRGB        []byte        `yaml:"LedRGB"`
 	} `yaml:"SensorLED"`
 	NightLED struct {
 		Enabled   bool    `yaml:"Enabled"`
 		Latitude  float64 `yaml:"Latitude"`
 		Longitude float64 `yaml:"Longitude"`
-		LedRed    byte    `yaml:"LedRed"`
-		LedGreen  byte    `yaml:"LedGreen"`
-		LedBlue   byte    `yaml:"LedBlue"`
+		LedRGB    []byte  `yaml:"LedRGB"`
 	} `yaml:"NightLED"`
 	HoldLED struct {
 		Enabled        bool          `yaml:"Enabled"`
 		HoldMinutes    time.Duration `yaml:"HoldMinutes"`
 		TriggerSeconds time.Duration `yaml:"TriggerSeconds"`
 		TriggerValue   int           `yaml:"TriggerValue"`
-		LedRed         byte          `yaml:"LedRed"`
-		LedGreen       byte          `yaml:"LedGreen"`
-		LedBlue        byte          `yaml:"LedBlue"`
+		LedRGB         []byte        `yaml:"LedRGB"`
 	} `yaml:"HoldLED"`
 	Hardware struct {
 		Display struct {
-			LedsTotal      int     `yaml:"LedsTotal"`
-			ColorCorrRed   float64 `yaml:"ColorCorrRed"`
-			ColorCorrGreen float64 `yaml:"ColorCorrGreen"`
-			ColorCorrBlue  float64 `yaml:"ColorCorrBlue"`
+			LedsTotal int `yaml:"LedsTotal"`
 		} `yaml:"Display"`
 		Sensors struct {
 			TriggerLeft     int           `yaml:"TriggerLeft"`
