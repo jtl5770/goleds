@@ -2,7 +2,6 @@ package hardware
 
 import (
 	"log"
-	"time"
 
 	"github.com/stianeikeland/go-rpio/v4"
 	c "lautenbacher.net/goleds/config"
@@ -24,8 +23,10 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 				simulateLed(0, led1)
 				simulateLed(1, led2)
 			} else {
+				spiMutex.Lock()
 				setLedSegment(0, led1)
 				setLedSegment(1, led2)
+				spiMutex.Unlock()
 			}
 		}
 	}
@@ -38,11 +39,8 @@ func setLedSegment(segmentID int, values []p.Led) {
 		display[(3*idx)+1] = led.Green
 		display[(3*idx)+2] = led.Blue
 	}
-	spiMutex.Lock()
 	selectLed(segmentID)
 	rpio.SpiExchange(display)
-	time.Sleep(2 * time.Millisecond)
-	spiMutex.Unlock()
 }
 
 func selectLed(index int) {
