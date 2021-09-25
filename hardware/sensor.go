@@ -60,15 +60,11 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan
 
 	sensorvalues := make(map[string]int)
 	sensormax := make(map[string]int)
-	var retval int
 	ticker := time.NewTicker(c.CONFIG.Hardware.Sensors.LoopDelayMillis * time.Millisecond)
 	for {
 		select {
 		case <-statistics:
-			printstatistics(&sensormax)
-			for k := range sensormax {
-				delete(sensormax, k)
-			}
+			printStatisticsAndReset(&sensormax)
 		case <-sig:
 			log.Println("Ending SensorDriver go-routine")
 			ticker.Stop()
@@ -77,14 +73,13 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan
 			spiMutex.Lock()
 			for name, sensor := range sensors {
 				selectAdc(sensor.adc)
-				retval = sensor.smoothValue(readAdc(sensor.adcIndex))
-				sensorvalues[name] = retval
-				if retval > sensormax[name] {
-					sensormax[name] = retval
-				}
+				sensorvalues[name] = sensor.smoothValue(readAdc(sensor.adcIndex))
 			}
 			spiMutex.Unlock()
 			for name, value := range sensorvalues {
+				if value > sensormax[name] {
+					sensormax[name] = value
+				}
 				if value > sensors[name].triggerLevel {
 					sensorReader <- Trigger{name, value, time.Now()}
 				}
@@ -93,7 +88,7 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan
 	}
 }
 
-func printstatistics(max *map[string]int) {
+func printStatisticsAndReset(max *map[string]int) {
 	keys := make([]string, 0, len(*max))
 	for k := range *max {
 		keys = append(keys, k)
@@ -106,8 +101,9 @@ func printstatistics(max *map[string]int) {
 		}
 	})
 	var output string
-	for _, v := range keys {
-		output = output + fmt.Sprintf("[%3d] ", (*max)[v])
+	for _, name := range keys {
+		output = output + fmt.Sprintf("[%3d] ", (*max)[name])
+		delete(*max, name)
 	}
 	log.Print(output)
 }
