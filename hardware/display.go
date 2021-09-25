@@ -2,6 +2,7 @@ package hardware
 
 import (
 	"log"
+	"time"
 
 	"github.com/stianeikeland/go-rpio/v4"
 	c "lautenbacher.net/goleds/config"
@@ -40,6 +41,7 @@ func setLedSegment(segmentID int, values []p.Led) {
 	spiMutex.Lock()
 	selectLed(segmentID)
 	rpio.SpiExchange(display)
+	time.Sleep(2 * time.Millisecond)
 	spiMutex.Unlock()
 }
 
