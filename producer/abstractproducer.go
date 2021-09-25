@@ -1,0 +1,101 @@
+package producer
+
+import (
+	"log"
+	"sync"
+	t "time"
+)
+
+// Implementation of common and shared functionality between the
+// concrete Implementations
+type AbstractProducer struct {
+	uid       string
+	leds      []Led
+	isRunning bool
+	lastFire  t.Time
+	// Guards getting and setting LED values
+	ledsMutex sync.Mutex
+	// Guards changes to lastFire & isRunning
+	updateMutex sync.Mutex
+	ledsChanged chan LedProducer
+	// the method Fire() should call. MUST be set by the concrete
+	// implementation upon constructing a new instance
+	runfunc func()
+	// this will channel will be signaled via the Stop method
+	stop chan bool
+}
+
+func NewAbstractProducer(uid string, size int, ledsChanged chan LedProducer) *AbstractProducer {
+	inst := AbstractProducer{
+		uid:         uid,
+		leds:        make([]Led, size),
+		ledsChanged: ledsChanged,
+		stop:        make(chan bool, 1)}
+	return &inst
+}
+
+// This method should only be called once per instance to make sure
+// the 1 element deep buffered channel "stop" won't block
+func (s *AbstractProducer) Stop() {
+	s.updateMutex.Lock()
+	s.runfunc = func() {
+		log.Println("Called Fire() after Stop(). Ignoring...")
+	}
+	s.updateMutex.Unlock()
+	s.stop <- true
+}
+
+// Sets a single LED at index index to value
+// Guarded by s.ledsMutex
+func (s *AbstractProducer) setLed(index int, value Led) {
+	s.ledsMutex.Lock()
+	defer s.ledsMutex.Unlock()
+	s.leds[index] = value
+}
+
+// Returns a slice with the current values of all the LEDs.
+// Guarded by s.ledsMutex
+func (s *AbstractProducer) GetLeds() []Led {
+	s.ledsMutex.Lock()
+	defer s.ledsMutex.Unlock()
+	ret := make([]Led, len(s.leds))
+	copy(ret, s.leds)
+	return ret
+}
+
+// The UID of the controller. Must be globally unique
+func (s *AbstractProducer) GetUID() string {
+	return s.uid
+}
+
+// Returns the time of the last time s.Fire() has been called. This is
+// guarded by s.updateMutex
+func (s *AbstractProducer) getLastFire() t.Time {
+	s.updateMutex.Lock()
+	defer s.updateMutex.Unlock()
+
+	return s.lastFire
+}
+
+// Used to start the main worker process as a go routine. Does never
+// block.  When the worker go routine is already running, it does
+// nothing besides updating s.lastFire to the current time. If the
+// worker go routine is started and s.isRunning is set to true, no
+// intermiediate call to Fire() will be able to start another worker
+// concurrently.  The method is guarded by s.updateMutex
+// IMPORTANT: After constructing your concrete instance you MUST set
+// AbstractProducer.runfunc to the concrete worker method to call.
+func (s *AbstractProducer) Fire() {
+	s.updateMutex.Lock()
+	defer s.updateMutex.Unlock()
+
+	s.lastFire = t.Now()
+	if !s.isRunning {
+		s.isRunning = true
+		go s.runfunc()
+	}
+}
+
+// Local Variables:
+// compile-command: "cd .. && go build"
+// End:

@@ -6,14 +6,14 @@ import (
 )
 
 type HoldProducer struct {
-	AbstractProducer
+	*AbstractProducer
 	ledOnHold Led
 	holdT     time.Duration
 }
 
 func NewHoldProducer(uid string, size int, ledsChanged chan LedProducer) *HoldProducer {
 	inst := HoldProducer{
-		AbstractProducer: *NewAbstractProducer(uid, size, ledsChanged),
+		AbstractProducer: NewAbstractProducer(uid, size, ledsChanged),
 		ledOnHold:        Led{Red: CONFIG.HoldLED.LedRed, Green: CONFIG.HoldLED.LedGreen, Blue: CONFIG.HoldLED.LedBlue},
 		holdT:            CONFIG.HoldLED.HoldMinutes * time.Second}
 	inst.runfunc = inst.runner
@@ -48,7 +48,7 @@ LOOP:
 		}
 	}
 	for idx := range s.leds {
-		s.setLed(idx, NULL_LED)
+		s.setLed(idx, Led{})
 	}
 	s.ledsChanged <- s
 }

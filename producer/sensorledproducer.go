@@ -6,7 +6,7 @@ import (
 )
 
 type SensorLedProducer struct {
-	AbstractProducer
+	*AbstractProducer
 	ledIndex int
 	holdT    time.Duration
 	runUpT   time.Duration
@@ -16,7 +16,7 @@ type SensorLedProducer struct {
 
 func NewSensorLedProducer(uid string, size int, index int, ledsChanged chan (LedProducer)) *SensorLedProducer {
 	inst := SensorLedProducer{
-		AbstractProducer: *NewAbstractProducer(uid, size, ledsChanged),
+		AbstractProducer: NewAbstractProducer(uid, size, ledsChanged),
 		ledIndex:         index,
 		holdT:            CONFIG.SensorLED.HoldSeconds * time.Second,
 		runUpT:           CONFIG.SensorLED.RunUpMillis * time.Millisecond,
@@ -103,10 +103,10 @@ func (s *SensorLedProducer) runner() {
 			}
 
 			if left <= s.ledIndex && left >= 0 {
-				s.setLed(left, NULL_LED)
+				s.setLed(left, Led{})
 			}
 			if right >= s.ledIndex && right <= len(s.leds)-1 {
-				s.setLed(right, NULL_LED)
+				s.setLed(right, Led{})
 			}
 			s.ledsChanged <- s
 			if left == s.ledIndex && right == s.ledIndex {

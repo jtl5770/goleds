@@ -8,7 +8,7 @@ import (
 )
 
 type NightlightProducer struct {
-	AbstractProducer
+	*AbstractProducer
 	latitude  float64
 	longitude float64
 	ledNight  Led
@@ -16,7 +16,7 @@ type NightlightProducer struct {
 
 func NewNightlightProducer(uid string, size int, ledsChanged chan (LedProducer)) *NightlightProducer {
 	inst := NightlightProducer{
-		AbstractProducer: *NewAbstractProducer(uid, size, ledsChanged),
+		AbstractProducer: NewAbstractProducer(uid, size, ledsChanged),
 		latitude:         CONFIG.NightLED.Latitude,
 		longitude:        CONFIG.NightLED.Longitude,
 		ledNight:         Led{Red: CONFIG.NightLED.LedRed, Green: CONFIG.NightLED.LedGreen, Blue: CONFIG.NightLED.LedBlue}}
@@ -33,7 +33,7 @@ func (s *NightlightProducer) setLed(on bool) {
 		}
 	} else {
 		for i := range s.leds {
-			s.leds[i] = NULL_LED
+			s.leds[i] = Led{}
 		}
 	}
 }
