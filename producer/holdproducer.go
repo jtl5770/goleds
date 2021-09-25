@@ -17,7 +17,7 @@ func NewHoldProducer(uid string, ledsChanged chan LedProducer) *HoldProducer {
 	inst := HoldProducer{
 		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
 		ledOnHold:        Led{Red: c.CONFIG.HoldLED.LedRed, Green: c.CONFIG.HoldLED.LedGreen, Blue: c.CONFIG.HoldLED.LedBlue},
-		holdT:            c.CONFIG.HoldLED.HoldMinutes * time.Second}
+		holdT:            c.CONFIG.HoldLED.HoldMinutes * time.Minute}
 	inst.runfunc = inst.runner
 	return &inst
 }
