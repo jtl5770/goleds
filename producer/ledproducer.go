@@ -53,11 +53,20 @@ type AbstractProducer struct {
 	ledsMutex sync.Mutex
 	// Guards changes to lastFire & isRunning
 	updateMutex sync.Mutex
-	ledsChanged chan (LedProducer)
+	ledsChanged chan LedProducer
 	// the method Fire() should call. MUST be set by the concrete
 	// implementation upon constructing a new instance
 	stop    chan bool
 	runfunc func()
+}
+
+func NewAbstractProducer(uid string, size int, ledsChanged chan LedProducer) *AbstractProducer {
+	inst := AbstractProducer{
+		uid:         uid,
+		leds:        make([]Led, size),
+		ledsChanged: ledsChanged,
+		stop:        make(chan bool, 1)}
+	return &inst
 }
 
 func (s *AbstractProducer) Stop() {

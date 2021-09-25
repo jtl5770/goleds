@@ -15,17 +15,11 @@ type NightlightProducer struct {
 }
 
 func NewNightlightProducer(uid string, size int, ledsChanged chan (LedProducer)) *NightlightProducer {
-	leds := make([]Led, size)
 	inst := NightlightProducer{
-		AbstractProducer: AbstractProducer{
-			leds:        leds,
-			uid:         uid,
-			isRunning:   false,
-			ledsChanged: ledsChanged,
-			stop:        make(chan bool, 1)},
-		latitude:  CONFIG.NightLED.Latitude,
-		longitude: CONFIG.NightLED.Longitude,
-		ledNight:  Led{Red: CONFIG.NightLED.LedRed, Green: CONFIG.NightLED.LedGreen, Blue: CONFIG.NightLED.LedBlue}}
+		AbstractProducer: *NewAbstractProducer(uid, size, ledsChanged),
+		latitude:         CONFIG.NightLED.Latitude,
+		longitude:        CONFIG.NightLED.Longitude,
+		ledNight:         Led{Red: CONFIG.NightLED.LedRed, Green: CONFIG.NightLED.LedGreen, Blue: CONFIG.NightLED.LedBlue}}
 	inst.runfunc = inst.runner
 	return &inst
 }
