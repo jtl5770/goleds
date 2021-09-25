@@ -2,6 +2,10 @@ package hardware
 
 import (
 	"log"
+	"os"
+	"os/signal"
+	"sort"
+	"syscall"
 	"time"
 
 	"github.com/stianeikeland/go-rpio/v4"
@@ -50,10 +54,19 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan
 		simulateSensors(sensorReader, sig)
 		return
 	}
+	statistics := make(chan os.Signal)
+	signal.Notify(statistics, syscall.SIGUSR1)
+
 	sensorvalues := make(map[string]int)
+	sensormax := make(map[string]int)
 	ticker := time.NewTicker(c.CONFIG.Hardware.Sensors.LoopDelayMillis * time.Millisecond)
 	for {
 		select {
+		case <-statistics:
+			printstatistics(&sensormax)
+			for k := range sensormax {
+				delete(sensormax, k)
+			}
 		case <-sig:
 			log.Println("Ending SensorDriver go-routine")
 			ticker.Stop()
@@ -72,6 +85,25 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan
 			}
 		}
 	}
+}
+
+func printstatistics(max *map[string]int) {
+	keys := make([]string, 0, len(*max))
+	for k := range *max {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		if keys[i] < keys[j] {
+			return true
+		} else {
+			return false
+		}
+	})
+	log.Print("\n")
+	for _, v := range keys {
+		log.Printf("%4d  ", (*max)[v])
+	}
+	log.Print("\n")
 }
 
 func readAdc(channel byte) int {
