@@ -12,7 +12,8 @@ import (
 var Sensors map[string]Sensor
 
 const (
-	SPI_SPEED = 976562
+	//SPI_SPEED = 976562
+	SPI_SPEED = 488281
 )
 
 // *** end of tuneable part ***
