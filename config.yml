@@ -29,7 +29,7 @@ Hardware:
     LedsTotal: 125
     ColorCorrRed: 1.0
     ColorCorrGreen: 0.18
-    ColorCorrBlue: 0.02
+    ColorCorrBlue: 0.04
   Sensors:
     TriggerLeft: 40
     TriggerMidLeft: 50
