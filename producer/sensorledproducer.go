@@ -117,19 +117,13 @@ func (s *SensorLedProducer) runner() {
 				// we see if there has been a fire event in the little
 				// time while this last iteration of the inner for
 				// loop took place)
-				s.updateMutex.Lock()
 				ticker.Stop()
-				if s.lastFire.After(last_fire) {
-					s.updateMutex.Unlock()
-					// again back into running up again
-					break
-				} else {
-					// we are finally ready and can set s.isRunning to
-					// false so the next fire event can pass the mutex
-					// and fire up the go routine again from the start
-					s.isRunning = false
-					s.updateMutex.Unlock()
+				if s.stopRunningIfNoNewFire(last_fire) {
+					// we are finally ready and can return and end the go routine
 					return
+				} else {
+					// back into running up again
+					break
 				}
 			}
 			left++
