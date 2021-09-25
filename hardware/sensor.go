@@ -1,6 +1,7 @@
 package hardware
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -104,11 +105,11 @@ func printstatistics(max map[string]int) {
 			return false
 		}
 	})
-	log.Print("\n")
+	var output string
 	for _, v := range keys {
-		log.Printf("%4d  ", max[v])
+		output = output + fmt.Sprintf("%4d ", max[v])
 	}
-	log.Print("\n")
+	log.Print(output)
 }
 
 func readAdc(channel byte) int {
