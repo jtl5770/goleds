@@ -38,23 +38,23 @@ func intensity(s p.Led) byte {
 
 func simulateSensors(sensorReader chan Trigger, sig chan bool) {
 	for {
-		sensorReader <- Trigger{"_s0", 80, time.Now()}
+		sensorReader <- Trigger{"S0", 80, time.Now()}
 		if !waitorbreak(12*time.Second, sig) {
 			return
 		}
-		sensorReader <- Trigger{"_s0", 80, time.Now()}
+		sensorReader <- Trigger{"S0", 80, time.Now()}
 		if !waitorbreak(15*time.Second, sig) {
 			return
 		}
-		sensorReader <- Trigger{"_s3", 80, time.Now()}
+		sensorReader <- Trigger{"S3", 80, time.Now()}
 		if !waitorbreak(20*time.Second, sig) {
 			return
 		}
-		sensorReader <- Trigger{"_s1", 80, time.Now()}
+		sensorReader <- Trigger{"S1", 80, time.Now()}
 		if !waitorbreak(15*time.Second, sig) {
 			return
 		}
-		sensorReader <- Trigger{"_s2", 80, time.Now()}
+		sensorReader <- Trigger{"S2", 80, time.Now()}
 		if !waitorbreak(15*time.Second, sig) {
 			return
 		}
@@ -66,7 +66,7 @@ func waitorbreak(wait time.Duration, sig chan bool) bool {
 	case <-time.After(wait):
 		return true
 	case <-sig:
-		log.Println("Ending SensorDriver go-routine")
+		log.Println("Ending SensorDriver simulation go-routine")
 		return false
 	}
 }

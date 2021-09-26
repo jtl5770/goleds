@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 	"time"
 
@@ -39,18 +40,20 @@ type Config struct {
 			LedsTotal int `yaml:"LedsTotal"`
 		} `yaml:"Display"`
 		Sensors struct {
-			TriggerLeft     int           `yaml:"TriggerLeft"`
-			TriggerMidLeft  int           `yaml:"TriggerMidLeft"`
-			TriggerMidRight int           `yaml:"TriggerMidRight"`
-			TriggerRight    int           `yaml:"TriggerRight"`
 			SmoothingSize   int           `yaml:"SmoothingSize"`
 			LoopDelayMillis time.Duration `yaml:"LoopDelayMillis"`
+			SensorCfg       map[string]struct {
+				LedIndex     int  `yaml:"LedIndex"`
+				Adc          int  `yaml:"Adc"`
+				AdcChannel   byte `yaml:"AdcChannel"`
+				TriggerValue int  `yaml:"TriggerValue"`
+			} `yaml:"SensorCfg"`
 		} `yaml:"Sensors"`
 	} `yaml:"Hardware"`
 }
 
 func ReadConfig(cfile string, realhw bool) {
-
+	log.Printf("Reading config file %s...", cfile)
 	f, err := os.Open(cfile)
 	if err != nil {
 		panic(err)

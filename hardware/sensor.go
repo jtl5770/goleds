@@ -16,8 +16,8 @@ import (
 type Sensor struct {
 	LedIndex     int
 	adc          int
-	adcIndex     byte
-	triggerLevel int
+	adcChannel   byte
+	triggerValue int
 	values       []int
 }
 
@@ -27,13 +27,13 @@ type Trigger struct {
 	Timestamp time.Time
 }
 
-func NewSensor(ledIndex int, adc int, adcIndex byte, triggerLevel int) Sensor {
+func NewSensor(ledIndex int, adc int, adcChannel byte, triggerValue int) Sensor {
 	smoothing := c.CONFIG.Hardware.Sensors.SmoothingSize
 	return Sensor{
 		LedIndex:     ledIndex,
 		adc:          adc,
-		adcIndex:     adcIndex,
-		triggerLevel: triggerLevel,
+		adcChannel:   adcChannel,
+		triggerValue: triggerValue,
 		values:       make([]int, smoothing, smoothing+1),
 	}
 }
@@ -73,14 +73,14 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan
 			spiMutex.Lock()
 			for name, sensor := range sensors {
 				selectAdc(sensor.adc)
-				sensorvalues[name] = sensor.smoothValue(readAdc(sensor.adcIndex))
+				sensorvalues[name] = sensor.smoothValue(readAdc(sensor.adcChannel))
 			}
 			spiMutex.Unlock()
 			for name, value := range sensorvalues {
 				if value > sensormax[name] {
 					sensormax[name] = value
 				}
-				if value > sensors[name].triggerLevel {
+				if value > sensors[name].triggerValue {
 					sensorReader <- Trigger{name, value, time.Now()}
 				}
 			}

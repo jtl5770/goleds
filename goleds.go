@@ -2,12 +2,12 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"reflect"
+	"sync"
 	"syscall"
 	"time"
 
@@ -16,11 +16,13 @@ import (
 	p "lautenbacher.net/goleds/producer"
 )
 
-const HOLD_LED_UID = "hold_led"
+const HOLD_LED_UID = "__hold_producer"
+const NIGHT_LED_UID = "__night_producer"
 const FORCED_UPDATE_INTERVAL = 5 * time.Second
 
 var ledproducers map[string]p.LedProducer
 var sigchans [](chan bool)
+var inithwonce sync.Once
 
 func main() {
 	ex, err := os.Executable()
@@ -31,47 +33,48 @@ func main() {
 	cfile := flag.String("config", exPath+"/"+c.CONFILE, "Config file to use")
 	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
 	flag.Parse()
+
+	c.ReadConfig(*cfile, *realp)
+	Initialise()
+
 	osSig := make(chan os.Signal)
 	reload := make(chan os.Signal)
 	signal.Notify(osSig, os.Interrupt)
 	signal.Notify(reload, syscall.SIGHUP)
-
-	Initialise(*cfile, *realp, true)
-
 	for {
 		select {
 		case <-osSig:
-			fmt.Println("\nExiting...")
+			log.Println("Exiting...")
 			os.Exit(0)
 		case <-reload:
-			fmt.Println("\nResetting...")
 			ResetAll()
-			fmt.Println("\nInitialising...")
-			Initialise(*cfile, *realp, false)
+			c.ReadConfig(*cfile, *realp)
+			Initialise()
 		}
 	}
 }
 
-func Initialise(cfile string, realhw bool, firsttime bool) {
-	c.ReadConfig(cfile, realhw)
-	log.Println(c.CONFIG)
-
-	hw.InitGpioAndSensors(firsttime)
+func Initialise() {
+	log.Println("Initialising...")
+	inithwonce.Do(hw.InitGpioAndSpi) // This must be done once only!
+	hw.Sensors = make(map[string]hw.Sensor)
 	ledproducers = make(map[string]p.LedProducer)
 	sigchans = make([](chan bool), 0)
 	ledReader := make(chan (p.LedProducer))
 	ledWriter := make(chan []p.Led, c.CONFIG.Hardware.Display.LedsTotal)
 	sensorReader := make(chan hw.Trigger)
 
-	if c.CONFIG.SensorLED.Enabled {
-		for uid := range hw.Sensors {
-			ledproducers[uid] = p.NewSensorLedProducer(uid, hw.Sensors[uid].LedIndex, ledReader)
+	for uid, cfg := range c.CONFIG.Hardware.Sensors.SensorCfg {
+		hw.Sensors[uid] = hw.NewSensor(cfg.LedIndex, cfg.Adc, cfg.AdcChannel, cfg.TriggerValue)
+		if c.CONFIG.SensorLED.Enabled {
+			ledproducers[uid] = p.NewSensorLedProducer(uid, cfg.LedIndex, ledReader)
 		}
 	}
+
 	if c.CONFIG.NightLED.Enabled {
-		// The Nightlight producer makes a permanent red glow (by default) during night time
-		prodnight := p.NewNightlightProducer("night_led", ledReader)
-		ledproducers["night_led"] = prodnight
+		// The Nightlight producer makes a permanent red (default) glow during night time
+		prodnight := p.NewNightlightProducer(NIGHT_LED_UID, ledReader)
+		ledproducers[NIGHT_LED_UID] = prodnight
 		prodnight.Fire()
 	}
 
@@ -97,6 +100,7 @@ func Initialise(cfile string, realhw bool, firsttime bool) {
 }
 
 func ResetAll() {
+	log.Println("Resetting...")
 	for _, prod := range ledproducers {
 		prod.Stop()
 	}

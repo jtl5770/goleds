@@ -22,9 +22,27 @@ Hardware:
   Display:
     LedsTotal: 125
   Sensors:
-    TriggerLeft: 40
-    TriggerMidLeft: 50
-    TriggerMidRight: 60
-    TriggerRight: 55
     SmoothingSize: 3
     LoopDelayMillis: 5 
+    SensorCfg:
+      S0:
+        LedIndex: 0
+        Adc: 0
+        AdcChannel: 0
+        TriggerValue: 40
+      S1:
+        LedIndex: 69
+        Adc: 0
+        AdcChannel: 7
+        TriggerValue: 50
+      S2:
+        LedIndex: 70
+        Adc: 1
+        AdcChannel: 0
+        TriggerValue: 60
+      S3:
+        LedIndex: 124
+        Adc: 1
+        AdcChannel: 5
+        TriggerValue: 55
+      
