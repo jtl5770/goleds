@@ -23,7 +23,7 @@ Hardware:
     LedsTotal: 125
   Sensors:
     SmoothingSize: 3
-    LoopDelayMillis: 5 
+    LoopDelayMillis: 5
     SensorCfg:
       S0:
         LedIndex: 0
@@ -45,4 +45,3 @@ Hardware:
         Adc: 1
         AdcChannel: 5
         TriggerValue: 55
-      
