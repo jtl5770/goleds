@@ -18,7 +18,6 @@ import (
 
 const HOLD_LED_UID = "__hold_producer"
 const NIGHT_LED_UID = "__night_producer"
-const FORCED_UPDATE_INTERVAL = 5 * time.Second
 
 var ledproducers map[string]p.LedProducer
 var sigchans [](chan bool)
@@ -119,7 +118,7 @@ func resetAll() {
 func combineAndupdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan bool) {
 	var oldSumLeds []p.Led
 	allLedRanges := make(map[string][]p.Led)
-	ticker := time.NewTicker(FORCED_UPDATE_INTERVAL)
+	ticker := time.NewTicker(c.CONFIG.Hardware.Display.ForceUpdateSeconds * time.Second)
 	for uid := range hw.Sensors {
 		allLedRanges[uid] = make([]p.Led, c.CONFIG.Hardware.Display.LedsTotal)
 	}

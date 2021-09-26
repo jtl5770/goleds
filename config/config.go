@@ -37,7 +37,8 @@ type Config struct {
 	} `yaml:"HoldLED"`
 	Hardware struct {
 		Display struct {
-			LedsTotal int `yaml:"LedsTotal"`
+			ForceUpdateSeconds time.Duration `yaml:"ForceUpdateSeconds"`
+			LedsTotal          int           `yaml:"LedsTotal"`
 		} `yaml:"Display"`
 		Sensors struct {
 			SmoothingSize   int           `yaml:"SmoothingSize"`

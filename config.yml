@@ -20,6 +20,7 @@ HoldLED:
 
 Hardware:
   Display:
+    ForceUpdateSeconds: 10
     LedsTotal: 125
   Sensors:
     SmoothingSize: 3
