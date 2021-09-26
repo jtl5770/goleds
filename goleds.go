@@ -22,7 +22,7 @@ const FORCED_UPDATE_INTERVAL = 5 * time.Second
 
 var ledproducers map[string]p.LedProducer
 var sigchans [](chan bool)
-var inithwonce sync.Once
+var initHw sync.Once
 
 func main() {
 	ex, err := os.Executable()
@@ -35,7 +35,7 @@ func main() {
 	flag.Parse()
 
 	c.ReadConfig(*cfile, *realp)
-	Initialise()
+	initialise()
 
 	osSig := make(chan os.Signal)
 	reload := make(chan os.Signal)
@@ -47,16 +47,16 @@ func main() {
 			log.Println("Exiting...")
 			os.Exit(0)
 		case <-reload:
-			ResetAll()
+			resetAll()
 			c.ReadConfig(*cfile, *realp)
-			Initialise()
+			initialise()
 		}
 	}
 }
 
-func Initialise() {
+func initialise() {
 	log.Println("Initialising...")
-	inithwonce.Do(hw.InitGpioAndSpi) // This must be done once only!
+	initHw.Do(hw.InitGpioAndSpi) // This must be done once only!
 	hw.Sensors = make(map[string]hw.Sensor)
 	ledproducers = make(map[string]p.LedProducer)
 	sigchans = make([](chan bool), 0)
@@ -72,16 +72,21 @@ func Initialise() {
 	}
 
 	if c.CONFIG.NightLED.Enabled {
-		// The Nightlight producer makes a permanent red (default) glow during night time
+		// The Nightlight producer makes a permanent red (default)
+		// glow during night time
 		prodnight := p.NewNightlightProducer(NIGHT_LED_UID, ledReader)
 		ledproducers[NIGHT_LED_UID] = prodnight
 		prodnight.Fire()
 	}
 
 	if c.CONFIG.HoldLED.Enabled {
-		// The HoldLight producer will be fired whenever a sensor produces for HOLD_TRIGGER_DELAY a signal > HOLD_TRIGGER_VALUE
-		// It will generate a brighter, full lit LED stripe and keep it for FULL_HIGH_HOLD time, if not being triggered again
-		// in this time - then it will shut off earlier
+		// The HoldLight producer will be fired whenever a sensor
+		// produces for longer than a configurable time a signal > a
+		// configurable value (see config file for TriggerDelay and
+		// TriggerValue) It will generate a brighter, full lit LED
+		// stripe and keep it for FULL_HIGH_HOLD time, if not being
+		// triggered again in this time - then it will shut off
+		// earlier
 		prodhold := p.NewHoldProducer(HOLD_LED_UID, ledReader)
 		ledproducers[HOLD_LED_UID] = prodhold
 	}
@@ -99,7 +104,7 @@ func Initialise() {
 	go hw.SensorDriver(sensorReader, hw.Sensors, SDsignal)
 }
 
-func ResetAll() {
+func resetAll() {
 	log.Println("Resetting...")
 	for _, prod := range ledproducers {
 		prod.Stop()
