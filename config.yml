@@ -45,4 +45,4 @@ Hardware:
         LedIndex: 124
         Adc: 1
         AdcChannel: 5
-        TriggerValue: 55
+        TriggerValue: 50
