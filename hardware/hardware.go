@@ -16,7 +16,7 @@ var Sensors map[string]Sensor
 var pin17, pin22, pin23, pin24 rpio.Pin
 var spiMutex sync.Mutex
 
-func InitGpioAndSpi() {
+func InitGpio() {
 	if c.CONFIG.RealHW {
 		log.Println("Initialise GPI and Spi...")
 		if err := rpio.Open(); err != nil {
@@ -42,7 +42,7 @@ func InitGpioAndSpi() {
 		pin24.Output()
 		pin24.High()
 	} else {
-		log.Println("No GPI or Spi init done as we are not running on real hardware...")
+		log.Println("No GPI init done as we are not running on real hardware...")
 	}
 }
 

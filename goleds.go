@@ -55,7 +55,7 @@ func main() {
 
 func initialise() {
 	log.Println("Initialising...")
-	initHw.Do(hw.InitGpioAndSpi) // This must be done once only!
+	initHw.Do(hw.InitGpio) // This must be done once only!
 	hw.Sensors = make(map[string]hw.Sensor)
 	ledproducers = make(map[string]p.LedProducer)
 	sigchans = make([](chan bool), 0)
