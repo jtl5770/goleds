@@ -42,6 +42,7 @@ func setLedSegment(segmentID int, values []p.Led) {
 	}
 	selectLed(segmentID)
 	rpio.SpiExchange(display)
+	time.Sleep(50 * time.Microsecond)
 }
 
 func selectLed(index int) {
@@ -58,7 +59,7 @@ func selectLed(index int) {
 	} else {
 		panic("No LED")
 	}
-	time.Sleep(100 * time.Microsecond)
+	time.Sleep(50 * time.Microsecond)
 }
 
 // Local Variables:
