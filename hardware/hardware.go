@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	SPI_SPEED = 976562
+	//SPI_SPEED = 976562
+	SPI_SPEED = 1000000
 )
 
 var Sensors map[string]Sensor
@@ -22,10 +23,11 @@ func InitGpio() {
 		if err := rpio.Open(); err != nil {
 			panic(err)
 		}
-		// if err := rpio.SpiBegin(rpio.Spi0); err != nil {
-		// 	panic(err)
-		// }
+		if err := rpio.SpiBegin(rpio.Spi0); err != nil {
+			panic(err)
+		}
 
+		rpio.SpiSpeed(SPI_SPEED)
 		pin17 = rpio.Pin(17)
 		pin17.Output()
 		pin17.Low()
