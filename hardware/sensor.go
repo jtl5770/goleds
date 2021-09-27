@@ -128,4 +128,5 @@ func selectAdc(index int) {
 	} else {
 		panic("No ADC")
 	}
+	time.Sleep(50 * time.Microsecond)
 }
