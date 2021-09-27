@@ -110,8 +110,12 @@ func printStatisticsAndReset(max *map[string]int) {
 
 func readAdc(channel byte) int {
 	buffer := []byte{1, (8 + channel) << 4, 0}
+	if err := rpio.SpiBegin(rpio.Spi0); err != nil {
+		panic(err)
+	}
+	rpio.SpiSpeed(SPI_SPEED)
+	defer rpio.SpiEnd(rpio.Spi0)
 	rpio.SpiExchange(buffer)
-	time.Sleep(50 * time.Microsecond)
 	return ((int(buffer[1]) & 3) << 8) + int(buffer[2])
 }
 
@@ -129,7 +133,7 @@ func selectAdc(index int) {
 	} else {
 		panic("No ADC")
 	}
-	time.Sleep(50 * time.Microsecond)
+	time.Sleep(100 * time.Microsecond)
 }
 
 // Local Variables:
