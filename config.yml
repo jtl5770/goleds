@@ -20,11 +20,11 @@ HoldLED:
 
 Hardware:
   Display:
-    ForceUpdateSeconds: 1
+    ForceUpdateSeconds: 2
     LedsTotal: 125
   Sensors:
     SmoothingSize: 3
-    LoopDelayMillis: 5
+    LoopDelayMillis: 10
     SensorCfg:
       S0:
         LedIndex: 0
