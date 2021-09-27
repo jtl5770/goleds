@@ -2,6 +2,7 @@ package hardware
 
 import (
 	"log"
+	"time"
 
 	"github.com/stianeikeland/go-rpio/v4"
 	c "lautenbacher.net/goleds/config"
@@ -57,6 +58,7 @@ func selectLed(index int) {
 	} else {
 		panic("No LED")
 	}
+	time.Sleep(100 * time.Microsecond)
 }
 
 // Local Variables:
