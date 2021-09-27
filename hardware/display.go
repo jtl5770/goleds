@@ -25,7 +25,9 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 				simulateLed(1, led2)
 			} else {
 				spiMutex.Lock()
+				time.Sleep(50 * time.Microsecond)
 				setLedSegment(0, led1)
+				time.Sleep(50 * time.Microsecond)
 				setLedSegment(1, led2)
 				spiMutex.Unlock()
 			}
@@ -42,7 +44,6 @@ func setLedSegment(segmentID int, values []p.Led) {
 	}
 	selectLed(segmentID)
 	rpio.SpiExchange(display)
-	time.Sleep(100 * time.Microsecond)
 }
 
 func selectLed(index int) {
@@ -59,7 +60,6 @@ func selectLed(index int) {
 	} else {
 		panic("No LED")
 	}
-	time.Sleep(100 * time.Microsecond)
 }
 
 // Local Variables:
