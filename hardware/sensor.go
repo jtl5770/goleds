@@ -111,6 +111,7 @@ func printStatisticsAndReset(max *map[string]int) {
 func readAdc(channel byte) int {
 	buffer := []byte{1, (8 + channel) << 4, 0}
 	rpio.SpiExchange(buffer)
+	time.Sleep(50 * time.Microsecond)
 	return ((int(buffer[1]) & 3) << 8) + int(buffer[2])
 }
 
