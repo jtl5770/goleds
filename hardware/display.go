@@ -25,9 +25,9 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 				simulateLed(1, led2)
 			} else {
 				spiMutex.Lock()
-				time.Sleep(50 * time.Microsecond)
+				// time.Sleep(50 * time.Microsecond)
 				setLedSegment(0, led1)
-				time.Sleep(50 * time.Microsecond)
+				// time.Sleep(50 * time.Microsecond)
 				setLedSegment(1, led2)
 				spiMutex.Unlock()
 			}
