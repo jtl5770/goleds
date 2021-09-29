@@ -2,7 +2,6 @@ package hardware
 
 import (
 	"log"
-	"time"
 
 	"github.com/stianeikeland/go-rpio/v4"
 	c "lautenbacher.net/goleds/config"
