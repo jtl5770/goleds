@@ -10,7 +10,7 @@ import (
 
 const (
 	//SPI_SPEED = 976562
-	SPI_SPEED = 2000000
+	SPI_SPEED = 2500000
 )
 
 var Sensors map[string]Sensor
