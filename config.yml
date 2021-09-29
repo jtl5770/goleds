@@ -30,7 +30,7 @@ Hardware:
         LedIndex: 0
         Adc: 0
         AdcChannel: 0
-        TriggerValue: 40
+        TriggerValue: 45
       S1:
         LedIndex: 69
         Adc: 0
