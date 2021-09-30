@@ -58,7 +58,7 @@ func initialise() {
 	initHw.Do(hw.InitGpio) // This must be done once only!
 	hw.Sensors = make(map[string]hw.Sensor)
 	ledproducers = make(map[string]p.LedProducer)
-	sigchans = make([](chan bool), 0)
+	sigchans = make([](chan bool), 0, 4)
 	ledReader := make(chan (p.LedProducer))
 	ledWriter := make(chan []p.Led, c.CONFIG.Hardware.Display.LedsTotal)
 	sensorReader := make(chan hw.Trigger)
