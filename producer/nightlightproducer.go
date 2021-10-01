@@ -21,7 +21,8 @@ func NewNightlightProducer(uid string, ledsChanged chan (LedProducer)) *Nightlig
 		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
 		latitude:         c.CONFIG.NightLED.Latitude,
 		longitude:        c.CONFIG.NightLED.Longitude,
-		ledNight:         Led{Red: c.CONFIG.NightLED.LedRGB[0], Green: c.CONFIG.NightLED.LedRGB[1], Blue: c.CONFIG.NightLED.LedRGB[2]}}
+		ledNight:         Led{Red: c.CONFIG.NightLED.LedRGB[0], Green: c.CONFIG.NightLED.LedRGB[1], Blue: c.CONFIG.NightLED.LedRGB[2]},
+	}
 	inst.runfunc = inst.runner
 	return &inst
 }

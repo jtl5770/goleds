@@ -16,12 +16,16 @@ import (
 	p "lautenbacher.net/goleds/producer"
 )
 
-const HOLD_LED_UID = "__hold_producer"
-const NIGHT_LED_UID = "__night_producer"
+const (
+	HOLD_LED_UID  = "__hold_producer"
+	NIGHT_LED_UID = "__night_producer"
+)
 
-var ledproducers map[string]p.LedProducer
-var sigchans [](chan bool)
-var initHw sync.Once
+var (
+	ledproducers map[string]p.LedProducer
+	sigchans     [](chan bool)
+	initHw       sync.Once
+)
 
 func main() {
 	ex, err := os.Executable()
@@ -156,7 +160,7 @@ func combineLeds(allLedRanges map[string][]p.Led) []p.Led {
 
 func fireController(sensor chan (hw.Trigger), producers map[string]p.LedProducer, sig chan bool) {
 	var firstSameTrigger hw.Trigger
-	var triggerDelay = c.CONFIG.HoldLED.TriggerSeconds * time.Second
+	triggerDelay := c.CONFIG.HoldLED.TriggerSeconds * time.Second
 
 	for {
 		select {

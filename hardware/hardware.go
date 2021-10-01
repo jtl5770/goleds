@@ -9,13 +9,15 @@ import (
 )
 
 const (
-	//SPI_SPEED = 976562
+	// SPI_SPEED = 976562
 	SPI_SPEED = 2500000
 )
 
-var Sensors map[string]Sensor
-var pin17, pin22, pin23, pin24 rpio.Pin
-var spiMutex sync.Mutex
+var (
+	Sensors                    map[string]Sensor
+	pin17, pin22, pin23, pin24 rpio.Pin
+	spiMutex                   sync.Mutex
+)
 
 func InitGpio() {
 	if c.CONFIG.RealHW {

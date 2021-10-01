@@ -32,7 +32,8 @@ func NewAbstractProducer(uid string, ledsChanged chan LedProducer) *AbstractProd
 		uid:         uid,
 		leds:        make([]Led, c.CONFIG.Hardware.Display.LedsTotal),
 		ledsChanged: ledsChanged,
-		stop:        make(chan bool, 1)}
+		stop:        make(chan bool, 1),
+	}
 	return &inst
 }
 
