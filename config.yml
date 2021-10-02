@@ -19,18 +19,18 @@ HoldLED:
   LedRGB: [140, 25, 6]
 
 BlobLED:
-  Enabled: false 
-  DelayMillis: 100
+  Enabled: true 
+  DelayMillis: 50
   DeltaX: 0.1
   X: 30
   Width: 64
-  LedRGB: [80, 5, 0]
+  LedRGB: [80, 0, 0]
 
 Hardware:
   Display:
     ForceUpdateSeconds: 2
     LedsTotal: 125
-    SPIFrequency: 2500000
+    SPIFrequency: 2000000
   Sensors:
     SmoothingSize: 3
     LoopDelayMillis: 10
