@@ -8,18 +8,13 @@ import (
 	c "lautenbacher.net/goleds/config"
 )
 
-const (
-	// SPI_SPEED = 976562
-	SPI_SPEED = 2500000
-)
-
 var (
 	Sensors                    map[string]Sensor
 	pin17, pin22, pin23, pin24 rpio.Pin
 	spiMutex                   sync.Mutex
 )
 
-func InitGpio() {
+func InitGPIO() {
 	if c.CONFIG.RealHW {
 		log.Println("Initialise GPI and Spi...")
 		if err := rpio.Open(); err != nil {
@@ -29,7 +24,7 @@ func InitGpio() {
 			panic(err)
 		}
 
-		rpio.SpiSpeed(SPI_SPEED)
+		rpio.SpiSpeed(c.CONFIG.Hardware.Display.SPIFrequency)
 		pin17 = rpio.Pin(17)
 		pin17.Output()
 		pin17.Low()
@@ -47,6 +42,15 @@ func InitGpio() {
 		pin24.High()
 	} else {
 		log.Println("No GPI init done as we are not running on real hardware...")
+	}
+}
+
+func CloseGPIO() {
+	if c.CONFIG.RealHW {
+		rpio.SpiEnd(rpio.Spi0)
+		if err := rpio.Close(); err != nil {
+			panic(err)
+		}
 	}
 }
 

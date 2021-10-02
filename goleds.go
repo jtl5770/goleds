@@ -45,13 +45,15 @@ func main() {
 	reload := make(chan os.Signal)
 	signal.Notify(osSig, os.Interrupt)
 	signal.Notify(reload, syscall.SIGHUP)
+
 	for {
 		select {
 		case <-osSig:
 			log.Println("Exiting...")
+			reset()
 			os.Exit(0)
 		case <-reload:
-			resetAll()
+			reset()
 			c.ReadConfig(*cfile, *realp)
 			initialise()
 		}
@@ -60,7 +62,7 @@ func main() {
 
 func initialise() {
 	log.Println("Initialising...")
-	initHw.Do(hw.InitGpio) // This must be done once only!
+	hw.InitGPIO() // This must be done once only!
 	hw.Sensors = make(map[string]hw.Sensor)
 	ledproducers = make(map[string]p.LedProducer)
 	sigchans = make([](chan bool), 0, 4)
@@ -114,7 +116,7 @@ func initialise() {
 	go hw.SensorDriver(sensorReader, hw.Sensors, SDsignal)
 }
 
-func resetAll() {
+func reset() {
 	log.Println("Resetting...")
 	for _, prod := range ledproducers {
 		prod.Stop()
@@ -124,6 +126,7 @@ func resetAll() {
 		sig <- true
 	}
 	time.Sleep(2 * time.Second)
+	hw.CloseGPIO()
 }
 
 func combineAndupdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan bool) {
