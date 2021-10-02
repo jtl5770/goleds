@@ -44,8 +44,7 @@ func (s *BlobProducer) runner() {
 
 		select {
 		case <-s.stop:
-			log.Println("Stopped HoldProducer...")
-
+			log.Println("Stopped BlobProducer...")
 			tickX.Stop()
 			return
 		case <-tickX.C:
