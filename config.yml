@@ -19,7 +19,7 @@ HoldLED:
   LedRGB: [140, 25, 6]
 
 BlobLED:
-  Enabled: false 
+  Enabled: false
   BlobCfg:
     Blob1:
       DelayMillis: 40
