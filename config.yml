@@ -20,18 +20,19 @@ HoldLED:
 
 BlobLED:
   Enabled: true 
-  Blob1:
-    DelayMillis: 50
-    DeltaX: 0.1
-    X: 30
-    Width: 64
-    LedRGB: [80, 0, 0]
-  Blob2:
-    DelayMillis: 75
-    DeltaX: -0.1
-    X: 90
-    Width: 128
-    LedRGB: [80, 0, 0]
+  BlobCfg:
+    Blob1:
+      DelayMillis: 50
+      DeltaX: 0.1
+      X: 30
+      Width: 64
+      LedRGB: [80, 0, 0]
+    Blob2:
+      DelayMillis: 75
+      DeltaX: -0.1
+      X: 90
+      Width: 128
+      LedRGB: [80, 0, 0]
 
 Hardware:
   Display:
