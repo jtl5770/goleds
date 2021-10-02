@@ -19,10 +19,10 @@ HoldLED:
   LedRGB: [140, 25, 6]
 
 BlobLED:
-  Enabled: true
+  Enabled: false 
   X: 30
-  Width: 8
-  LedRGB: [10, 25, 1]
+  Width: 16 
+  LedRGB: [20, 25, 1]
 
 Hardware:
   Display:
