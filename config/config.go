@@ -36,12 +36,14 @@ type Config struct {
 		LedRGB         []byte        `yaml:"LedRGB"`
 	} `yaml:"HoldLED"`
 	BlobLED struct {
-		Enabled     bool          `yaml:"Enabled"`
-		DelayMillis time.Duration `yaml:"DelayMillis"`
-		DeltaX      float64       `yaml:"DeltaX"`
-		X           float64       `yaml:"X"`
-		Width       float64       `yaml:"Width"`
-		LedRGB      []byte        `yaml:"LedRGB"`
+		Enabled bool `yaml:"Enabled"`
+		BlobCfg map[string]struct {
+			DelayMillis time.Duration `yaml:"DelayMillis"`
+			DeltaX      float64       `yaml:"DeltaX"`
+			X           float64       `yaml:"X"`
+			Width       float64       `yaml:"Width"`
+			LedRGB      []byte        `yaml:"LedRGB"`
+		} `yaml:"BlobCfg"`
 	} `yaml:"BlobLED"`
 	Hardware struct {
 		Display struct {
