@@ -5,7 +5,7 @@ type LedProducer interface {
 	GetLeds() []Led
 	GetUID() string
 	Fire()
-	Stop()
+	Exit()
 }
 
 // Local Variables:

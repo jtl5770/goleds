@@ -22,7 +22,7 @@ BlobLED:
   Enabled: false 
   X: 30
   Width: 16 
-  LedRGB: [20, 25, 1]
+  LedRGB: [25, 10, 0]
 
 Hardware:
   Display:

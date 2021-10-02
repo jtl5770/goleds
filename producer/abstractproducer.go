@@ -39,7 +39,7 @@ func NewAbstractProducer(uid string, ledsChanged chan LedProducer) *AbstractProd
 
 // This method should only be called once per instance to make sure
 // the 1 element deep buffered channel "stop" won't block
-func (s *AbstractProducer) Stop() {
+func (s *AbstractProducer) Exit() {
 	s.updateMutex.Lock()
 	s.runfunc = func() {
 		log.Println("Called Fire() after Stop(). Ignoring...")

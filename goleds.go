@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"reflect"
-	"sync"
 	"syscall"
 	"time"
 
@@ -25,7 +24,6 @@ const (
 var (
 	ledproducers map[string]p.LedProducer
 	sigchans     [](chan bool)
-	initHw       sync.Once
 )
 
 func main() {
@@ -62,7 +60,7 @@ func main() {
 
 func initialise() {
 	log.Println("Initialising...")
-	hw.InitGPIO() // This must be done once only!
+	hw.InitGPIO()
 	hw.Sensors = make(map[string]hw.Sensor)
 	ledproducers = make(map[string]p.LedProducer)
 	sigchans = make([](chan bool), 0, 4)
@@ -85,12 +83,6 @@ func initialise() {
 		prodnight.Fire()
 	}
 
-	if c.CONFIG.BlobLED.Enabled {
-		prodblob := p.NewBlobProducer(BLOB_LED_UID, ledReader)
-		ledproducers[BLOB_LED_UID] = prodblob
-		prodblob.Fire()
-	}
-
 	if c.CONFIG.HoldLED.Enabled {
 		// The HoldLight producer will be fired whenever a sensor
 		// produces for longer than a configurable time a signal > a
@@ -101,6 +93,12 @@ func initialise() {
 		// earlier
 		prodhold := p.NewHoldProducer(HOLD_LED_UID, ledReader)
 		ledproducers[HOLD_LED_UID] = prodhold
+	}
+
+	if c.CONFIG.BlobLED.Enabled {
+		prodblob := p.NewBlobProducer(BLOB_LED_UID, ledReader)
+		ledproducers[BLOB_LED_UID] = prodblob
+		prodblob.Fire()
 	}
 
 	// *FUTURE* init more types of ledproducers if needed/wanted
@@ -119,7 +117,7 @@ func initialise() {
 func reset() {
 	log.Println("Resetting...")
 	for _, prod := range ledproducers {
-		prod.Stop()
+		prod.Exit()
 	}
 	time.Sleep(2 * time.Second)
 	for _, sig := range sigchans {
