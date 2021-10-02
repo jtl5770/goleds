@@ -35,6 +35,12 @@ type Config struct {
 		TriggerValue   int           `yaml:"TriggerValue"`
 		LedRGB         []byte        `yaml:"LedRGB"`
 	} `yaml:"HoldLED"`
+	BlobLED struct {
+		Enabled bool    `yaml:"Enabled"`
+		X       float64 `yaml:"X"`
+		Width   float64 `yaml:"Width"`
+		LedRGB  []byte  `yaml:"LedRGB"`
+	} `yaml:"BlobLED"`
 	Hardware struct {
 		Display struct {
 			ForceUpdateSeconds time.Duration `yaml:"ForceUpdateSeconds"`

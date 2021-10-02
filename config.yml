@@ -18,6 +18,12 @@ HoldLED:
   TriggerValue: 160
   LedRGB: [140, 25, 6]
 
+BlobLED:
+  Enabled: true
+  X: 30
+  Width: 8
+  LedRGB: [10, 25, 1]
+
 Hardware:
   Display:
     ForceUpdateSeconds: 2

@@ -19,6 +19,7 @@ import (
 const (
 	HOLD_LED_UID  = "__hold_producer"
 	NIGHT_LED_UID = "__night_producer"
+	BLOB_LED_UID  = "__blob_producer"
 )
 
 var (
@@ -80,6 +81,12 @@ func initialise() {
 		prodnight := p.NewNightlightProducer(NIGHT_LED_UID, ledReader)
 		ledproducers[NIGHT_LED_UID] = prodnight
 		prodnight.Fire()
+	}
+
+	if c.CONFIG.BlobLED.Enabled {
+		prodblob := p.NewBlobProducer(BLOB_LED_UID, ledReader)
+		ledproducers[BLOB_LED_UID] = prodblob
+		prodblob.Fire()
 	}
 
 	if c.CONFIG.HoldLED.Enabled {
