@@ -20,9 +20,11 @@ HoldLED:
 
 BlobLED:
   Enabled: false 
+  DelayMillis: 100
+  DeltaX: 0.1
   X: 30
-  Width: 16 
-  LedRGB: [25, 10, 0]
+  Width: 64
+  LedRGB: [80, 5, 0]
 
 Hardware:
   Display:

@@ -33,8 +33,8 @@ func (s *BlobProducer) runner() {
 		s.updateMutex.Unlock()
 	}()
 
-	delta := 0.2
-	tickX := time.NewTicker(200 * time.Millisecond)
+	delta := c.CONFIG.BlobLED.DeltaX
+	tickX := time.NewTicker(c.CONFIG.BlobLED.DelayMillis * time.Millisecond)
 	for {
 		for i := 0; i < c.CONFIG.Hardware.Display.LedsTotal; i++ {
 			y := math.Exp(-1 * (math.Pow(float64(i)-s.x, 2) / s.width))

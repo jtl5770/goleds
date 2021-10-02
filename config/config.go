@@ -36,10 +36,12 @@ type Config struct {
 		LedRGB         []byte        `yaml:"LedRGB"`
 	} `yaml:"HoldLED"`
 	BlobLED struct {
-		Enabled bool    `yaml:"Enabled"`
-		X       float64 `yaml:"X"`
-		Width   float64 `yaml:"Width"`
-		LedRGB  []byte  `yaml:"LedRGB"`
+		Enabled     bool          `yaml:"Enabled"`
+		DelayMillis time.Duration `yaml:"DelayMillis"`
+		DeltaX      float64       `yaml:"DeltaX"`
+		X           float64       `yaml:"X"`
+		Width       float64       `yaml:"Width"`
+		LedRGB      []byte        `yaml:"LedRGB"`
 	} `yaml:"BlobLED"`
 	Hardware struct {
 		Display struct {
@@ -77,6 +79,6 @@ func ReadConfig(cfile string, realhw bool) {
 	log.Printf("%+v", CONFIG)
 }
 
-// Local Variables:
+// Local Variables:D
 // compile-command: "cd .. && go build"
 // End:
