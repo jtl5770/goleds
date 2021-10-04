@@ -78,7 +78,7 @@ func ReadConfig(cfile string, realhw bool) {
 	}
 	CONFIG.RealHW = realhw
 	CONFIG.Configfile = cfile
-	log.Printf("%+v", CONFIG)
+	log.Printf("%+v\n", CONFIG)
 }
 
 // Local Variables:D
