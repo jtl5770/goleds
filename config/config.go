@@ -23,10 +23,10 @@ type Config struct {
 		LedRGB        []byte        `yaml:"LedRGB"`
 	} `yaml:"SensorLED"`
 	NightLED struct {
-		Enabled   bool    `yaml:"Enabled"`
-		Latitude  float64 `yaml:"Latitude"`
-		Longitude float64 `yaml:"Longitude"`
-		LedRGB    []byte  `yaml:"LedRGB"`
+		Enabled   bool     `yaml:"Enabled"`
+		Latitude  float64  `yaml:"Latitude"`
+		Longitude float64  `yaml:"Longitude"`
+		LedRGB    [][]byte `yaml:"LedRGB"`
 	} `yaml:"NightLED"`
 	HoldLED struct {
 		Enabled        bool          `yaml:"Enabled"`

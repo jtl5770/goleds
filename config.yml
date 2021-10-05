@@ -9,8 +9,16 @@ NightLED:
   Enabled: true
   Latitude: 49.014
   Longitude: 8.4043
-  LedRGB: [4, 0, 0]
-
+  LedRGB:
+    - [4, 0, 0]
+    - [4, 0, 1]
+    - [3, 0, 1]
+    - [3, 0, 2]
+    - [2, 0, 2]
+    - [2, 0, 3]
+    - [1, 0, 3]
+    - [1, 0, 4]
+    - [0, 0, 4]
 HoldLED:
   Enabled: true
   HoldMinutes: 5
