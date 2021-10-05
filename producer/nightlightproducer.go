@@ -57,7 +57,7 @@ func (s *NightlightProducer) runner() {
 		prev := now.Add(-24 * time.Hour) // yesterday
 		rise, set := sunrise.SunriseSunset(s.latitude, s.longitude, now.Year(), now.Month(), now.Day())
 		rise_next_day, _ := sunrise.SunriseSunset(s.latitude, s.longitude, next.Year(), next.Month(), next.Day())
-		set_prev_day, _ := sunrise.SunriseSunset(s.latitude, s.longitude, prev.Year(), prev.Month(), prev.Day())
+		_, set_prev_day := sunrise.SunriseSunset(s.latitude, s.longitude, prev.Year(), prev.Month(), prev.Day())
 		var wakeupAfter time.Duration
 		if now.After(rise) && now.Before(set) {
 			// During the day - between sunrise and sunset
