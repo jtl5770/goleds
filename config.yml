@@ -23,7 +23,7 @@ HoldLED:
   HoldMinutes: 5
   TriggerSeconds: 3
   TriggerValue: 160
-  LedRGB: [160, 30, 10]
+  LedRGB: [140, 25, 6]
 
 BlobLED:
   Enabled: false
