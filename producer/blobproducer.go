@@ -38,7 +38,7 @@ func (s *BlobProducer) runner() {
 	for {
 		for i := 0; i < c.CONFIG.Hardware.Display.LedsTotal; i++ {
 			y := math.Exp(-1 * (math.Pow(float64(i)-s.x, 2) / s.width))
-			s.setLed(i, Led{byte(float64(s.led.Red) * y), byte(float64(s.led.Green) * y), byte(float64(s.led.Blue) * y)})
+			s.setLed(i, Led{byte(math.Round(float64(s.led.Red) * y)), byte(math.Round(float64(s.led.Green) * y)), byte(math.Round(float64(s.led.Blue) * y))})
 		}
 		s.ledsChanged <- s
 
