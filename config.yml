@@ -1,6 +1,6 @@
 SensorLED:
   Enabled: true
-  RunUpMillis: 5 
+  RunUpMillis: 5
   RunDownMillis: 20
   HoldSeconds: 10
   LedRGB: [80, 15, 3]
