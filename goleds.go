@@ -33,7 +33,7 @@ var (
 )
 
 // main driver loop to setup hardware, go routines etc., listen for signals
-// to either end or reload config or print sensor statistics
+// to either exit or reload config or log sensor statistics
 func main() {
 	ex, err := os.Executable()
 	if err != nil {
