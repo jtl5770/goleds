@@ -1,8 +1,10 @@
-// A package to read infrared sensor data via MCP3008 an drive WS-2801 LED stripes.
-// This is configured to a very special hardware layout of two MCPs handling 2 sensors each
-// and two segments of LEDs. This is partly due to originally having to drive more than 8 sensors.
-// The LED stripe layout is due to the special situation in my floor. All hardware related things are
-// defined in the hardware/ directory (package hardware)
+// A package to read infrared sensor data via MCP3008 an drive WS-2801
+// LED stripes.  This is configured to a very special hardware layout
+// of two MCPs handling 2 sensors each and two segments of LEDs. This
+// is partly due to originally having to drive more than 8 sensors.
+// The LED stripe layout is due to the special situation in my
+// floor. All hardware related things are defined in the hardware/
+// directory (package hardware)
 package main
 
 import (
