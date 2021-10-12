@@ -34,7 +34,7 @@ func (s *BlobProducer) runner() {
 	}()
 
 	delta := c.CONFIG.BlobLED.BlobCfg[s.uid].DeltaX
-	tickX := time.NewTicker(c.CONFIG.BlobLED.BlobCfg[s.uid].DelayMillis * time.Millisecond)
+	tickX := time.NewTicker(c.CONFIG.BlobLED.BlobCfg[s.uid].Delay)
 	for {
 		for i := 0; i < c.CONFIG.Hardware.Display.LedsTotal; i++ {
 			y := math.Exp(-1 * (math.Pow(float64(i)-s.x, 2) / s.width))

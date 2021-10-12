@@ -20,9 +20,9 @@ func NewSensorLedProducer(uid string, index int, ledsChanged chan (LedProducer))
 	inst := SensorLedProducer{
 		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
 		ledIndex:         index,
-		holdT:            c.CONFIG.SensorLED.HoldSeconds * time.Second,
-		runUpT:           c.CONFIG.SensorLED.RunUpMillis * time.Millisecond,
-		runDownT:         c.CONFIG.SensorLED.RunDownMillis * time.Millisecond,
+		holdT:            c.CONFIG.SensorLED.HoldTime,
+		runUpT:           c.CONFIG.SensorLED.RunUpDelay,
+		runDownT:         c.CONFIG.SensorLED.RunDownDelay,
 		ledOn:            Led{Red: c.CONFIG.SensorLED.LedRGB[0], Green: c.CONFIG.SensorLED.LedRGB[1], Blue: c.CONFIG.SensorLED.LedRGB[2]},
 	}
 	inst.runfunc = inst.runner

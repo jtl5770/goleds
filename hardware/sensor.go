@@ -60,7 +60,7 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan
 
 	sensorvalues := make(map[string]int)
 	sensormax := make(map[string]int)
-	ticker := time.NewTicker(c.CONFIG.Hardware.Sensors.LoopDelayMillis * time.Millisecond)
+	ticker := time.NewTicker(c.CONFIG.Hardware.Sensors.LoopDelay)
 	for {
 		select {
 		case <-statistics:
