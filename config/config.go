@@ -30,7 +30,7 @@ type Config struct {
 	} `yaml:"NightLED"`
 	HoldLED struct {
 		Enabled      bool          `yaml:"Enabled"`
-		HoldTime     time.Duration `yaml:"Hold"`
+		HoldTime     time.Duration `yaml:"HoldTime"`
 		TriggerDelay time.Duration `yaml:"TriggerDelay"`
 		TriggerValue int           `yaml:"TriggerValue"`
 		LedRGB       []byte        `yaml:"LedRGB"`
