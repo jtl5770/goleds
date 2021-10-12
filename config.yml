@@ -43,9 +43,9 @@ BlobLED:
 
 Hardware:
   Display:
-    ForceUpdateDelay: 750ms
+    ForceUpdateDelay: 1000ms
     LedsTotal: 125
-    SPIFrequency: 2100000
+    SPIFrequency: 2300000
   Sensors:
     SmoothingSize: 3
     LoopDelay: 10ms
