@@ -1,8 +1,8 @@
 SensorLED:
   Enabled: true
-  RunUpMillis: 5
-  RunDownMillis: 20
-  HoldSeconds: 10
+  RunUpDelay: 5ms
+  RunDownDelay: 20ms
+  HoldTime: 10s
   LedRGB: [80, 15, 3]
 
 NightLED:
@@ -20,8 +20,8 @@ NightLED:
 
 HoldLED:
   Enabled: true
-  HoldMinutes: 5
-  TriggerSeconds: 3
+  HoldTime: 5m
+  TriggerDelay: 3s
   TriggerValue: 160
   LedRGB: [140, 25, 6]
 
@@ -29,13 +29,13 @@ BlobLED:
   Enabled: false
   BlobCfg:
     Blob1:
-      DelayMillis: 40
+      Delay: 40ms
       DeltaX: 0.1
       X: 30
       Width: 64
       LedRGB: [60, 0, 0]
     Blob2:
-      DelayMillis: 75
+      Delay: 75ms
       DeltaX: -0.1
       X: 90
       Width: 128
@@ -43,18 +43,18 @@ BlobLED:
 
 Hardware:
   Display:
-    ForceUpdateSeconds: 2
+    ForceUpdateDelay: 1000ms
     LedsTotal: 125
-    SPIFrequency: 2100000
+    SPIFrequency: 2300000
   Sensors:
     SmoothingSize: 3
-    LoopDelayMillis: 10
+    LoopDelay: 10ms
     SensorCfg:
       S0:
         LedIndex: 0
         Adc: 0
         AdcChannel: 0
-        TriggerValue: 45
+        TriggerValue: 47
       S1:
         LedIndex: 69
         Adc: 0
@@ -69,4 +69,4 @@ Hardware:
         LedIndex: 124
         Adc: 1
         AdcChannel: 5
-        TriggerValue: 50
+        TriggerValue: 52

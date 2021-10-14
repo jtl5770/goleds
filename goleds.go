@@ -140,7 +140,7 @@ func reset() {
 func combineAndupdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan bool) {
 	var oldSumLeds []p.Led
 	allLedRanges := make(map[string][]p.Led)
-	ticker := time.NewTicker(c.CONFIG.Hardware.Display.ForceUpdateSeconds * time.Second)
+	ticker := time.NewTicker(c.CONFIG.Hardware.Display.ForceUpdateDelay)
 	for uid := range hw.Sensors {
 		allLedRanges[uid] = make([]p.Led, c.CONFIG.Hardware.Display.LedsTotal)
 	}
@@ -178,7 +178,7 @@ func combineLeds(allLedRanges map[string][]p.Led) []p.Led {
 
 func fireController(sensor chan (hw.Trigger), producers map[string]p.LedProducer, sig chan bool) {
 	var firstSameTrigger hw.Trigger
-	triggerDelay := c.CONFIG.HoldLED.TriggerSeconds * time.Second
+	triggerDelay := c.CONFIG.HoldLED.TriggerDelay
 
 	for {
 		select {
