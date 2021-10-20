@@ -21,9 +21,13 @@ type BlobProducer struct {
 func NewBlobProducer(uid string, ledsChanged chan LedProducer) *BlobProducer {
 	inst := BlobProducer{
 		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
-		led:              Led{Red: c.CONFIG.BlobLED.BlobCfg[uid].LedRGB[0], Green: c.CONFIG.BlobLED.BlobCfg[uid].LedRGB[1], Blue: c.CONFIG.BlobLED.BlobCfg[uid].LedRGB[2]},
-		x:                c.CONFIG.BlobLED.BlobCfg[uid].X,
-		width:            c.CONFIG.BlobLED.BlobCfg[uid].Width,
+		led: Led{
+			Red:   c.CONFIG.BlobLED.BlobCfg[uid].LedRGB[0],
+			Green: c.CONFIG.BlobLED.BlobCfg[uid].LedRGB[1],
+			Blue:  c.CONFIG.BlobLED.BlobCfg[uid].LedRGB[2],
+		},
+		x:     c.CONFIG.BlobLED.BlobCfg[uid].X,
+		width: c.CONFIG.BlobLED.BlobCfg[uid].Width,
 	}
 	inst.runfunc = inst.runner
 	return &inst
