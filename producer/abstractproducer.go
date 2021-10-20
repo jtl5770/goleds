@@ -23,7 +23,7 @@ type AbstractProducer struct {
 	// the method Fire() should call. MUST be set by the concrete
 	// implementation upon constructing a new instance
 	runfunc func()
-	// this will channel will be signaled via the Stop method
+	// this channel will be signaled via the Stop method
 	stop chan bool
 }
 

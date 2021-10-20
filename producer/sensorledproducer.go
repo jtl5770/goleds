@@ -122,7 +122,8 @@ func (s *SensorLedProducer) runner() {
 				// loop took place)
 				ticker.Stop()
 				if s.stopRunningIfNoNewFire(last_fire) {
-					// we are finally ready and can return and end the go routine
+					// we are finally ready and can return and end the
+					// go routine
 					return
 				} else {
 					// back into running up again
