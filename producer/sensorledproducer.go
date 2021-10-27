@@ -35,7 +35,7 @@ func NewSensorLedProducer(uid string, index int, ledsChanged chan (LedProducer))
 // time accordingly) and during run-down to switch back into the
 // run-up part if needed. At the end it checks one last time for an
 // intermediate Fire() before finally setting s.isRunning to false and
-// ending the go routine. All this is either quarded directly or
+// ending the go routine. All this is either guarded directly or
 // indirectly (by calls to s.getLastFire()) by s.updateMutex.
 func (s *SensorLedProducer) runner() {
 	left := s.ledIndex
@@ -119,7 +119,7 @@ func (s *SensorLedProducer) runner() {
 				// run down cycle in the future or - as a last check -
 				// we see if there has been a fire event in the little
 				// time while this last iteration of the inner for
-				// loop took place)
+				// loop took place thereby closing a small race condition)
 				ticker.Stop()
 				if s.stopRunningIfNoNewFire(last_fire) {
 					// we are finally ready and can return and end the
