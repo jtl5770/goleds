@@ -46,7 +46,7 @@ Hardware:
   Display:
     ForceUpdateDelay: 1000ms
     LedsTotal: 125
-    SPIFrequency: 2300000
+    SPIFrequency: 2097152
   Sensors:
     SmoothingSize: 3
     LoopDelay: 10ms
