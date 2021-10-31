@@ -2,6 +2,7 @@ package hardware
 
 import (
 	"log"
+	"time"
 
 	"github.com/stianeikeland/go-rpio/v4"
 	c "lautenbacher.net/goleds/config"
@@ -40,6 +41,7 @@ func setLedSegment(segmentID int, values []p.Led) {
 		display[(3*idx)+2] = led.Blue
 	}
 	selectLed(segmentID)
+	time.Sleep(50 * time.Nanosecond)
 	rpio.SpiExchange(display)
 }
 
