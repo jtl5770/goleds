@@ -73,7 +73,6 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan
 			spiMutex.Lock()
 			for name, sensor := range sensors {
 				selectAdc(sensor.adc)
-				time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 				sensorvalues[name] = sensor.smoothValue(readAdc(sensor.adcChannel))
 			}
 			spiMutex.Unlock()
@@ -111,7 +110,9 @@ func printStatisticsAndReset(max *map[string]int) {
 
 func readAdc(channel byte) int {
 	buffer := []byte{1, (8 + channel) << 4, 0}
+	time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 	rpio.SpiExchange(buffer)
+	time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 	return ((int(buffer[1]) & 3) << 8) + int(buffer[2])
 }
 

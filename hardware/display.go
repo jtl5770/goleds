@@ -43,6 +43,7 @@ func setLedSegment(segmentID int, values []p.Led) {
 	selectLed(segmentID)
 	time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 	rpio.SpiExchange(display)
+	time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 }
 
 func selectLed(index int) {
