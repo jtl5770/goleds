@@ -73,7 +73,7 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan
 			spiMutex.Lock()
 			for name, sensor := range sensors {
 				selectAdc(sensor.adc)
-				time.Sleep(50 * time.Nanosecond)
+				time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 				sensorvalues[name] = sensor.smoothValue(readAdc(sensor.adcChannel))
 			}
 			spiMutex.Unlock()

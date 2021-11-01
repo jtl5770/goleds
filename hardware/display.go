@@ -41,7 +41,7 @@ func setLedSegment(segmentID int, values []p.Led) {
 		display[(3*idx)+2] = led.Blue
 	}
 	selectLed(segmentID)
-	time.Sleep(50 * time.Nanosecond)
+	time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 	rpio.SpiExchange(display)
 }
 

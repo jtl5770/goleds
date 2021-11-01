@@ -50,6 +50,7 @@ type Config struct {
 			ForceUpdateDelay time.Duration `yaml:"ForceUpdateDelay"`
 			LedsTotal        int           `yaml:"LedsTotal"`
 			SPIFrequency     int           `yaml:"SPIFrequency"`
+			SPIDelay         time.Duration `yaml:"SPIDelay"`
 		} `yaml:"Display"`
 		Sensors struct {
 			SmoothingSize int           `yaml:"SmoothingSize"`
