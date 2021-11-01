@@ -27,7 +27,7 @@ HoldLED:
 
 BlobLED:
   # leave it disabled for now, not working correctly
-  Enabled: true
+  Enabled: false 
   BlobCfg:
     Blob1:
       Delay: 40ms
