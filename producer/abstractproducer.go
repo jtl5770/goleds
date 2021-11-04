@@ -99,7 +99,7 @@ func (s *AbstractProducer) Fire() {
 	}
 }
 
-func (s *AbstractProducer) stopRunningIfNoNewFire(last_fire t.Time) bool {
+func (s *AbstractProducer) stopRunningIfNoNewFireEvent(last_fire t.Time) bool {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 	if s.lastFire.After(last_fire) {
