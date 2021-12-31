@@ -30,14 +30,14 @@ BlobLED:
   Enabled: false 
   BlobCfg:
     Blob1:
-      Delay: 40ms
-      DeltaX: 0.1
+      Delay: 200ms
+      DeltaX: 0.5
       X: 30
       Width: 64
       LedRGB: [60, 0, 0]
     Blob2:
-      Delay: 75ms
-      DeltaX: -0.1
+      Delay: 200ms
+      DeltaX: -0.3
       X: 90
       Width: 128
       LedRGB: [60, 0, 0]
