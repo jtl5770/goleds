@@ -4,11 +4,12 @@
 // segments of LEDs. Multiplexing 2 MCPs for just 4 sensons is
 // normally not needed, but the hardware was built to originally
 // having to drive around 14 sensors spaced very closely together
-// alongside the two LED strupes. This idea has later been abandoned
+// alongside the two LED stripes. This idea has later been abandoned
 // because of heavy crosstalk of the sensors. Now there is only a
-// sensor at both sides of each stripe. The LED stripe layout is due
-// to the special situation in my floor. All hardware related things
-// are defined in the hardware/ directory (package hardware)
+// sensor at both sides of each stripe (4 in total). The LED stripe
+// layout is due to the special situation in my floor with a door
+// seperating the two stripes. All hardware related things are defined
+// in the hardware/ directory (package hardware)
 package main
 
 import (
