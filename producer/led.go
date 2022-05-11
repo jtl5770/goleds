@@ -12,7 +12,7 @@ func (s Led) IsEmpty() bool {
 }
 
 // Return a Led with per component the max value of the caller and the
-// in parameter
+// in Led parameter
 func (s Led) Max(in Led) Led {
 	if s.Red > in.Red {
 		in.Red = s.Red
