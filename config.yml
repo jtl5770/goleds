@@ -10,7 +10,7 @@ NightLED:
   Latitude: 49.014
   Longitude: 8.4043
   LedRGB:
-    - [2, 0, 0]
+    - [3, 0, 0]
     - [0, 0, 1]
 
 HoldLED:
