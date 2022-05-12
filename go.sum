@@ -1,7 +1,7 @@
 github.com/nathan-osman/go-sunrise v1.0.0 h1:mvjoVmXjmiHDSwKRA5t4T/1rNuHQDhodfQoxrUU39ck=
 github.com/nathan-osman/go-sunrise v1.0.0/go.mod h1:RcWqhT+5ShCZDev79GuWLayetpJp78RSjSWxiDowmlM=
-github.com/stianeikeland/go-rpio/v4 v4.5.1 h1:sLzl5w1HS+4726C5kfvpIgjXULrLCCM82vDpAFefGQI=
-github.com/stianeikeland/go-rpio/v4 v4.5.1/go.mod h1:A3GvHxC1Om5zaId+HqB3HKqx4K/AqeckxB7qRjxMK7o=
+github.com/stianeikeland/go-rpio/v4 v4.6.0 h1:eAJgtw3jTtvn/CqwbC82ntcS+dtzUTgo5qlZKe677EY=
+github.com/stianeikeland/go-rpio/v4 v4.6.0/go.mod h1:A3GvHxC1Om5zaId+HqB3HKqx4K/AqeckxB7qRjxMK7o=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v2 v2.4.0 h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=
