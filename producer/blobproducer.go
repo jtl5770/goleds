@@ -8,7 +8,7 @@ import (
 	c "lautenbacher.net/goleds/config"
 )
 
-// TODO: This will create weird effects in my installation. I assume
+// TODO: This creates weird effects on my hardware. I assume
 // this is either crosstalk or generally producing too many updates
 // per time. It is DISABLED in the config for that reason.
 type BlobProducer struct {
