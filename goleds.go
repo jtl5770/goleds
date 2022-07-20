@@ -7,7 +7,7 @@
 // alongside the two LED stripes. This idea has later been abandoned
 // because of heavy crosstalk of the sensors. Now there is only a
 // sensor at both sides of each stripe (4 in total). The LED stripe
-// layout is due to the special situation in my floor with a door
+// layout is due to the special situation in my hallway with a door
 // seperating the two stripes. All hardware related things are defined
 // in the hardware/ directory (package hardware)
 package main
