@@ -4,7 +4,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/stianeikeland/go-rpio/v4"
 	c "lautenbacher.net/goleds/config"
 	p "lautenbacher.net/goleds/producer"
 )
@@ -42,24 +41,8 @@ func setLedSegment(segmentID int, values []p.Led) {
 	}
 	selectLed(segmentID)
 	time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
-	rpio.SpiExchange(display)
+	SPIExchange(display)
 	time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
-}
-
-func selectLed(index int) {
-	if index == 0 {
-		pin17.Low()
-		pin22.High()
-		pin23.High()
-		pin24.High()
-	} else if index == 1 {
-		pin17.High()
-		pin22.Low()
-		pin23.High()
-		pin24.High()
-	} else {
-		panic("No LED")
-	}
 }
 
 // Local Variables:

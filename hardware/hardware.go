@@ -9,7 +9,6 @@ import (
 )
 
 var (
-	Sensors                    map[string]Sensor
 	pin17, pin22, pin23, pin24 rpio.Pin
 	spiMutex                   sync.Mutex
 )
@@ -51,6 +50,42 @@ func CloseGPIO() {
 		if err := rpio.Close(); err != nil {
 			panic(err)
 		}
+	}
+}
+
+func SPIExchange(buffer []byte) {
+	rpio.SpiExchange(buffer)
+}
+
+func selectLed(index int) {
+	if index == 0 {
+		pin17.Low()
+		pin22.High()
+		pin23.High()
+		pin24.High()
+	} else if index == 1 {
+		pin17.High()
+		pin22.Low()
+		pin23.High()
+		pin24.High()
+	} else {
+		panic("No LED")
+	}
+}
+
+func selectAdc(index int) {
+	if index == 0 {
+		pin17.Low()
+		pin22.Low()
+		pin23.Low()
+		pin24.High()
+	} else if index == 1 {
+		pin17.Low()
+		pin22.Low()
+		pin23.High()
+		pin24.Low()
+	} else {
+		panic("No ADC")
 	}
 }
 

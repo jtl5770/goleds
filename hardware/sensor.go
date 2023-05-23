@@ -9,9 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/stianeikeland/go-rpio/v4"
 	c "lautenbacher.net/goleds/config"
 )
+
+var Sensors map[string]Sensor
 
 type Sensor struct {
 	LedIndex     int
@@ -111,23 +112,7 @@ func printStatisticsAndReset(max *map[string]int) {
 func readAdc(channel byte) int {
 	buffer := []byte{1, (8 + channel) << 4, 0}
 	time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
-	rpio.SpiExchange(buffer)
+	SPIExchange(buffer)
 	time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 	return ((int(buffer[1]) & 3) << 8) + int(buffer[2])
-}
-
-func selectAdc(index int) {
-	if index == 0 {
-		pin17.Low()
-		pin22.Low()
-		pin23.Low()
-		pin24.High()
-	} else if index == 1 {
-		pin17.Low()
-		pin22.Low()
-		pin23.High()
-		pin24.Low()
-	} else {
-		panic("No ADC")
-	}
 }
