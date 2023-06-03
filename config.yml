@@ -38,6 +38,7 @@ BlobLED:
       LedRGB: [60, 0, 0]
 
 Hardware:
+  GPIOLibrary: "periph.io"
   Display:
     ForceUpdateDelay: 1000ms
     LedsTotal: 125

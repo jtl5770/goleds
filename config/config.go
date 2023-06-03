@@ -46,7 +46,8 @@ type Config struct {
 		} `yaml:"BlobCfg"`
 	} `yaml:"BlobLED"`
 	Hardware struct {
-		Display struct {
+		GPIOLibrary string `yaml:"GPIOLibrary"`
+		Display     struct {
 			ForceUpdateDelay time.Duration `yaml:"ForceUpdateDelay"`
 			LedsTotal        int           `yaml:"LedsTotal"`
 			SPIFrequency     int           `yaml:"SPIFrequency"`
