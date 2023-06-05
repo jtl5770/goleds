@@ -29,13 +29,13 @@ func InitGPIO() {
 		log.Println("Initialise GPI and Spi...")
 		if c.CONFIG.Hardware.GPIOLibrary == "periph.io" {
 			host.Init()
-			PeriphPin17 = gpioreg.ByName("17")
+			PeriphPin17 = gpioreg.ByName("GPIO17")
 			PeriphPin17.Out(gpio.Low)
-			PeriphPin22 = gpioreg.ByName("22")
+			PeriphPin22 = gpioreg.ByName("GPIO22")
 			PeriphPin22.Out(gpio.Low)
-			PeriphPin23 = gpioreg.ByName("23")
+			PeriphPin23 = gpioreg.ByName("GPIO23")
 			PeriphPin23.Out(gpio.High)
-			PeriphPin24 = gpioreg.ByName("24")
+			PeriphPin24 = gpioreg.ByName("GPIO24")
 			PeriphPin24.Out(gpio.High)
 			if _, err := driverreg.Init(); err != nil {
 				panic(err)
