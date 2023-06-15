@@ -2,7 +2,6 @@ package hardware
 
 import (
 	"log"
-	"time"
 
 	c "lautenbacher.net/goleds/config"
 	p "lautenbacher.net/goleds/producer"
@@ -40,9 +39,7 @@ func setLedSegment(segmentID int, values []p.Led) {
 		display[(3*idx)+2] = led.Blue
 	}
 	selectLed(segmentID)
-	time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 	SPIExchange(display)
-	time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 }
 
 // Local Variables:

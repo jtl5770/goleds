@@ -111,8 +111,6 @@ func printStatisticsAndReset(max *map[string]int) {
 
 func readAdc(channel byte) int {
 	write := []byte{1, (8 + channel) << 4, 0}
-	time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 	read := SPIExchange(write)
-	time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 	return ((int(read[1]) & 3) << 8) + int(read[2])
 }

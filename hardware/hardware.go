@@ -4,6 +4,7 @@ import (
 	"log"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/stianeikeland/go-rpio/v4"
 	c "lautenbacher.net/goleds/config"
@@ -28,6 +29,7 @@ func InitGPIO() {
 	if c.CONFIG.RealHW {
 		log.Println("Initialise GPI and Spi...")
 		if c.CONFIG.Hardware.GPIOLibrary == "periph.io" {
+			log.Println("using periph.io...")
 			host.Init()
 			PeriphPin17 = gpioreg.ByName("GPIO17")
 			PeriphPin17.Out(gpio.Low)
@@ -47,7 +49,7 @@ func InitGPIO() {
 			}
 			spiPort = port
 			var freq physic.Frequency
-			freq.Set(strconv.Itoa(c.CONFIG.Hardware.Display.SPIFrequency))
+			freq.Set(strconv.Itoa(c.CONFIG.Hardware.SPIFrequency))
 			// Convert the spi.Port into a spi.Conn so it can be used for communication.
 			conn, err := spiPort.Connect(freq, spi.Mode3, 8)
 			if err != nil {
@@ -62,7 +64,7 @@ func InitGPIO() {
 				panic(err)
 			}
 
-			rpio.SpiSpeed(c.CONFIG.Hardware.Display.SPIFrequency)
+			rpio.SpiSpeed(c.CONFIG.Hardware.SPIFrequency)
 			pin17 = rpio.Pin(17)
 			pin17.Output()
 			pin17.Low()
@@ -100,12 +102,16 @@ func CloseGPIO() {
 func SPIExchange(write []byte) []byte {
 	if c.CONFIG.Hardware.GPIOLibrary == "periph.io" {
 		read := make([]byte, len(write))
+		time.Sleep(c.CONFIG.Hardware.SPIDelay)
 		if err := spiConn.Tx(write, read); err != nil {
 			panic(err)
 		}
+		// time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 		return read
 	} else {
+		time.Sleep(c.CONFIG.Hardware.SPIDelay)
 		rpio.SpiExchange(write)
+		// time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 		return write
 	}
 }
