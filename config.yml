@@ -38,7 +38,7 @@ BlobLED:
       LedRGB: [60, 0, 0]
 
 Hardware:
-  GPIOLibrary: "periph.io"
+  GPIOLibrary: "default"
   SPIFrequency: 2097152
   SPIDelay: 1µs 
   Display:
