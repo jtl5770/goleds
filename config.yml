@@ -21,7 +21,6 @@ HoldLED:
   LedRGB: [140, 25, 6]
 
 BlobLED:
-  # leave it disabled for now, not working correctly
   Enabled: false 
   BlobCfg:
     Blob1:
