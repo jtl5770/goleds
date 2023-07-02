@@ -24,17 +24,17 @@ BlobLED:
   Enabled: false 
   BlobCfg:
     Blob1:
-      Delay: 200ms
-      DeltaX: 0.5
+      Delay: 100ms
+      DeltaX: 0.3
       X: 30
       Width: 64
-      LedRGB: [60, 0, 0]
+      LedRGB: [40, 8, 0]
     Blob2:
       Delay: 200ms
-      DeltaX: -0.3
+      DeltaX: -0.2
       X: 90
       Width: 128
-      LedRGB: [60, 0, 0]
+      LedRGB: [50, 10, 0]
 
 Hardware:
   GPIOLibrary: "default"
