@@ -46,9 +46,8 @@ type Config struct {
 		} `yaml:"BlobCfg"`
 	} `yaml:"BlobLED"`
 	Hardware struct {
-		GPIOLibrary  string        `yaml:"GPIOLibrary"`
-		SPIFrequency int           `yaml:"SPIFrequency"`
-		SPIDelay     time.Duration `yaml:"SPIDelay"`
+		GPIOLibrary  string `yaml:"GPIOLibrary"`
+		SPIFrequency int    `yaml:"SPIFrequency"`
 		Display      struct {
 			ForceUpdateDelay time.Duration `yaml:"ForceUpdateDelay"`
 			LedsTotal        int           `yaml:"LedsTotal"`

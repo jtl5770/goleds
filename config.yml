@@ -39,7 +39,6 @@ BlobLED:
 Hardware:
   GPIOLibrary: "default"
   SPIFrequency: 2097152
-  SPIDelay: 1µs 
   Display:
     ForceUpdateDelay: 1000ms
     LedsTotal: 125

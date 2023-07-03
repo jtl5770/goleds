@@ -54,9 +54,7 @@ func CloseGPIO() {
 }
 
 func SPIExchange(write []byte) []byte {
-	// time.Sleep(c.CONFIG.Hardware.SPIDelay)
 	rpio.SpiExchange(write)
-	// time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 	return write
 }
 
