@@ -3,7 +3,6 @@ package hardware
 import (
 	"log"
 	"sync"
-	"time"
 
 	"github.com/stianeikeland/go-rpio/v4"
 	c "lautenbacher.net/goleds/config"
@@ -55,7 +54,7 @@ func CloseGPIO() {
 }
 
 func SPIExchange(write []byte) []byte {
-	time.Sleep(c.CONFIG.Hardware.SPIDelay)
+	// time.Sleep(c.CONFIG.Hardware.SPIDelay)
 	rpio.SpiExchange(write)
 	// time.Sleep(c.CONFIG.Hardware.Display.SPIDelay)
 	return write
