@@ -21,26 +21,26 @@ HoldLED:
   LedRGB: [140, 25, 6]
 
 BlobLED:
-  Enabled: true
+  Enabled: false 
   BlobCfg:
     Blob1:
       Delay: 100ms
       DeltaX: 0.2
       X: 30
       Width: 256
-      LedRGB: [30, 0, 0]
+      LedRGB: [20, 0, 0]
     Blob2:
       Delay: 100ms
       DeltaX: -0.1
       X: 90
       Width: 256
-      LedRGB: [0, 8, 0]
+      LedRGB: [0, 5, 0]
     Blob3:
-      Delay: 100ms
-      DeltaX: 0.1
+      Delay: 50ms
+      DeltaX: 0.2
       X: 110
       Width: 256 
-      LedRGB: [0, 0, 8]
+      LedRGB: [0, 0, 3]
 Hardware:
   GPIOLibrary: "default"
   SPIFrequency: 2097152
