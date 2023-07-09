@@ -34,13 +34,13 @@ BlobLED:
       DeltaX: -0.1
       X: 90
       Width: 256
-      LedRGB: [0, 5, 0]
+      LedRGB: [0, 10, 0]
     Blob3:
       Delay: 50ms
       DeltaX: 0.2
       X: 110
       Width: 256 
-      LedRGB: [0, 0, 3]
+      LedRGB: [0, 0, 6]
 Hardware:
   GPIOLibrary: "default"
   SPIFrequency: 2097152
