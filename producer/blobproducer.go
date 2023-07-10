@@ -10,9 +10,12 @@ import (
 
 type BlobProducer struct {
 	*AbstractProducer
-	x     float64
-	width float64
-	led   Led
+	last_x float64
+	x      float64
+	width  float64
+	led    Led
+	delta  float64
+	dir    float64
 }
 
 func NewBlobProducer(uid string, ledsChanged chan LedProducer) *BlobProducer {
@@ -23,11 +26,30 @@ func NewBlobProducer(uid string, ledsChanged chan LedProducer) *BlobProducer {
 			Green: c.CONFIG.BlobLED.BlobCfg[uid].LedRGB[1],
 			Blue:  c.CONFIG.BlobLED.BlobCfg[uid].LedRGB[2],
 		},
-		x:     c.CONFIG.BlobLED.BlobCfg[uid].X,
-		width: c.CONFIG.BlobLED.BlobCfg[uid].Width,
+		last_x: c.CONFIG.BlobLED.BlobCfg[uid].X,
+		x:      c.CONFIG.BlobLED.BlobCfg[uid].X,
+		width:  c.CONFIG.BlobLED.BlobCfg[uid].Width,
 	}
 	inst.runfunc = inst.runner
+	inst.delta = c.CONFIG.BlobLED.BlobCfg[uid].DeltaX
+	if inst.delta < 0 {
+		inst.dir = -1
+	} else {
+		inst.dir = 1
+	}
+	inst.delta = math.Abs(inst.delta)
 	return &inst
+}
+
+func (s *BlobProducer) getMovement() (float64, float64) {
+	old := s.last_x
+	cur := s.x
+	s.last_x = cur
+	return old, cur
+}
+
+func (s *BlobProducer) toggleDir() {
+	s.dir = s.dir * -1
 }
 
 func (s *BlobProducer) runner() {
@@ -37,7 +59,8 @@ func (s *BlobProducer) runner() {
 		s.updateMutex.Unlock()
 	}()
 
-	delta := c.CONFIG.BlobLED.BlobCfg[s.uid].DeltaX
+	max := float64(c.CONFIG.Hardware.Display.LedsTotal)
+
 	tickX := time.NewTicker(c.CONFIG.BlobLED.BlobCfg[s.uid].Delay)
 	for {
 		for i := 0; i < c.CONFIG.Hardware.Display.LedsTotal; i++ {
@@ -52,16 +75,13 @@ func (s *BlobProducer) runner() {
 			tickX.Stop()
 			return
 		case <-tickX.C:
-			if delta >= 0 {
-				if s.x+delta > float64(c.CONFIG.Hardware.Display.LedsTotal) {
-					delta = -delta
-				}
+			new := s.x + (s.delta * s.dir)
+			if (new > max) || (new < 0) {
+				s.toggleDir()
+				s.x = s.x + (s.delta * s.dir)
 			} else {
-				if s.x+delta < 0 {
-					delta = -delta
-				}
+				s.x = new
 			}
-			s.x += delta
 		}
 	}
 }
