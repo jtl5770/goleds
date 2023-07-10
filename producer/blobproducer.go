@@ -87,7 +87,8 @@ func DetectCollisions(prods [](*BlobProducer), sig chan bool) {
 		case <-tick.C:
 			// detect reaching beginning or end of stripe
 			for _, prod := range prods {
-				if (prod.x > max) || (prod.x < 0) {
+				if ((prod.x > max) && (prod.dir > 0)) ||
+					((prod.x < 0) && (prod.dir < 0)) {
 					prod.toggleDir()
 				}
 			}
