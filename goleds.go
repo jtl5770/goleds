@@ -108,12 +108,16 @@ func initialise() {
 		ledproducers[HOLD_LED_UID] = prodhold
 	}
 
+	collDsignal := make(chan bool)
 	if c.CONFIG.BlobLED.Enabled {
+		var allblobs [](*p.BlobProducer)
 		for uid := range c.CONFIG.BlobLED.BlobCfg {
 			prodblob := p.NewBlobProducer(uid, ledReader)
 			ledproducers[uid] = prodblob
+			allblobs = append(allblobs, prodblob)
 			prodblob.Fire()
 		}
+		go p.DetectCollisions(allblobs, collDsignal)
 	}
 
 	// *FUTURE* init more types of ledproducers if needed/wanted
@@ -123,6 +127,9 @@ func initialise() {
 	DDsignal := make(chan bool)
 	SDsignal := make(chan bool)
 	sigchans = append(sigchans, cADsignal, fCsignal, DDsignal, SDsignal)
+	if c.CONFIG.BlobLED.Enabled {
+		sigchans = append(sigchans, collDsignal)
+	}
 	go combineAndupdateDisplay(ledReader, ledWriter, cADsignal)
 	go fireController(sensorReader, ledproducers, fCsignal)
 	go hw.DisplayDriver(ledWriter, DDsignal)

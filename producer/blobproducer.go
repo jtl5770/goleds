@@ -59,8 +59,6 @@ func (s *BlobProducer) runner() {
 		s.updateMutex.Unlock()
 	}()
 
-	max := float64(c.CONFIG.Hardware.Display.LedsTotal)
-
 	tickX := time.NewTicker(c.CONFIG.BlobLED.BlobCfg[s.uid].Delay)
 	for {
 		for i := 0; i < c.CONFIG.Hardware.Display.LedsTotal; i++ {
@@ -75,13 +73,29 @@ func (s *BlobProducer) runner() {
 			tickX.Stop()
 			return
 		case <-tickX.C:
-			new := s.x + (s.delta * s.dir)
-			if (new > max) || (new < 0) {
-				s.toggleDir()
-				s.x = s.x + (s.delta * s.dir)
-			} else {
-				s.x = new
+			s.x = s.x + (s.delta * s.dir)
+		}
+	}
+}
+
+func DetectCollisions(prods [](*BlobProducer), sig chan bool) {
+	max := float64(c.CONFIG.Hardware.Display.LedsTotal)
+	tick := time.NewTicker(50 * time.Millisecond)
+
+	for {
+		select {
+		case <-tick.C:
+			// detect reaching beginning or end of stripe
+			for _, prod := range prods {
+				if (prod.x > max) || (prod.x < 0) {
+					prod.toggleDir()
+				}
 			}
+			// *TODO* detect inter blob collision
+		case <-sig:
+			log.Println("Ending detectCollisions go-routine")
+			tick.Stop()
+			return
 		}
 	}
 }
