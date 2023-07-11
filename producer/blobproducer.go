@@ -64,7 +64,11 @@ func (s *BlobProducer) runner() {
 	for {
 		for i := 0; i < c.CONFIG.Hardware.Display.LedsTotal; i++ {
 			y := math.Exp(-1 * (math.Pow(float64(i)-s.x, 2) / s.width))
-			s.setLed(i, Led{byte(math.Round(float64(s.led.Red) * y)), byte(math.Round(float64(s.led.Green) * y)), byte(math.Round(float64(s.led.Blue) * y))})
+			s.setLed(i, Led{
+				byte(math.Round(float64(s.led.Red) * y)),
+				byte(math.Round(float64(s.led.Green) * y)),
+				byte(math.Round(float64(s.led.Blue) * y)),
+			})
 		}
 		s.ledsChanged <- s
 
@@ -150,8 +154,9 @@ func detectIntra(prod_a *BlobProducer, prod_b *BlobProducer) {
 			// chsing from right to left - only right changes direction
 			right.toggleDir()
 		} else if left.dir < 0 && right.dir > 0 {
-			// should never happen
-			log.Println("Caution: colliding blobs " + left.GetUID() + " and " + right.GetUID() + " are already heading in opposite directions")
+			// should not happen (?)
+			log.Println("Caution: colliding blobs " + left.GetUID() + " and " + right.GetUID() +
+				" are already heading in opposite directions")
 		}
 	}
 }
