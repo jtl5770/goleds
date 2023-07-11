@@ -127,6 +127,8 @@ func detectIntra(prod_a *BlobProducer, prod_b *BlobProducer) {
 		log.Println("Collision detected between " + prod_a.GetUID() + " and " + prod_b.GetUID())
 		var left *BlobProducer
 		var right *BlobProducer
+
+		// find out which one is the "left one" and which is the right one, to simplify handling
 		if prod_a.last_x < prod_b.last_x {
 			left = prod_a
 			right = prod_b
@@ -138,14 +140,14 @@ func detectIntra(prod_a *BlobProducer, prod_b *BlobProducer) {
 		left.x = left.last_x
 		right.x = right.last_x
 		if left.dir > 0 && right.dir < 0 {
-			// heading straight together
+			// heading straight at each other
 			left.toggleDir()
 			right.toggleDir()
 		} else if left.dir > 0 && right.dir > 0 {
-			// chasing from left to right - only left will be toggled
+			// chasing from left to right - only left changes direction
 			left.toggleDir()
 		} else if left.dir < 0 && right.dir < 0 {
-			// chsing from right to left
+			// chsing from right to left - only right changes direction
 			right.toggleDir()
 		} else if left.dir < 0 && right.dir > 0 {
 			// should never happen
