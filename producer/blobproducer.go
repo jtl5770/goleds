@@ -105,6 +105,9 @@ func DetectCollisions(prods [](*BlobProducer), sig chan bool) {
 					}
 				}
 			}
+			for _, prod := range prods {
+				prod.x = prod.last_x
+			}
 		case <-sig:
 			log.Println("Ending detectCollisions go-routine")
 			tick.Stop()
@@ -156,8 +159,5 @@ func detectIntra(prod_a *BlobProducer, prod_b *BlobProducer) {
 			left.toggleDir()
 			right.toggleDir()
 		}
-	} else {
-		prod_a.last_x = a1
-		prod_b.last_x = b1
 	}
 }
