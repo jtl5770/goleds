@@ -85,18 +85,40 @@ func DetectCollisions(prods [](*BlobProducer), sig chan bool) {
 	for {
 		select {
 		case <-tick.C:
+			var inter [](*BlobProducer)
 			// detect reaching beginning or end of stripe
 			for _, prod := range prods {
 				if ((prod.x > max) && (prod.dir > 0)) ||
 					((prod.x < 0) && (prod.dir < 0)) {
 					prod.toggleDir()
+				} else {
+					inter = append(inter, prod)
 				}
 			}
-			// *TODO* detect inter blob collision
+			size := len(inter)
+			if size >= 2 {
+				for i := 0; i < size; i++ {
+					prod_a := inter[i]
+					for j := i + 1; j < size; j++ {
+						prod_b := inter[j]
+						detectIntra(prod_a, prod_b)
+					}
+				}
+			}
 		case <-sig:
 			log.Println("Ending detectCollisions go-routine")
 			tick.Stop()
 			return
 		}
 	}
+}
+
+func detectIntra(prod_a *BlobProducer, prod_b *BlobProducer) bool {
+	a1, a2 := prod_a.getMovement()
+	a_start := math.Min(a1, a2)
+	a_end := math.Max(a1, a2)
+	b1, b2 := prod_b.getMovement()
+	b_start := math.Min(b1, b2)
+	b_end := math.Max(b1, b2)
+	return (a_start <= b_end) && (b_start <= a_end)
 }
