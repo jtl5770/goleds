@@ -83,7 +83,7 @@ func (s *BlobProducer) runner() {
 
 func DetectCollisions(blobs [](*BlobProducer), sig chan bool) {
 	max := float64(c.CONFIG.Hardware.Display.LedsTotal)
-	tick := time.NewTicker(50 * time.Millisecond)
+	tick := time.NewTicker(500 * time.Millisecond)
 
 	for {
 		select {
