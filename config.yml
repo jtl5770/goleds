@@ -24,20 +24,20 @@ BlobLED:
   Enabled: true 
   BlobCfg:
     BlobRed:
-      Delay: 50ms
-      DeltaX: 0.2
+      Delay: 100ms
+      DeltaX: 0.1
       X: 20
       Width: 256
       LedRGB: [20, 0, 0]
     BlobGreen:
-      Delay: 50ms
+      Delay: 100ms
       DeltaX: 0.1
       X: 70
       Width: 256
       LedRGB: [0, 10, 0]
     BlobBlue:
-      Delay: 50ms
-      DeltaX: -0.2
+      Delay: 100ms
+      DeltaX: -0.1
       X: 110
       Width: 256 
       LedRGB: [0, 0, 6]
