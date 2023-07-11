@@ -42,13 +42,6 @@ func NewBlobProducer(uid string, ledsChanged chan LedProducer) *BlobProducer {
 	return &inst
 }
 
-func (s *BlobProducer) getMovement() (float64, float64) {
-	old := s.last_x
-	cur := s.x
-	s.last_x = cur
-	return old, cur
-}
-
 func (s *BlobProducer) toggleDir() {
 	s.dir = s.dir * -1
 }
@@ -121,10 +114,10 @@ func DetectCollisions(prods [](*BlobProducer), sig chan bool) {
 }
 
 func detectIntra(prod_a *BlobProducer, prod_b *BlobProducer) {
-	a1, a2 := prod_a.getMovement()
+	a1, a2 := prod_a.x, prod_a.last_x
 	a_start := math.Min(a1, a2)
 	a_end := math.Max(a1, a2)
-	b1, b2 := prod_b.getMovement()
+	b1, b2 := prod_b.x, prod_b.last_x
 	b_start := math.Min(b1, b2)
 	b_end := math.Max(b1, b2)
 	if (a_start <= b_end) && (b_start <= a_end) {
@@ -163,5 +156,8 @@ func detectIntra(prod_a *BlobProducer, prod_b *BlobProducer) {
 			left.toggleDir()
 			right.toggleDir()
 		}
+	} else {
+		prod_a.last_x = a1
+		prod_b.last_x = b1
 	}
 }
