@@ -23,12 +23,12 @@ HoldLED:
 BlobLED:
   Enabled: false 
   BlobCfg:
-    BlobRed:
-      Delay: 100ms
-      DeltaX: 0.2
-      X: 30
-      Width: 256
-      LedRGB: [20, 0, 0]
+    # BlobRed:
+    #   Delay: 100ms
+    #   DeltaX: 0.2
+    #   X: 30
+    #   Width: 256
+    #   LedRGB: [20, 0, 0]
     BlobGreen:
       Delay: 100ms
       DeltaX: -0.1
