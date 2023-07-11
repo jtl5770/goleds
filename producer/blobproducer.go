@@ -95,7 +95,7 @@ func DetectCollisions(prods [](*BlobProducer), sig chan bool) {
 			for _, prod := range prods {
 				if ((prod.x > max) && (prod.dir > 0)) ||
 					((prod.x < 0) && (prod.dir < 0)) {
-					log.Println(fmt.Sprint(prod.GetUID()+" hit boundary. (x=%f)", prod.x))
+					log.Println(fmt.Sprintf("%s hit boundary. x=%f ", prod.GetUID(), prod.x))
 					prod.toggleDir()
 				} else {
 					// we will look only on collisions between blobs which are not right now hitting the stripe boundaries
