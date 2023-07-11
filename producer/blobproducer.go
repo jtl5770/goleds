@@ -106,7 +106,7 @@ func DetectCollisions(prods [](*BlobProducer), sig chan bool) {
 				}
 			}
 			for _, prod := range prods {
-				prod.x = prod.last_x
+				prod.last_x = prod.x
 			}
 		case <-sig:
 			log.Println("Ending detectCollisions go-routine")
