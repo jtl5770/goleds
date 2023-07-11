@@ -157,10 +157,11 @@ func detectIntra(prod_a *BlobProducer, prod_b *BlobProducer) {
 			log.Println(fmt.Sprintf("Chasing R2L: %s - Direction %f  |  %s - Direction %f", left.GetUID(), left.dir, right.GetUID(), right.dir))
 			right.toggleDir()
 		} else if left.dir < 0 && right.dir > 0 {
-			// should not happen (?)
 			log.Println(fmt.Sprintf("%s - Direction %f  | %s - Direction %f", left.GetUID(), left.dir, right.GetUID(), right.dir))
 			log.Println("Caution: colliding blobs " + left.GetUID() + " and " + right.GetUID() +
 				" are already heading in opposite directions")
+			left.toggleDir()
+			right.toggleDir()
 		}
 	}
 }
