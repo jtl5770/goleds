@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"sync"
 	"time"
 
 	c "lautenbacher.net/goleds/config"
 )
+
+var collMutex sync.Mutex
 
 type BlobProducer struct {
 	*AbstractProducer
@@ -71,7 +74,9 @@ func (s *BlobProducer) runner() {
 			tickX.Stop()
 			return
 		case <-tickX.C:
+			collMutex.Lock()
 			s.x = s.x + (s.delta * s.dir)
+			collMutex.Unlock()
 		}
 	}
 }
@@ -83,6 +88,7 @@ func DetectCollisions(prods [](*BlobProducer), sig chan bool) {
 	for {
 		select {
 		case <-tick.C:
+			collMutex.Lock()
 			var inter [](*BlobProducer)
 			// detect reaching beginning or end of stripe
 			for _, prod := range prods {
@@ -108,6 +114,7 @@ func DetectCollisions(prods [](*BlobProducer), sig chan bool) {
 			for _, prod := range prods {
 				prod.last_x = prod.x
 			}
+			collMutex.Unlock()
 		case <-sig:
 			log.Println("Ending detectCollisions go-routine")
 			tick.Stop()
