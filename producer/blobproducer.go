@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"sync"
 	"time"
 
 	c "lautenbacher.net/goleds/config"
 )
+
+var collMutex sync.Mutex
 
 type BlobProducer struct {
 	*AbstractProducer
@@ -71,21 +74,24 @@ func (s *BlobProducer) runner() {
 			tickX.Stop()
 			return
 		case <-tickX.C:
+			collMutex.Lock()
 			s.x = s.x + (s.delta * s.dir)
+			collMutex.Unlock()
 		}
 	}
 }
 
-func DetectCollisions(prods [](*BlobProducer), sig chan bool) {
+func DetectCollisions(blobs [](*BlobProducer), sig chan bool) {
 	max := float64(c.CONFIG.Hardware.Display.LedsTotal)
 	tick := time.NewTicker(50 * time.Millisecond)
 
 	for {
 		select {
 		case <-tick.C:
+			collMutex.Lock()
 			var inter [](*BlobProducer)
 			// detect reaching beginning or end of stripe
-			for _, prod := range prods {
+			for _, prod := range blobs {
 				if ((prod.x > max) && (prod.dir > 0)) ||
 					((prod.x < 0) && (prod.dir < 0)) {
 					log.Println(fmt.Sprintf("%s hit boundary. x=%f ", prod.GetUID(), prod.x))
@@ -98,13 +104,17 @@ func DetectCollisions(prods [](*BlobProducer), sig chan bool) {
 			size := len(inter)
 			if size >= 2 {
 				for i := 0; i < size; i++ {
-					prod_a := inter[i]
+					blob_a := inter[i]
 					for j := i + 1; j < size; j++ {
-						prod_b := inter[j]
-						detectIntra(prod_a, prod_b)
+						blob_b := inter[j]
+						detectIntra(blob_a, blob_b)
 					}
 				}
 			}
+			for _, blob := range blobs {
+				blob.x = blob.last_x
+			}
+			collMutex.Unlock()
 		case <-sig:
 			log.Println("Ending detectCollisions go-routine")
 			tick.Stop()
@@ -156,8 +166,5 @@ func detectIntra(prod_a *BlobProducer, prod_b *BlobProducer) {
 			left.toggleDir()
 			right.toggleDir()
 		}
-	} else {
-		prod_a.last_x = a1
-		prod_b.last_x = b1
 	}
 }
