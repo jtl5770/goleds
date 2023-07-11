@@ -1,6 +1,7 @@
 package producer
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"time"
@@ -90,8 +91,10 @@ func DetectCollisions(prods [](*BlobProducer), sig chan bool) {
 			for _, prod := range prods {
 				if ((prod.x > max) && (prod.dir > 0)) ||
 					((prod.x < 0) && (prod.dir < 0)) {
+					log.Println(fmt.Sprint(prod.GetUID()+" hit boundary. (x=%f)", prod.x))
 					prod.toggleDir()
 				} else {
+					// we will look only on collisions between blobs which are not right now hitting the stripe boundaries
 					inter = append(inter, prod)
 				}
 			}
@@ -113,12 +116,40 @@ func DetectCollisions(prods [](*BlobProducer), sig chan bool) {
 	}
 }
 
-func detectIntra(prod_a *BlobProducer, prod_b *BlobProducer) bool {
+func detectIntra(prod_a *BlobProducer, prod_b *BlobProducer) {
 	a1, a2 := prod_a.getMovement()
 	a_start := math.Min(a1, a2)
 	a_end := math.Max(a1, a2)
 	b1, b2 := prod_b.getMovement()
 	b_start := math.Min(b1, b2)
 	b_end := math.Max(b1, b2)
-	return (a_start <= b_end) && (b_start <= a_end)
+	if (a_start <= b_end) && (b_start <= a_end) {
+		log.Println("Collision detected between " + prod_a.GetUID() + " and " + prod_b.GetUID())
+		var left *BlobProducer
+		var right *BlobProducer
+		if prod_a.last_x < prod_b.last_x {
+			left = prod_a
+			right = prod_b
+		} else {
+			left = prod_b
+			right = prod_a
+		}
+
+		left.x = left.last_x
+		right.x = right.last_x
+		if left.dir > 0 && right.dir < 0 {
+			// heading straight together
+			left.toggleDir()
+			right.toggleDir()
+		} else if left.dir > 0 && right.dir > 0 {
+			// chasing from left to right - only left will be toggled
+			left.toggleDir()
+		} else if left.dir < 0 && right.dir < 0 {
+			// chsing from right to left
+			right.toggleDir()
+		} else if left.dir < 0 && right.dir > 0 {
+			// should never happen
+			log.Println("Caution: colliding blobs " + left.GetUID() + " and " + right.GetUID() + " are already heading in opposite directions")
+		}
+	}
 }
