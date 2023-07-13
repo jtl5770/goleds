@@ -93,7 +93,7 @@ func (s *MultiBlobProducer) runner() {
 			tick.Stop()
 			return
 		case <-tick.C:
-			// Update the x value
+			// compute new x value
 			for _, blob := range s.allblobs {
 				blob.x = blob.x + (blob.delta * blob.dir)
 			}
@@ -169,7 +169,7 @@ func detectBlobColl(blob_a *Blob, blob_b *Blob) bool {
 		var left *Blob
 		var right *Blob
 
-		// find out which one is the "left one" and which is the right one, to simplify handling
+		// find out which one is the "left one" and which is the "right one", to simplify handling
 		if blob_a.last_x < blob_b.last_x {
 			left = blob_a
 			right = blob_b
@@ -177,9 +177,6 @@ func detectBlobColl(blob_a *Blob, blob_b *Blob) bool {
 			left = blob_b
 			right = blob_a
 		}
-		// We set the x value back to the last known before the collision
-		left.x = left.last_x
-		right.x = right.last_x
 
 		if left.dir > 0 && right.dir < 0 {
 			// heading straight at each other
