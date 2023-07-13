@@ -1,5 +1,7 @@
 package producer
 
+import c "lautenbacher.net/goleds/config"
+
 type Led struct {
 	Red   byte
 	Green byte
@@ -24,6 +26,16 @@ func (s Led) Max(in Led) Led {
 		in.Blue = s.Blue
 	}
 	return in
+}
+
+func CombineLeds(allLedRanges map[string][]Led) []Led {
+	sumLeds := make([]Led, c.CONFIG.Hardware.Display.LedsTotal)
+	for _, currleds := range allLedRanges {
+		for j, v := range currleds {
+			sumLeds[j] = v.Max(sumLeds[j])
+		}
+	}
+	return sumLeds
 }
 
 // Local Variables:
