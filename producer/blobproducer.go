@@ -1,20 +1,16 @@
 package producer
 
-import (
-	"sync"
-)
+// var collMutex sync.Mutex
 
-var collMutex sync.Mutex
-
-type BlobProducer struct {
-	*AbstractProducer
-	last_x float64
-	x      float64
-	width  float64
-	led    Led
-	delta  float64
-	dir    float64
-}
+// type BlobProducer struct {
+// 	*AbstractProducer
+// 	last_x float64
+// 	x      float64
+// 	width  float64
+// 	led    Led
+// 	delta  float64
+// 	dir    float64
+// }
 
 // func NewBlobProducer(uid string, ledsChanged chan LedProducer) *BlobProducer {
 // 	inst := BlobProducer{
