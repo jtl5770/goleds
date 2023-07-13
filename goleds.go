@@ -28,8 +28,9 @@ import (
 )
 
 const (
-	HOLD_LED_UID  = "__hold_producer"
-	NIGHT_LED_UID = "__night_producer"
+	HOLD_LED_UID   = "__hold_producer"
+	NIGHT_LED_UID  = "__night_producer"
+	MULTI_BLOB_UID = "__multiblob_producer"
 )
 
 var (
@@ -108,16 +109,22 @@ func initialise() {
 		ledproducers[HOLD_LED_UID] = prodhold
 	}
 
-	collDsignal := make(chan bool)
-	if c.CONFIG.BlobLED.Enabled {
-		var allblobs [](*p.BlobProducer)
-		for uid := range c.CONFIG.BlobLED.BlobCfg {
-			prodblob := p.NewBlobProducer(uid, ledReader)
-			ledproducers[uid] = prodblob
-			allblobs = append(allblobs, prodblob)
-			prodblob.Fire()
-		}
-		go p.DetectCollisions(allblobs, collDsignal)
+	// collDsignal := make(chan bool)
+	// if c.CONFIG.BlobLED.Enabled {
+	// 	var allblobs [](*p.BlobProducer)
+	// 	for uid := range c.CONFIG.BlobLED.BlobCfg {
+	// 		prodblob := p.NewBlobProducer(uid, ledReader)
+	// 		ledproducers[uid] = prodblob
+	// 		allblobs = append(allblobs, prodblob)
+	// 		prodblob.Fire()
+	// 	}
+	// 	go p.DetectCollisions(allblobs, collDsignal)
+	// }
+
+	if c.CONFIG.MultiBlobLED.Enabled {
+		multiblob := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader)
+		ledproducers[MULTI_BLOB_UID] = multiblob
+		multiblob.Fire()
 	}
 
 	// *FUTURE* init more types of ledproducers if needed/wanted
@@ -127,9 +134,9 @@ func initialise() {
 	DDsignal := make(chan bool)
 	SDsignal := make(chan bool)
 	sigchans = append(sigchans, cADsignal, fCsignal, DDsignal, SDsignal)
-	if c.CONFIG.BlobLED.Enabled {
-		sigchans = append(sigchans, collDsignal)
-	}
+	// if c.CONFIG.BlobLED.Enabled {
+	// 	sigchans = append(sigchans, collDsignal)
+	// }
 	go combineAndupdateDisplay(ledReader, ledWriter, cADsignal)
 	go fireController(sensorReader, ledproducers, fCsignal)
 	go hw.DisplayDriver(ledWriter, DDsignal)
@@ -160,7 +167,7 @@ func combineAndupdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 		select {
 		case s := <-r:
 			allLedRanges[s.GetUID()] = s.GetLeds()
-			sumLeds := combineLeds(allLedRanges)
+			sumLeds := p.CombineLeds(allLedRanges)
 			if !reflect.DeepEqual(sumLeds, oldSumLeds) {
 				w <- sumLeds
 			}
@@ -169,23 +176,13 @@ func combineAndupdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 			// We do this purely because there occasionally are
 			// artifacts on the led line from - maybe/somehow - electrical distortions
 			// so we make sure to regularily update the Led stripe
-			w <- combineLeds(allLedRanges)
+			w <- p.CombineLeds(allLedRanges)
 		case <-sig:
 			log.Println("Ending combineAndupdateDisplay go-routine")
 			ticker.Stop()
 			return
 		}
 	}
-}
-
-func combineLeds(allLedRanges map[string][]p.Led) []p.Led {
-	sumLeds := make([]p.Led, c.CONFIG.Hardware.Display.LedsTotal)
-	for _, currleds := range allLedRanges {
-		for j, v := range currleds {
-			sumLeds[j] = v.Max(sumLeds[j])
-		}
-	}
-	return sumLeds
 }
 
 func fireController(sensor chan (hw.Trigger), producers map[string]p.LedProducer, sig chan bool) {
