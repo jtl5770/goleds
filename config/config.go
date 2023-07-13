@@ -35,16 +35,26 @@ type Config struct {
 		TriggerValue int           `yaml:"TriggerValue"`
 		LedRGB       []byte        `yaml:"LedRGB"`
 	} `yaml:"HoldLED"`
-	BlobLED struct {
-		Enabled bool `yaml:"Enabled"`
+	MultiBlobLED struct {
+		Enabled bool          `yaml:"Enabled"`
+		Delay   time.Duration `yaml:"Delay"`
 		BlobCfg map[string]struct {
-			Delay  time.Duration `yaml:"Delay"`
-			DeltaX float64       `yaml:"DeltaX"`
-			X      float64       `yaml:"X"`
-			Width  float64       `yaml:"Width"`
-			LedRGB []byte        `yaml:"LedRGB"`
+			DeltaX float64 `yaml:"DeltaX"`
+			X      float64 `yaml:"X"`
+			Width  float64 `yaml:"Width"`
+			LedRGB []byte  `yaml:"LedRGB"`
 		} `yaml:"BlobCfg"`
-	} `yaml:"BlobLED"`
+	} `yaml:"MultiBlobLED"`
+	// BlobLED struct {
+	// 	Enabled bool `yaml:"Enabled"`
+	// 	BlobCfg map[string]struct {
+	// 		Delay  time.Duration `yaml:"Delay"`
+	// 		DeltaX float64       `yaml:"DeltaX"`
+	// 		X      float64       `yaml:"X"`
+	// 		Width  float64       `yaml:"Width"`
+	// 		LedRGB []byte        `yaml:"LedRGB"`
+	// 	} `yaml:"BlobCfg"`
+	// } `yaml:"BlobLED"`
 	Hardware struct {
 		GPIOLibrary  string `yaml:"GPIOLibrary"`
 		SPIFrequency int    `yaml:"SPIFrequency"`
