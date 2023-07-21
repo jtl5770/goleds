@@ -21,21 +21,21 @@ HoldLED:
   LedRGB: [140, 25, 6]
 
 MultiBlobLED:
-  Enabled: true 
-  Delay: 50ms
+  Enabled: false
+  Delay: 200ms
   BlobCfg:
     BlobRed:                    
-      DeltaX: 0.1
+      DeltaX: 0.2
       X: 20
       Width: 512
       LedRGB: [20, 0, 0]
     BlobGreen:
-      DeltaX: 0.12
+      DeltaX: 0.5
       X: 70
       Width: 512
       LedRGB: [0, 10, 0]
     BlobBlue:
-      DeltaX: -0.08
+      DeltaX: -0.1
       X: 110
       Width: 512 
       LedRGB: [0, 0, 6]
