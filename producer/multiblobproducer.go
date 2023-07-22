@@ -129,10 +129,10 @@ func detectAndHandleCollisions(blobs map[string]*Blob) {
 		if ((blob.x > max) && (blob.dir > 0)) ||
 			((blob.x < 0) && (blob.dir < 0)) {
 			log.Println(fmt.Sprintf("%s hit boundary. x=%f ", blob.uid, blob.x))
-			blob.toggleDir()
+			blob.switchDirection()
 			collblobs[blob.uid] = blob
 		} else {
-			// we will look only on collisions between blobs which are not right now also hitting the stripe boundaries
+			// we will look only for collisions between blobs which are not right now also hitting the stripe boundaries
 			// to make sure that a blob colliding with the boundary always changes direction away from the boundary
 			checkinter = append(checkinter, blob)
 		}
@@ -182,16 +182,16 @@ func detectBlobColl(blob_a *Blob, blob_b *Blob) bool {
 		if left.dir > 0 && right.dir < 0 {
 			// heading straight at each other
 			// log.Println(fmt.Sprintf("Head2Head: %s - Direction %f  |  %s - Direction %f", left.uid, left.dir, right.uid, right.dir))
-			left.toggleDir()
-			right.toggleDir()
+			left.switchDirection()
+			right.switchDirection()
 		} else if left.dir > 0 && right.dir > 0 {
 			// chasing from left to right - only left changes direction
 			// log.Println(fmt.Sprintf("Chasing L2R: %s - Direction %f  |  %s - Direction %f", left.uid, left.dir, right.uid, right.dir))
-			left.toggleDir()
+			left.switchDirection()
 		} else if left.dir < 0 && right.dir < 0 {
 			// chsing from right to left - only right changes direction
 			// log.Println(fmt.Sprintf("Chasing R2L: %s - Direction %f  |  %s - Direction %f", left.uid, left.dir, right.uid, right.dir))
-			right.toggleDir()
+			right.switchDirection()
 		} else if left.dir < 0 && right.dir > 0 {
 			log.Println(fmt.Sprintf("%s - Direction %f  | %s - Direction %f", left.uid, left.dir, right.uid, right.dir))
 			log.Println("Caution: colliding blobs " + left.uid + " and " + right.uid +
