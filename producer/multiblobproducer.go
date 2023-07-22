@@ -55,7 +55,7 @@ func (s *Blob) getBlobLeds() []Led {
 	return leds
 }
 
-func (s *Blob) toggleDir() {
+func (s *Blob) switchDirection() {
 	s.dir = s.dir * -1
 }
 
