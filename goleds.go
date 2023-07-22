@@ -82,19 +82,12 @@ func initialise() {
 	ledWriter := make(chan []p.Led, c.CONFIG.Hardware.Display.LedsTotal)
 	sensorReader := make(chan hw.Trigger)
 
+	// This is the main functionality: reaction to sensor trigger to light the stripes
 	for uid, cfg := range c.CONFIG.Hardware.Sensors.SensorCfg {
 		hw.Sensors[uid] = hw.NewSensor(cfg.LedIndex, cfg.Adc, cfg.AdcChannel, cfg.TriggerValue)
 		if c.CONFIG.SensorLED.Enabled {
 			ledproducers[uid] = p.NewSensorLedProducer(uid, cfg.LedIndex, ledReader)
 		}
-	}
-
-	if c.CONFIG.NightLED.Enabled {
-		// The Nightlight producer makes a permanent red (default)
-		// glow during night time
-		prodnight := p.NewNightlightProducer(NIGHT_LED_UID, ledReader)
-		ledproducers[NIGHT_LED_UID] = prodnight
-		prodnight.Start()
 	}
 
 	if c.CONFIG.HoldLED.Enabled {
@@ -109,6 +102,13 @@ func initialise() {
 		ledproducers[HOLD_LED_UID] = prodhold
 	}
 
+	if c.CONFIG.NightLED.Enabled {
+		// The Nightlight producer creates a permanent glow during night time
+		prodnight := p.NewNightlightProducer(NIGHT_LED_UID, ledReader)
+		ledproducers[NIGHT_LED_UID] = prodnight
+		prodnight.Start()
+	}
+
 	if c.CONFIG.MultiBlobLED.Enabled {
 		multiblob := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader)
 		ledproducers[MULTI_BLOB_UID] = multiblob
@@ -117,15 +117,13 @@ func initialise() {
 
 	// *FUTURE* init more types of ledproducers if needed/wanted
 
-	cADsignal := make(chan bool)
+	cAUDsignal := make(chan bool)
 	fCsignal := make(chan bool)
 	DDsignal := make(chan bool)
 	SDsignal := make(chan bool)
-	sigchans = append(sigchans, cADsignal, fCsignal, DDsignal, SDsignal)
-	// if c.CONFIG.BlobLED.Enabled {
-	// 	sigchans = append(sigchans, collDsignal)
-	// }
-	go combineAndupdateDisplay(ledReader, ledWriter, cADsignal)
+	sigchans = append(sigchans, cAUDsignal, fCsignal, DDsignal, SDsignal)
+
+	go combineAndUpdateDisplay(ledReader, ledWriter, cAUDsignal)
 	go fireController(sensorReader, ledproducers, fCsignal)
 	go hw.DisplayDriver(ledWriter, DDsignal)
 	go hw.SensorDriver(sensorReader, hw.Sensors, SDsignal)
@@ -136,21 +134,21 @@ func reset() {
 	for _, prod := range ledproducers {
 		prod.Exit()
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 	for _, sig := range sigchans {
 		sig <- true
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 	hw.CloseGPIO()
 }
 
-func combineAndupdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan bool) {
+func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan bool) {
 	var oldSumLeds []p.Led
 	allLedRanges := make(map[string][]p.Led)
 	ticker := time.NewTicker(c.CONFIG.Hardware.Display.ForceUpdateDelay)
-	for uid := range hw.Sensors {
-		allLedRanges[uid] = make([]p.Led, c.CONFIG.Hardware.Display.LedsTotal)
-	}
+	// for uid := range hw.Sensors {
+	// 	allLedRanges[uid] = make([]p.Led, c.CONFIG.Hardware.Display.LedsTotal)
+	// }
 	for {
 		select {
 		case s := <-r:
@@ -163,7 +161,7 @@ func combineAndupdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 		case <-ticker.C:
 			// We do this purely because there occasionally are
 			// artifacts on the led line from - maybe/somehow - electrical distortions
-			// so we make sure to regularily update the Led stripe
+			// so we make sure to regularily force an update of the Led stripe
 			w <- p.CombineLeds(allLedRanges)
 		case <-sig:
 			log.Println("Ending combineAndupdateDisplay go-routine")
