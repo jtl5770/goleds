@@ -94,11 +94,11 @@ func initialise() {
 		// glow during night time
 		prodnight := p.NewNightlightProducer(NIGHT_LED_UID, ledReader)
 		ledproducers[NIGHT_LED_UID] = prodnight
-		prodnight.Fire()
+		prodnight.Start()
 	}
 
 	if c.CONFIG.HoldLED.Enabled {
-		// The HoldLight producer will be fired whenever a sensor
+		// The HoldLight producer will be started whenever a sensor
 		// produces for longer than a configurable time a signal > a
 		// configurable value (see config file for TriggerDelay and
 		// TriggerValue) It will generate a brighter, full lit LED
@@ -109,22 +109,10 @@ func initialise() {
 		ledproducers[HOLD_LED_UID] = prodhold
 	}
 
-	// collDsignal := make(chan bool)
-	// if c.CONFIG.BlobLED.Enabled {
-	// 	var allblobs [](*p.BlobProducer)
-	// 	for uid := range c.CONFIG.BlobLED.BlobCfg {
-	// 		prodblob := p.NewBlobProducer(uid, ledReader)
-	// 		ledproducers[uid] = prodblob
-	// 		allblobs = append(allblobs, prodblob)
-	// 		prodblob.Fire()
-	// 	}
-	// 	go p.DetectCollisions(allblobs, collDsignal)
-	// }
-
 	if c.CONFIG.MultiBlobLED.Enabled {
 		multiblob := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader)
 		ledproducers[MULTI_BLOB_UID] = multiblob
-		multiblob.Fire()
+		multiblob.Start()
 	}
 
 	// *FUTURE* init more types of ledproducers if needed/wanted
@@ -202,13 +190,13 @@ func fireController(sensor chan (hw.Trigger), producers map[string]p.LedProducer
 					firstSameTrigger = hw.Trigger{}
 					// Don't want to compare against too old timestamps
 					if newStamp.Sub(oldStamp) < (triggerDelay + (1 * time.Second)) {
-						producers[HOLD_LED_UID].Fire()
+						producers[HOLD_LED_UID].Start()
 					}
 				}
 			} else {
 				firstSameTrigger = hw.Trigger{}
 				if producer, ok := producers[trigger.ID]; ok {
-					producer.Fire()
+					producer.Start()
 				} else {
 					log.Printf("Unknown UID %s", trigger.ID)
 				}

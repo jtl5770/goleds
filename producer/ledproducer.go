@@ -4,7 +4,7 @@ package producer
 type LedProducer interface {
 	GetLeds() []Led
 	GetUID() string
-	Fire()
+	Start()
 	Exit()
 }
 

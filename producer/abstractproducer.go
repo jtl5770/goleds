@@ -88,7 +88,7 @@ func (s *AbstractProducer) getLastFire() t.Time {
 // concurrently.  The method is guarded by s.updateMutex
 // IMPORTANT: After constructing your concrete instance you MUST set
 // AbstractProducer.runfunc to the concrete worker method to call.
-func (s *AbstractProducer) Fire() {
+func (s *AbstractProducer) Start() {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 
