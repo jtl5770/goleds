@@ -6,7 +6,7 @@ SensorLED:
   LedRGB: [80, 15, 3]
 
 NightLED:
-  Enabled: true
+  Enabled: false
   Latitude: 49.014
   Longitude: 8.4043
   LedRGB:
@@ -21,7 +21,7 @@ HoldLED:
   LedRGB: [140, 25, 6]
 
 MultiBlobLED:
-  Enabled: false
+  Enabled: true
   Delay: 200ms
   BlobCfg:
     BlobRed:                    
@@ -30,15 +30,20 @@ MultiBlobLED:
       Width: 512
       LedRGB: [20, 0, 0]
     BlobGreen:
-      DeltaX: 0.5
-      X: 70
+      DeltaX: 0.4
+      X: 50
       Width: 512
       LedRGB: [0, 10, 0]
     BlobBlue:
-      DeltaX: -0.1
-      X: 110
+      DeltaX: -0.2
+      X: 90
       Width: 512 
       LedRGB: [0, 0, 6]
+    BlobRed2:
+      DeltaX: 0.2
+      X: 110
+      Width: 512 
+      LedRGB: [20, 0, 0]
 
 Hardware:
   GPIOLibrary: "default"
