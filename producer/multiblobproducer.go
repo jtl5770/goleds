@@ -128,7 +128,7 @@ func detectAndHandleCollisions(blobs map[string]*Blob) {
 	for _, blob := range blobs {
 		if ((blob.x > max) && (blob.dir > 0)) ||
 			((blob.x < 0) && (blob.dir < 0)) {
-			log.Println(fmt.Sprintf("%s hit boundary. x=%f ", blob.uid, blob.x))
+			// log.Println(fmt.Sprintf("%s hit boundary. x=%f ", blob.uid, blob.x))
 			blob.switchDirection()
 			collblobs[blob.uid] = blob
 		} else {
@@ -166,7 +166,7 @@ func detectBlobColl(blob_a *Blob, blob_b *Blob) bool {
 	b_end := math.Max(b1, b2)
 	collide := (a_start <= b_end) && (b_start <= a_end)
 	if collide {
-		log.Println("Collision detected between " + blob_a.uid + " and " + blob_b.uid)
+		// log.Println("Collision detected between " + blob_a.uid + " and " + blob_b.uid)
 		var left *Blob
 		var right *Blob
 
