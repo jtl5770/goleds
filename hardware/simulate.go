@@ -18,10 +18,25 @@ func simulateLed(segmentID int, values []p.Led) {
 	for _, v := range values {
 		if v.IsEmpty() {
 			buf.WriteString(" ")
-		} else if intensity(v) > 10 {
-			buf.WriteString("*")
 		} else {
-			buf.WriteString("_")
+			value := intensity(v)
+			if value == 1 {
+				buf.WriteString("▁")
+			} else if value == 2 {
+				buf.WriteString("▂")
+			} else if value <= 4 {
+				buf.WriteString("▃")
+			} else if value <= 8 {
+				buf.WriteString("▄")
+			} else if value <= 16 {
+				buf.WriteString("▅")
+			} else if value <= 32 {
+				buf.WriteString("▆")
+			} else if value <= 64 {
+				buf.WriteString("▇")
+			} else {
+				buf.WriteString("█")
+			}
 		}
 	}
 	fmt.Print(buf.String())
