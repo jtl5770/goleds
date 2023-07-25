@@ -6,6 +6,7 @@ type LedProducer interface {
 	GetUID() string
 	Start()
 	Exit()
+	IsCurrRunning() bool
 }
 
 // Local Variables:

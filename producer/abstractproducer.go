@@ -99,6 +99,12 @@ func (s *AbstractProducer) Start() {
 	}
 }
 
+func (s *AbstractProducer) IsCurrRunning() bool {
+	s.updateMutex.Lock()
+	defer s.updateMutex.Unlock()
+	return s.isRunning
+}
+
 func (s *AbstractProducer) stopRunningIfNoNewFireEvent(last_fire t.Time) bool {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
