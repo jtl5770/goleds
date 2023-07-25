@@ -112,7 +112,9 @@ func initialise() {
 	if c.CONFIG.MultiBlobLED.Enabled {
 		multiblob := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader)
 		ledproducers[MULTI_BLOB_UID] = multiblob
-		multiblob.Start()
+		if !c.CONFIG.MultiBlobLED.Trigger {
+			multiblob.Start()
+		}
 	}
 
 	// *FUTURE* init more types of ledproducers if needed/wanted
@@ -149,9 +151,24 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 	// for uid := range hw.Sensors {
 	// 	allLedRanges[uid] = make([]p.Led, c.CONFIG.Hardware.Display.LedsTotal)
 	// }
+	old_sensorledsrunning := false
 	for {
 		select {
 		case s := <-r:
+			if c.CONFIG.MultiBlobLED.Enabled && c.CONFIG.MultiBlobLED.Trigger {
+				isrunning := false
+				for uid := range hw.Sensors {
+					isrunning = (isrunning || ledproducers[uid].IsCurrRunning())
+				}
+				// Now we know if any of the sensor driven producers is still running (aka: has any LED on)
+				// if NOT, we detected a change from ON to OFF exactly when old_sensorledsrunning is true here,
+				// and we can Start() the multiblobproducer
+				if old_sensorledsrunning && !isrunning {
+					ledproducers[MULTI_BLOB_UID].Start()
+				}
+				old_sensorledsrunning = isrunning
+			}
+
 			allLedRanges[s.GetUID()] = s.GetLeds()
 			sumLeds := p.CombineLeds(allLedRanges)
 			if !reflect.DeepEqual(sumLeds, oldSumLeds) {
