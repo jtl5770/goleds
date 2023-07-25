@@ -22,6 +22,8 @@ HoldLED:
 
 MultiBlobLED:
   Enabled: true
+  Trigger: true
+  Duration: 60s
   Delay: 200ms
   BlobCfg:
     BlobRed:                    
