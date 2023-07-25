@@ -30,7 +30,7 @@ func (s *HoldProducer) runner() {
 		s.updateMutex.Unlock()
 	}()
 
-	initial := s.getLastFire()
+	initial := s.getLastStart()
 	for idx := range s.leds {
 		s.setLed(idx, s.ledOnHold)
 	}
@@ -44,7 +44,7 @@ LOOP:
 			log.Println("Stopped HoldProducer...")
 			return
 		case <-ticker.C:
-			if (time.Now().Sub(initial) >= s.holdT) || s.getLastFire().After(initial) {
+			if (time.Now().Sub(initial) >= s.holdT) || s.getLastStart().After(initial) {
 				ticker.Stop()
 				break LOOP
 			}

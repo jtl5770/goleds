@@ -78,7 +78,7 @@ func (s *SensorLedProducer) runner() {
 		var old_last_fire time.Time
 		for {
 			now := time.Now()
-			last_fire := s.getLastFire()
+			last_fire := s.getLastStart()
 			hold_until := last_fire.Add(s.holdT)
 			if hold_until.After(now) {
 				select {
@@ -100,7 +100,7 @@ func (s *SensorLedProducer) runner() {
 		// finally entering RUN DOWN state
 		ticker.Reset(s.runDownT)
 		for {
-			last_fire := s.getLastFire()
+			last_fire := s.getLastStart()
 			if last_fire.After(old_last_fire) {
 				// breaking out of inner for loop, but not outer, so
 				// we are back at RUN UP while preserving the current
