@@ -6,7 +6,7 @@ SensorLED:
   LedRGB: [85, 16, 4]
 
 NightLED:
-  Enabled: false
+  Enabled: true
   Latitude: 49.014
   Longitude: 8.4043
   LedRGB:
@@ -23,7 +23,7 @@ HoldLED:
 MultiBlobLED:
   Enabled: true
   Trigger: true
-  Duration: 60s
+  Duration: 30s
   Delay: 200ms
   BlobCfg:
     BlobRed:                    
