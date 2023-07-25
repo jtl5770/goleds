@@ -58,7 +58,7 @@ func simulateSensors(sensorReader chan Trigger, sig chan bool) {
 			return
 		}
 		sensorReader <- Trigger{"S0", 80, time.Now()}
-		if !waitorbreak(15*time.Second, sig) {
+		if !waitorbreak(30*time.Second, sig) {
 			return
 		}
 		sensorReader <- Trigger{"S3", 80, time.Now()}
@@ -70,7 +70,7 @@ func simulateSensors(sensorReader chan Trigger, sig chan bool) {
 			return
 		}
 		sensorReader <- Trigger{"S2", 80, time.Now()}
-		if !waitorbreak(15*time.Second, sig) {
+		if !waitorbreak(30*time.Second, sig) {
 			return
 		}
 	}
