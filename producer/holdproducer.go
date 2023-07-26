@@ -3,6 +3,7 @@ package producer
 import (
 	"log"
 	"time"
+	t "time"
 
 	c "lautenbacher.net/goleds/config"
 )
@@ -23,7 +24,7 @@ func NewHoldProducer(uid string, ledsChanged chan LedProducer) *HoldProducer {
 	return &inst
 }
 
-func (s *HoldProducer) runner() {
+func (s *HoldProducer) runner(startime t.Time) {
 	defer func() {
 		s.updateMutex.Lock()
 		s.isRunning = false

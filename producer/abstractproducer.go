@@ -22,7 +22,7 @@ type AbstractProducer struct {
 	ledsChanged chan LedProducer
 	// the method Fire() should call. MUST be set by the concrete
 	// implementation upon constructing a new instance
-	runfunc func()
+	runfunc func(start t.Time)
 	// this channel will be signaled via the Stop method
 	stop chan bool
 }
@@ -41,8 +41,8 @@ func NewAbstractProducer(uid string, ledsChanged chan LedProducer) *AbstractProd
 // the 1 element deep buffered channel "stop" won't block
 func (s *AbstractProducer) Exit() {
 	s.updateMutex.Lock()
-	s.runfunc = func() {
-		log.Println("Called Fire() after Stop(). Ignoring...")
+	s.runfunc = func(start t.Time) {
+		log.Println("Called Start() after Exit(). Ignoring...")
 	}
 	s.updateMutex.Unlock()
 	s.stop <- true
@@ -95,7 +95,7 @@ func (s *AbstractProducer) Start() {
 	s.lastFire = t.Now()
 	if !s.isRunning {
 		s.isRunning = true
-		go s.runfunc()
+		go s.runfunc(s.lastFire)
 	}
 }
 

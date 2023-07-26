@@ -3,6 +3,7 @@ package producer
 import (
 	"log"
 	"time"
+	t "time"
 
 	c "lautenbacher.net/goleds/config"
 
@@ -44,7 +45,7 @@ func (s *NightlightProducer) setLed(on bool, index int) {
 	}
 }
 
-func (s *NightlightProducer) runner() {
+func (s *NightlightProducer) runner(starttime t.Time) {
 	defer func() {
 		s.updateMutex.Lock()
 		s.isRunning = false

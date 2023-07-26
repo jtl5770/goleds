@@ -3,6 +3,7 @@ package producer
 import (
 	"log"
 	"time"
+	t "time"
 
 	c "lautenbacher.net/goleds/config"
 )
@@ -41,7 +42,7 @@ func NewSensorLedProducer(uid string, index int, ledsChanged chan (LedProducer))
 // intermediate Fire() before finally setting s.isRunning to false and
 // ending the go routine. All this is either guarded directly or
 // indirectly (by calls to s.getLastFire()) by s.updateMutex.
-func (s *SensorLedProducer) runner() {
+func (s *SensorLedProducer) runner(starttime t.Time) {
 	left := s.ledIndex
 	right := s.ledIndex
 
