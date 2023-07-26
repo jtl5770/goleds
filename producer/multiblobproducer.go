@@ -100,10 +100,30 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 	for {
 		select {
 		case <-triggerduration.C:
-			for i := 0; i < c.CONFIG.Hardware.Display.LedsTotal; i++ {
-				s.setLed(i, Led{})
+
+			currentleds := s.GetLeds()
+			downtick := time.NewTicker(150 * time.Millisecond)
+			counter := 10
+
+			select {
+			case <-downtick.C:
+				factor := float64(counter) / 10.0
+
+				for i, led := range currentleds {
+					s.setLed(i, Led{
+						byte(math.Round(float64(led.Red) * factor)),
+						byte(math.Round(float64(led.Green) * factor)),
+						byte(math.Round(float64(led.Blue) * factor)),
+					})
+				}
+				s.ledsChanged <- s
+				if counter == 0 {
+					downtick.Stop()
+					return
+				}
+				counter--
 			}
-			s.ledsChanged <- s
+
 			return
 		case <-s.stop:
 			log.Println("Stopped MultiBlobProducer...")
@@ -112,6 +132,10 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 			// compute new x value
 			for _, blob := range s.allblobs {
 				blob.x = blob.x + (blob.delta * blob.dir)
+			}
+			// check if another Start() has been triggered while running and extend accordingly
+			if s.getLastStart() != startTime {
+				triggerduration.Reset(c.CONFIG.MultiBlobLED.Duration)
 			}
 
 			// detect & handle collision
