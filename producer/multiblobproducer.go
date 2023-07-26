@@ -102,11 +102,8 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 		case <-triggerduration.C:
 
 			currentleds := s.GetLeds()
-			downtick := time.NewTicker(150 * time.Millisecond)
-			counter := 10
 
-			select {
-			case <-downtick.C:
+			for counter := 10; counter >= 0; counter-- {
 				factor := float64(counter) / 10.0
 
 				for i, led := range currentleds {
@@ -116,12 +113,9 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 						byte(math.Round(float64(led.Blue) * factor)),
 					})
 				}
+				log.Println("Going Down...")
 				s.ledsChanged <- s
-				if counter == 0 {
-					downtick.Stop()
-					return
-				}
-				counter--
+				time.Sleep(150 * time.Millisecond)
 			}
 
 			return
