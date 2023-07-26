@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"time"
+	t "time"
 
 	c "lautenbacher.net/goleds/config"
 )
@@ -78,7 +79,7 @@ func NewMultiBlobProducer(uid string, ledsChanged chan LedProducer) *MultiBlobPr
 	return &inst
 }
 
-func (s *MultiBlobProducer) runner() {
+func (s *MultiBlobProducer) runner(startTime t.Time) {
 	triggerduration := time.NewTicker(c.CONFIG.MultiBlobLED.Duration)
 	tick := time.NewTicker(c.CONFIG.MultiBlobLED.Delay)
 	defer func() {
