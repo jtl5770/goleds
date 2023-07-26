@@ -115,7 +115,7 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 				}
 				log.Println("Going Down...")
 				s.ledsChanged <- s
-				time.Sleep(150 * time.Millisecond)
+				time.Sleep(80 * time.Millisecond)
 			}
 
 			return
