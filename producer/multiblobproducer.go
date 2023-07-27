@@ -82,6 +82,8 @@ func NewMultiBlobProducer(uid string, ledsChanged chan LedProducer) *MultiBlobPr
 func (s *MultiBlobProducer) runner(startTime t.Time) {
 	triggerduration := time.NewTicker(c.CONFIG.MultiBlobLED.Duration)
 	tick := time.NewTicker(c.CONFIG.MultiBlobLED.Delay)
+	countup_run := false
+	maxintervals := 20
 	defer func() {
 		s.updateMutex.Lock()
 		s.isRunning = false
@@ -102,8 +104,8 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 		case <-triggerduration.C:
 			currentleds := s.GetLeds()
 
-			for counter := 10; counter >= 0; counter-- {
-				factor := float64(counter) / 10.0
+			for counter := maxintervals; counter >= 0; counter-- {
+				factor := float64(counter) / float64(maxintervals)
 
 				for i, led := range currentleds {
 					s.setLed(i, Led{
@@ -113,7 +115,7 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 					})
 				}
 				s.ledsChanged <- s
-				time.Sleep(80 * time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
 			}
 
 			return
@@ -145,8 +147,29 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 			for i := 0; i < c.CONFIG.Hardware.Display.LedsTotal; i++ {
 				s.setLed(i, combined[i])
 			}
-			s.ledsChanged <- s
 
+			if countup_run {
+				s.ledsChanged <- s
+			} else {
+				// The "countup" similar to the "countdown" fade out but fade in
+				// at the start of the blob period
+				currentleds := s.GetLeds()
+
+				for counter := 0; counter <= maxintervals; counter++ {
+					factor := float64(counter) / float64(maxintervals)
+
+					for i, led := range currentleds {
+						s.setLed(i, Led{
+							byte(math.Round(float64(led.Red) * factor)),
+							byte(math.Round(float64(led.Green) * factor)),
+							byte(math.Round(float64(led.Blue) * factor)),
+						})
+					}
+					s.ledsChanged <- s
+					time.Sleep(50 * time.Millisecond)
+				}
+				countup_run = true
+			}
 			// update last_x value to current x
 			for _, blob := range s.allblobs {
 				blob.last_x = blob.x
