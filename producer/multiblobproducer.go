@@ -102,7 +102,6 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 	}
 
 	if s.nproducer != nil && s.nproducer.isRunning {
-		log.Println("About to stopped NightlightProducer...")
 		s.nproducer.stop <- true
 	}
 

@@ -97,6 +97,7 @@ func (s *NightlightProducer) runner(starttime t.Time) {
 		case <-time.After(wakeupAfter):
 			// nothing, just continue
 		case <-s.stop:
+			s.setLed(false, 0)
 			log.Println("Stopped NightlightProducer...")
 			return
 		}
