@@ -103,7 +103,6 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 
 	if s.nproducer != nil && s.nproducer.isRunning {
 		s.nproducer.stop <- true
-		time.Sleep(2 * time.Second)
 	}
 
 	for {
