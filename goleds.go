@@ -102,15 +102,17 @@ func initialise() {
 		ledproducers[HOLD_LED_UID] = prodhold
 	}
 
+	var prodnight *p.NightlightProducer = nil
 	if c.CONFIG.NightLED.Enabled {
 		// The Nightlight producer creates a permanent glow during night time
-		prodnight := p.NewNightlightProducer(NIGHT_LED_UID, ledReader)
+		prodnight = p.NewNightlightProducer(NIGHT_LED_UID, ledReader)
 		ledproducers[NIGHT_LED_UID] = prodnight
 		prodnight.Start()
 	}
 
 	if c.CONFIG.MultiBlobLED.Enabled {
-		multiblob := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader)
+		// multiblobproducer gehts the - maybe nil - prodnight instance to control it
+		multiblob := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader, prodnight)
 		ledproducers[MULTI_BLOB_UID] = multiblob
 		if !c.CONFIG.MultiBlobLED.Trigger {
 			multiblob.Start()

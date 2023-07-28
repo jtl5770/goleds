@@ -62,10 +62,11 @@ func (s *Blob) switchDirection() {
 
 type MultiBlobProducer struct {
 	*AbstractProducer
-	allblobs map[string]*Blob
+	allblobs  map[string]*Blob
+	nproducer *NightlightProducer
 }
 
-func NewMultiBlobProducer(uid string, ledsChanged chan LedProducer) *MultiBlobProducer {
+func NewMultiBlobProducer(uid string, ledsChanged chan LedProducer, nprod *NightlightProducer) *MultiBlobProducer {
 	inst := MultiBlobProducer{
 		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
 	}
@@ -76,6 +77,7 @@ func NewMultiBlobProducer(uid string, ledsChanged chan LedProducer) *MultiBlobPr
 		blob := NewBlob(uid)
 		inst.allblobs[uid] = blob
 	}
+	inst.nproducer = nprod
 	return &inst
 }
 
@@ -99,6 +101,10 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 		triggerduration.Stop()
 	}
 
+	if s.nproducer != nil && s.nproducer.isRunning {
+		s.nproducer.stop <- true
+	}
+
 	for {
 		select {
 		case <-triggerduration.C:
@@ -116,6 +122,9 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 				}
 				s.ledsChanged <- s
 				time.Sleep(50 * time.Millisecond)
+			}
+			if s.nproducer != nil && !s.nproducer.isRunning {
+				s.nproducer.Start()
 			}
 
 			return
