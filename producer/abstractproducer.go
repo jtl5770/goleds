@@ -71,7 +71,7 @@ func (s *AbstractProducer) GetUID() string {
 	return s.uid
 }
 
-// Returns the time of the last time s.Start() has been called. This is
+// Returns last time when s.Start() has been called. This is
 // guarded by s.updateMutex
 func (s *AbstractProducer) getLastStart() t.Time {
 	s.updateMutex.Lock()

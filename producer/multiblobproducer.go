@@ -115,7 +115,7 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 					})
 				}
 				s.ledsChanged <- s
-				time.Sleep(100 * time.Millisecond)
+				time.Sleep(50 * time.Millisecond)
 			}
 
 			return
@@ -166,7 +166,7 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 						})
 					}
 					s.ledsChanged <- s
-					time.Sleep(50 * time.Millisecond)
+					time.Sleep(25 * time.Millisecond)
 				}
 				countup_run = true
 			}
