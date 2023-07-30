@@ -48,7 +48,6 @@ MultiBlobLED:
       LedRGB: [20, 0, 0]
 
 Hardware:
-  GPIOLibrary: "default"
   SPIFrequency: 2097152
   Display:
     ForceUpdateDelay: 1000ms
