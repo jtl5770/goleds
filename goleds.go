@@ -10,6 +10,21 @@
 // layout is due to the special situation in my hallway with a door
 // seperating the two stripes. All hardware related things are defined
 // in the hardware/ directory (package hardware)
+//
+// The software is designed to be configurable via a config file
+// (default: config.yml) and to be able to react to signals to
+// reload the config file or to exit. The config file is read by the
+// config package (package config) and the config is stored in a
+// global variable CONFIG. The config file is read on startup and
+// whenever a SIGHUP signal is received.
+//
+// The main functionality is to read the sensors and to drive the LED
+// stripes accordingly. The sensor data is read by the hardware
+// package (package hardware) and the LED stripes are driven by the
+// producer package (package producer). The producer package is
+// designed to be able to handle different types of producers, e.g.
+// the HoldProducer which is triggered by a sensor and keeps the
+// stripes lit for a configurable time.
 package main
 
 import (
