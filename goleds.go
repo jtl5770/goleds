@@ -19,12 +19,11 @@
 // whenever a SIGHUP signal is received.
 //
 // The main functionality is to read the sensors and to drive the LED
-// stripes accordingly. The sensor data is read by the hardware
-// package (package hardware) and the LED stripes are driven by the
-// producer package (package producer). The producer package is
-// designed to be able to handle different types of producers, e.g.
-// the HoldProducer which is triggered by a sensor and keeps the
-// stripes lit for a configurable time.
+// stripes accordingly. The sensor data is read by the hardware packag
+// and the LED stripes are driven by the producer package. The
+// producer package is designed to be able to handle different types
+// of producers, e.g.  the HoldProducer which is triggered by a sensor
+// and keeps the stripes lit for a configurable time.
 package main
 
 import (
