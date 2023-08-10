@@ -152,11 +152,11 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 			}
 
 			// check if another Start() has been triggered while running and extend accordingly
-			currstartTime := s.getLastStart()
-			if currstartTime != startTime {
-				triggerduration.Reset(c.CONFIG.MultiBlobLED.Duration)
-				startTime = currstartTime
-			}
+			// currstartTime := s.getLastStart()
+			// if currstartTime != startTime {
+			// 	triggerduration.Reset(c.CONFIG.MultiBlobLED.Duration)
+			// 	startTime = currstartTime
+			// }
 
 			// detect & handle collision
 			detectAndHandleCollisions(s.allblobs)
