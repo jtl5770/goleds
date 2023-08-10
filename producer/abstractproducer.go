@@ -38,17 +38,6 @@ func NewAbstractProducer(uid string, ledsChanged chan LedProducer) *AbstractProd
 	return &inst
 }
 
-// This method should only be called once per instance to make sure
-// the 1 element deep buffered channel "stop" won't block
-func (s *AbstractProducer) Exit() {
-	s.updateMutex.Lock()
-	s.runfunc = func(start t.Time) {
-		log.Println("Called Start() after Exit(). Ignoring...")
-	}
-	s.updateMutex.Unlock()
-	s.stop <- true
-}
-
 // Sets a single LED at index index to value
 // Guarded by s.ledsMutex
 func (s *AbstractProducer) setLed(index int, value Led) {
@@ -113,19 +102,20 @@ func (s *AbstractProducer) Stop() {
 	}
 }
 
-func (s *AbstractProducer) stopRunningIfNoNewFireEvent(last_fire t.Time) bool {
+// This method should only be called once per instance
+func (s *AbstractProducer) Exit() {
+	s.updateMutex.Lock()
+	s.runfunc = func(start t.Time) {
+		log.Println("Called Start() after Exit(). Ignoring in " + s.GetUID())
+	}
+	s.updateMutex.Unlock()
+	s.Stop()
+}
+
+func (s *AbstractProducer) GetIsRunning() bool {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
-	if s.lastFire.After(last_fire) {
-		// again back into running up again
-		return false
-	} else {
-		// we are finally ready and can set s.isRunning to
-		// false so the next fire event can pass the mutex
-		// and fire up the go routine again from the start
-		s.isRunning = false
-		return true
-	}
+	return s.isRunning
 }
 
 // Local Variables:
