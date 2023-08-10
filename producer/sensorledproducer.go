@@ -71,8 +71,8 @@ func (s *SensorLedProducer) runner(starttime t.Time) {
 			case <-ticker.C:
 			// continue
 			case <-s.stop:
-				ticker.Stop()
 				// log.Println("Stopped SensorLedProducer...")
+				ticker.Stop()
 				return
 			}
 		}
@@ -92,6 +92,7 @@ func (s *SensorLedProducer) runner(starttime t.Time) {
 					// continue
 				case <-s.stop:
 					// log.Println("Stopped SensorLedProducer...")
+					ticker.Stop()
 					return
 				}
 			} else {
