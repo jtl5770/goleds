@@ -1,7 +1,6 @@
 package producer
 
 import (
-	"log"
 	"time"
 	t "time"
 
@@ -67,7 +66,7 @@ func (s *SensorLedProducer) runner(starttime t.Time) {
 			// continue
 			case <-s.stop:
 				ticker.Stop()
-				log.Println("Stopped SensorLedProducer...")
+				// log.Println("Stopped SensorLedProducer...")
 				return
 			}
 		}
@@ -86,7 +85,7 @@ func (s *SensorLedProducer) runner(starttime t.Time) {
 				case <-time.After(hold_until.Sub(now)):
 					// continue
 				case <-s.stop:
-					log.Println("Stopped SensorLedProducer...")
+					// log.Println("Stopped SensorLedProducer...")
 					return
 				}
 			} else {
@@ -142,10 +141,25 @@ func (s *SensorLedProducer) runner(starttime t.Time) {
 				// continue
 			case <-s.stop:
 				ticker.Stop()
-				log.Println("Stopped SensorLedProducer...")
+				// log.Println("Stopped SensorLedProducer...")
 				return
 			}
 		}
+	}
+}
+
+func (s *SensorLedProducer) stopRunningIfNoNewFireEvent(last_fire t.Time) bool {
+	s.updateMutex.Lock()
+	defer s.updateMutex.Unlock()
+	if s.lastFire.After(last_fire) {
+		// again back into running up again
+		return false
+	} else {
+		// we are finally ready and can set s.isRunning to
+		// false so the next fire event can pass the mutex
+		// and fire up the go routine again from the start
+		s.isRunning = false
+		return true
 	}
 }
 
