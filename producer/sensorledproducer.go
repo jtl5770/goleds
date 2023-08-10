@@ -42,6 +42,12 @@ func NewSensorLedProducer(uid string, index int, ledsChanged chan (LedProducer))
 // ending the go routine. All this is either guarded directly or
 // indirectly (by calls to s.getLastFire()) by s.updateMutex.
 func (s *SensorLedProducer) runner(starttime t.Time) {
+	defer func() {
+		s.updateMutex.Lock()
+		s.isRunning = false
+		s.updateMutex.Unlock()
+	}()
+
 	left := s.ledIndex
 	right := s.ledIndex
 
