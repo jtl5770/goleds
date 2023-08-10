@@ -169,7 +169,7 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 	for {
 		select {
 		case s := <-r:
-			if c.CONFIG.MultiBlobLED.Enabled && c.CONFIG.MultiBlobLED.Trigger {
+			if c.CONFIG.MultiBlobLED.Enabled {
 				isrunning := false
 				for uid := range hw.Sensors {
 					isrunning = (isrunning || ledproducers[uid].GetIsRunning())
