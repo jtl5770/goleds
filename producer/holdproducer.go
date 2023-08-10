@@ -1,7 +1,6 @@
 package producer
 
 import (
-	"log"
 	"time"
 	t "time"
 
@@ -46,7 +45,7 @@ func (s *HoldProducer) runner(startime t.Time) {
 	for {
 		select {
 		case <-s.stop:
-			log.Println("Stopped HoldProducer...")
+			// log.Println("Stopped HoldProducer...")
 			return
 		case <-ticker.C:
 			if (time.Now().Sub(initial) >= s.holdT) || s.getLastStart().After(initial) {

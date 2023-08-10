@@ -99,7 +99,7 @@ func (s *NightlightProducer) runner(starttime t.Time) {
 		case <-s.stop:
 			s.setLed(false, 0)
 			s.ledsChanged <- s
-			log.Println("Stopped NightlightProducer...")
+			// log.Println("Stopped NightlightProducer...")
 			return
 		}
 	}
