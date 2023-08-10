@@ -9,7 +9,7 @@ import (
 )
 
 // Implementation of common and shared functionality between the
-// concrete Implementations
+// concrete Implementations of the ledproducer interface
 type AbstractProducer struct {
 	uid       string
 	leds      []Led
@@ -20,7 +20,7 @@ type AbstractProducer struct {
 	// Guards changes to lastFire & isRunning
 	updateMutex sync.Mutex
 	ledsChanged chan LedProducer
-	// the method Fire() should call. MUST be set by the concrete
+	// the method Start() should call. MUST be set by the concrete
 	// implementation upon constructing a new instance
 	runfunc func(start t.Time)
 	// this channel will be signaled via the Stop method
