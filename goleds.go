@@ -142,7 +142,7 @@ func initialise() {
 	sigchans = append(sigchans, cAUDsignal, fCsignal, DDsignal, SDsignal)
 
 	go combineAndUpdateDisplay(ledReader, ledWriter, cAUDsignal)
-	go fireController(sensorReader, ledproducers, fCsignal)
+	go fireController(sensorReader, fCsignal)
 	go hw.DisplayDriver(ledWriter, DDsignal)
 	go hw.SensorDriver(sensorReader, hw.Sensors, SDsignal)
 }
@@ -204,7 +204,7 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 	}
 }
 
-func fireController(sensor chan (hw.Trigger), producers map[string]p.LedProducer, sig chan bool) {
+func fireController(sensor chan (hw.Trigger), sig chan bool) {
 	var firstSameTrigger hw.Trigger
 	triggerDelay := c.CONFIG.HoldLED.TriggerDelay
 
@@ -221,12 +221,18 @@ func fireController(sensor chan (hw.Trigger), producers map[string]p.LedProducer
 					firstSameTrigger = hw.Trigger{}
 					// Don't want to compare against too old timestamps
 					if newStamp.Sub(oldStamp) < (triggerDelay + (1 * time.Second)) {
-						producers[HOLD_LED_UID].Start()
+						if c.CONFIG.MultiBlobLED.Enabled {
+							ledproducers[MULTI_BLOB_UID].Stop()
+						}
+						ledproducers[HOLD_LED_UID].Start()
 					}
 				}
 			} else {
 				firstSameTrigger = hw.Trigger{}
-				if producer, ok := producers[trigger.ID]; ok {
+				if producer, ok := ledproducers[trigger.ID]; ok {
+					if c.CONFIG.MultiBlobLED.Enabled {
+						ledproducers[MULTI_BLOB_UID].Stop()
+					}
 					producer.Start()
 				} else {
 					log.Printf("Unknown UID %s", trigger.ID)
