@@ -99,10 +99,17 @@ func (s *AbstractProducer) Start() {
 	}
 }
 
-func (s *AbstractProducer) IsCurrRunning() bool {
+// Stop method to signal the worker go routine on the stop channel.
+func (s *AbstractProducer) Stop() {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
-	return s.isRunning
+	if s.isRunning {
+		// log.Println("Called Stop in " + s.GetUID())
+		s.stop <- true
+		// log.Println("Done calling Stop in " + s.GetUID())
+	} else {
+		// log.Println("Called Stop in " + s.GetUID() + " but it was not running")
+	}
 }
 
 func (s *AbstractProducer) stopRunningIfNoNewFireEvent(last_fire t.Time) bool {
