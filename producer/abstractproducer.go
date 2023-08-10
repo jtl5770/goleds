@@ -27,12 +27,13 @@ type AbstractProducer struct {
 	stop chan bool
 }
 
+// Creates a new instance of AbstractProducer. The uid must be unique
 func NewAbstractProducer(uid string, ledsChanged chan LedProducer) *AbstractProducer {
 	inst := AbstractProducer{
 		uid:         uid,
 		leds:        make([]Led, c.CONFIG.Hardware.Display.LedsTotal),
 		ledsChanged: ledsChanged,
-		stop:        make(chan bool, 1),
+		stop:        make(chan bool),
 	}
 	return &inst
 }
