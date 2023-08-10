@@ -150,6 +150,7 @@ func initialise() {
 func reset() {
 	log.Println("Resetting...")
 	for _, prod := range ledproducers {
+		log.Println("Exiting producer: ", prod.GetUID())
 		prod.Exit()
 	}
 	time.Sleep(1 * time.Second)
@@ -164,9 +165,6 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 	var oldSumLeds []p.Led
 	allLedRanges := make(map[string][]p.Led)
 	ticker := time.NewTicker(c.CONFIG.Hardware.Display.ForceUpdateDelay)
-	// for uid := range hw.Sensors {
-	// 	allLedRanges[uid] = make([]p.Led, c.CONFIG.Hardware.Display.LedsTotal)
-	// }
 	old_sensorledsrunning := false
 	for {
 		select {
@@ -176,9 +174,11 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 				for uid := range hw.Sensors {
 					isrunning = (isrunning || ledproducers[uid].IsCurrRunning())
 				}
-				// Now we know if any of the sensor driven producers is still running (aka: has any LED on)
-				// if NOT, we detected a change from ON to OFF exactly when old_sensorledsrunning is true here,
-				// and we can Start() the multiblobproducer
+				// Now we know if any of the sensor driven producers
+				// is still running (aka: has any LED on) if NOT (aka:
+				// isrunning is false), we detected a change from ON
+				// to OFF exactly when old_sensorledsrunning is true;
+				// and we can now Start() the multiblobproducer
 				if old_sensorledsrunning && !isrunning {
 					ledproducers[MULTI_BLOB_UID].Start()
 				}
