@@ -129,8 +129,9 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 		triggerduration.Stop()
 	}
 
-	if s.nproducer != nil && s.nproducer.isRunning {
-		s.nproducer.stop <- true
+	// if the NightlightProducer is running, stop it
+	if s.nproducer != nil && s.nproducer.GetIsRunning() {
+		s.nproducer.Stop()
 	}
 
 	for {
