@@ -30,22 +30,22 @@ MultiBlobLED:
       DeltaX: 0.2
       X: 20
       Width: 512
-      LedRGB: [20, 0, 0]
+      LedRGB: [30, 0, 0]
     BlobGreen:
       DeltaX: 0.4
       X: 50
       Width: 512
-      LedRGB: [0, 8, 0]
+      LedRGB: [0, 10, 0]
     BlobBlue:
       DeltaX: -0.2
       X: 90
       Width: 512 
-      LedRGB: [0, 0, 3]
+      LedRGB: [0, 0, 5]
     BlobRed2:
       DeltaX: 0.2
       X: 110
       Width: 512 
-      LedRGB: [20, 0, 0]
+      LedRGB: [30, 0, 0]
 
 Hardware:
   SPIFrequency: 2097152
