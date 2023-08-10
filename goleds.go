@@ -172,7 +172,7 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 			if c.CONFIG.MultiBlobLED.Enabled && c.CONFIG.MultiBlobLED.Trigger {
 				isrunning := false
 				for uid := range hw.Sensors {
-					isrunning = (isrunning || ledproducers[uid].IsCurrRunning())
+					isrunning = (isrunning || ledproducers[uid].GetIsRunning())
 				}
 				// Now we know if any of the sensor driven producers
 				// is still running (aka: has any LED on) if NOT (aka:
