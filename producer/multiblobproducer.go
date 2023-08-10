@@ -81,11 +81,39 @@ func NewMultiBlobProducer(uid string, ledsChanged chan LedProducer, nprod *Night
 	return &inst
 }
 
+func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {
+	intervals := 20
+	delay := 20 * time.Millisecond
+	currentleds := s.GetLeds()
+	for counter := 0; counter <= intervals; counter++ {
+		var step int
+		if fadein {
+			step = counter
+		} else {
+			step = intervals - counter
+		}
+
+		factor := float64(step) / float64(intervals)
+
+		for i, led := range currentleds {
+			s.setLed(i, Led{
+				byte(math.Round(float64(led.Red) * factor)),
+				byte(math.Round(float64(led.Green) * factor)),
+				byte(math.Round(float64(led.Blue) * factor)),
+			})
+		}
+		s.ledsChanged <- s
+		time.Sleep(delay)
+		if s.nproducer != nil && !s.nproducer.GetIsRunning() {
+			s.nproducer.Start()
+		}
+	}
+}
+
 func (s *MultiBlobProducer) runner(startTime t.Time) {
 	triggerduration := time.NewTicker(c.CONFIG.MultiBlobLED.Duration)
 	tick := time.NewTicker(c.CONFIG.MultiBlobLED.Delay)
 	countup_run := false
-	maxintervals := 20
 	defer func() {
 		s.updateMutex.Lock()
 		s.isRunning = false
@@ -108,28 +136,13 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 	for {
 		select {
 		case <-triggerduration.C:
-			currentleds := s.GetLeds()
-
-			for counter := maxintervals; counter >= 0; counter-- {
-				factor := float64(counter) / float64(maxintervals)
-
-				for i, led := range currentleds {
-					s.setLed(i, Led{
-						byte(math.Round(float64(led.Red) * factor)),
-						byte(math.Round(float64(led.Green) * factor)),
-						byte(math.Round(float64(led.Blue) * factor)),
-					})
-				}
-				s.ledsChanged <- s
-				time.Sleep(50 * time.Millisecond)
-			}
-			if s.nproducer != nil && !s.nproducer.isRunning {
-				s.nproducer.Start()
-			}
-
+			// Doing the fadeout after the time is up
+			s.fade_in_or_out(false)
 			return
 		case <-s.stop:
-			log.Println("Stopped MultiBlobProducer...")
+			// Doing the fadeout when Stop() is triggered
+			s.fade_in_or_out(false)
+			// log.Println("Stopped MultiBlobProducer...")
 			return
 		case <-tick.C:
 			// compute new x value
@@ -162,21 +175,7 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 			} else {
 				// The "countup" similar to the "countdown" fade out but fade in
 				// at the start of the blob period
-				currentleds := s.GetLeds()
-
-				for counter := 0; counter <= maxintervals; counter++ {
-					factor := float64(counter) / float64(maxintervals)
-
-					for i, led := range currentleds {
-						s.setLed(i, Led{
-							byte(math.Round(float64(led.Red) * factor)),
-							byte(math.Round(float64(led.Green) * factor)),
-							byte(math.Round(float64(led.Blue) * factor)),
-						})
-					}
-					s.ledsChanged <- s
-					time.Sleep(25 * time.Millisecond)
-				}
+				s.fade_in_or_out(true)
 				countup_run = true
 			}
 			// update last_x value to current x
