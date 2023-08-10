@@ -131,9 +131,9 @@ func (s *SensorLedProducer) runner(starttime t.Time) {
 				// time while this last iteration of the inner for
 				// loop took place thereby closing a small race condition)
 				ticker.Stop()
-				if s.stopRunningIfNoNewFireEvent(last_fire) {
-					// we are finally ready and can return and end the
-					// go routine
+
+				if !s.getLastStart().After(last_fire) {
+					// we are finally ready and can end the go routine
 					return
 				} else {
 					// back into running up again
