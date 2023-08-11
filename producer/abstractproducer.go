@@ -107,6 +107,7 @@ func (s *AbstractProducer) Exit() {
 	s.updateMutex.Lock()
 	s.runfunc = func(start t.Time) {
 		log.Println("Called Start() after Exit(). Ignoring in " + s.GetUID())
+		s.isRunning = false
 	}
 	s.updateMutex.Unlock()
 	s.Stop()
