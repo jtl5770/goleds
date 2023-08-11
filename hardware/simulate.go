@@ -19,7 +19,7 @@ func simulateLed(segmentID int, values []p.Led) {
 		if v.IsEmpty() {
 			buf.WriteString(" ")
 		} else {
-			value := intensity(v)
+			value := byte(math.Round(float64(v.Red+v.Green+v.Blue) / 3.0))
 			if value == 1 {
 				buf.WriteString("▁")
 			} else if value == 2 {
@@ -30,9 +30,9 @@ func simulateLed(segmentID int, values []p.Led) {
 				buf.WriteString("▄")
 			} else if value <= 16 {
 				buf.WriteString("▅")
-			} else if value <= 32 {
+			} else if value <= 24 {
 				buf.WriteString("▆")
-			} else if value <= 64 {
+			} else if value <= 32 {
 				buf.WriteString("▇")
 			} else {
 				buf.WriteString("█")
@@ -45,10 +45,6 @@ func simulateLed(segmentID int, values []p.Led) {
 	} else {
 		fmt.Print("]\r")
 	}
-}
-
-func intensity(s p.Led) byte {
-	return byte(math.Round(float64(s.Red+s.Green+s.Blue) / 3.0))
 }
 
 func simulateSensors(sensorReader chan Trigger, sig chan bool) {
