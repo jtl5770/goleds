@@ -1,7 +1,6 @@
 package producer
 
 import (
-	"log"
 	"sync"
 	t "time"
 
@@ -14,16 +13,18 @@ type AbstractProducer struct {
 	uid       string
 	leds      []Led
 	isRunning bool
+	hasExited bool
 	lastStart t.Time
 	// Guards getting and setting LED values
 	ledsMutex sync.Mutex
-	// Guards changes to lastFire & isRunning
+	// Guards changes to lastStart & isRunning & hasExited
 	updateMutex sync.Mutex
 	ledsChanged chan LedProducer
 	// the method Start() should call. MUST be set by the concrete
 	// implementation upon constructing a new instance
 	runfunc func(start t.Time)
-	// this channel will be signaled via the Stop method
+	// this channel will be signaled via the Stop method. Your runfunc
+	// MUST listen to this channel and exit when it receives a signal
 	stop chan bool
 }
 
@@ -83,7 +84,7 @@ func (s *AbstractProducer) Start() {
 	defer s.updateMutex.Unlock()
 
 	s.lastStart = t.Now()
-	if !s.isRunning {
+	if !s.isRunning && !s.hasExited {
 		s.isRunning = true
 		go s.runfunc(s.lastStart)
 	}
@@ -93,24 +94,19 @@ func (s *AbstractProducer) Start() {
 func (s *AbstractProducer) Stop() {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
-	if s.isRunning {
-		// log.Println("Called Stop in " + s.GetUID())
+	if s.isRunning && !s.hasExited {
 		s.stop <- true
-		// log.Println("Done calling Stop in " + s.GetUID())
-	} else {
-		// log.Println("Called Stop in " + s.GetUID() + " but it was not running")
 	}
 }
 
 // This method should only be called once per instance
 func (s *AbstractProducer) Exit() {
 	s.updateMutex.Lock()
-	s.runfunc = func(start t.Time) {
-		log.Println("Called Start() after Exit(). Ignoring in " + s.GetUID())
-		s.isRunning = false
+	defer s.updateMutex.Unlock()
+	if s.isRunning {
+		s.stop <- true
 	}
-	s.updateMutex.Unlock()
-	s.Stop()
+	s.hasExited = true
 }
 
 func (s *AbstractProducer) GetIsRunning() bool {
