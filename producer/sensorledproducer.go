@@ -81,11 +81,11 @@ func (s *SensorLedProducer) runner(starttime t.Time) {
 		// the meantime or if there are more during hold, the hold
 		// period will be extended to be at least the last Fire()
 		// event time plus s.holdT
-		var old_last_fire time.Time
+		var old_last_start time.Time
 		for {
 			now := time.Now()
-			last_fire := s.getLastStart()
-			hold_until := last_fire.Add(s.holdT)
+			last_start := s.getLastStart()
+			hold_until := last_start.Add(s.holdT)
 			if hold_until.After(now) {
 				select {
 				case <-time.After(hold_until.Sub(now)):
@@ -100,15 +100,15 @@ func (s *SensorLedProducer) runner(starttime t.Time) {
 				// time so we don't accidentally loose events. If
 				// there have been new ones, we will see in the
 				// RUN_DOWN section and skip back to the beginning
-				old_last_fire = last_fire
+				old_last_start = last_start
 				break
 			}
 		}
 		// finally entering RUN DOWN state
 		ticker.Reset(s.runDownT)
 		for {
-			last_fire := s.getLastStart()
-			if last_fire.After(old_last_fire) {
+			last_start := s.getLastStart()
+			if last_start.After(old_last_start) {
 				// breaking out of inner for loop, but not outer, so
 				// we are back at RUN UP while preserving the current
 				// value for left and right
@@ -133,7 +133,7 @@ func (s *SensorLedProducer) runner(starttime t.Time) {
 				// loop took place thereby closing a small race condition)
 				ticker.Stop()
 
-				if !s.getLastStart().After(last_fire) {
+				if !s.getLastStart().After(last_start) {
 					// we are finally ready and can end the go routine
 					return
 				} else {
