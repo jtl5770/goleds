@@ -14,7 +14,7 @@ type AbstractProducer struct {
 	uid       string
 	leds      []Led
 	isRunning bool
-	lastFire  t.Time
+	lastStart t.Time
 	// Guards getting and setting LED values
 	ledsMutex sync.Mutex
 	// Guards changes to lastFire & isRunning
@@ -67,7 +67,7 @@ func (s *AbstractProducer) getLastStart() t.Time {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 
-	return s.lastFire
+	return s.lastStart
 }
 
 // Used to start the main worker process as a go routine. Does never
@@ -82,10 +82,10 @@ func (s *AbstractProducer) Start() {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 
-	s.lastFire = t.Now()
+	s.lastStart = t.Now()
 	if !s.isRunning {
 		s.isRunning = true
-		go s.runfunc(s.lastFire)
+		go s.runfunc(s.lastStart)
 	}
 }
 
