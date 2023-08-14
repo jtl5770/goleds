@@ -12,7 +12,14 @@ const SPLIT_AT = 70
 
 func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 	if !c.CONFIG.RealHW {
-		fmt.Println("[  Enter 1,2,3 or 4 to fire a sensor   ]")
+		fmt.Println("")
+		fmt.Println("*****************  SIMULATION MODE  ****************")
+		fmt.Println("*                                                  *")
+		fmt.Println("*         Enter 1,2,3 or 4 to fire a sensor        *")
+		fmt.Println("*         Enter q to exit                          *")
+		fmt.Println("*                                                  *")
+		fmt.Println("****************************************************")
+		fmt.Println("")
 	}
 	for {
 		select {

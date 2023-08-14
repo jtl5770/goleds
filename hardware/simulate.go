@@ -1,7 +1,6 @@
 package hardware
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"math"
@@ -9,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/eiannone/keyboard"
 	p "lautenbacher.net/goleds/producer"
 )
 
@@ -49,8 +49,8 @@ func simulateLed(segmentID int, values []p.Led) {
 	}
 }
 
-func readSingle(reader *bufio.Reader, w chan rune) {
-	r, _, err := reader.ReadRune()
+func readSingle(w chan rune) {
+	r, _, err := keyboard.GetKey()
 	if err != nil {
 		panic(err)
 	}
@@ -58,12 +58,17 @@ func readSingle(reader *bufio.Reader, w chan rune) {
 }
 
 func simulateSensors(sensorReader chan Trigger, sig chan bool) {
-	reader := bufio.NewReader(os.Stdin)
 	work := make(chan rune)
-	defer close(work)
+	if err := keyboard.Open(); err != nil {
+		panic(err)
+	}
+	defer func() {
+		close(work)
+		keyboard.Close()
+	}()
 
 	for {
-		go readSingle(reader, work)
+		go readSingle(work)
 		select {
 		case <-sig:
 			log.Println("Ending SensorDriver simulation go-routine")
@@ -77,6 +82,11 @@ func simulateSensors(sensorReader chan Trigger, sig chan bool) {
 				sensorReader <- Trigger{"S2", 80, time.Now()}
 			} else if r == '4' {
 				sensorReader <- Trigger{"S3", 80, time.Now()}
+			} else if r == 'q' {
+				log.Println("Exiting...")
+				close(work)
+				keyboard.Close()
+				os.Exit(0)
 			}
 		}
 	}

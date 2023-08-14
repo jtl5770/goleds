@@ -1,7 +1,6 @@
 package producer
 
 import (
-	"log"
 	"time"
 	t "time"
 
@@ -86,7 +85,7 @@ func (s *NightlightProducer) runner(starttime t.Time) {
 				currInterval = int(now.Sub(set) / waitIntervalDuration)
 				tillNextInterval = set.Add(time.Duration((currInterval + 1)) * waitIntervalDuration).Sub(now)
 			}
-			log.Printf("Current NightLED index %d : waitInterval %d : tillNextInterval %d", currInterval, waitIntervalDuration, tillNextInterval)
+			// log.Printf("Current NightLED index %d : waitInterval %d : tillNextInterval %d", currInterval, waitIntervalDuration, tillNextInterval)
 			s.setLed(true, currInterval)
 			s.ledsChanged <- s
 			// + 1s maybe not needed, but so we are sure to really be
