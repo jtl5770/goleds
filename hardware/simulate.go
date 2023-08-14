@@ -1,9 +1,11 @@
 package hardware
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"strings"
 	"time"
 
@@ -47,38 +49,36 @@ func simulateLed(segmentID int, values []p.Led) {
 	}
 }
 
-func simulateSensors(sensorReader chan Trigger, sig chan bool) {
-	for {
-		sensorReader <- Trigger{"S0", 80, time.Now()}
-		if !waitorbreak(12*time.Second, sig) {
-			return
-		}
-		sensorReader <- Trigger{"S0", 80, time.Now()}
-		if !waitorbreak(30*time.Second, sig) {
-			return
-		}
-		sensorReader <- Trigger{"S3", 80, time.Now()}
-		if !waitorbreak(20*time.Second, sig) {
-			return
-		}
-		sensorReader <- Trigger{"S1", 80, time.Now()}
-		if !waitorbreak(15*time.Second, sig) {
-			return
-		}
-		sensorReader <- Trigger{"S2", 80, time.Now()}
-		if !waitorbreak(30*time.Second, sig) {
-			return
-		}
+func readSingle(reader *bufio.Reader, w chan rune) {
+	r, _, err := reader.ReadRune()
+	if err != nil {
+		panic(err)
 	}
+	w <- r
 }
 
-func waitorbreak(wait time.Duration, sig chan bool) bool {
-	select {
-	case <-time.After(wait):
-		return true
-	case <-sig:
-		log.Println("Ending SensorDriver simulation go-routine")
-		return false
+func simulateSensors(sensorReader chan Trigger, sig chan bool) {
+	reader := bufio.NewReader(os.Stdin)
+	work := make(chan rune)
+	defer close(work)
+
+	for {
+		go readSingle(reader, work)
+		select {
+		case <-sig:
+			log.Println("Ending SensorDriver simulation go-routine")
+			return
+		case r := <-work:
+			if r == '1' {
+				sensorReader <- Trigger{"S0", 80, time.Now()}
+			} else if r == '2' {
+				sensorReader <- Trigger{"S1", 80, time.Now()}
+			} else if r == '3' {
+				sensorReader <- Trigger{"S2", 80, time.Now()}
+			} else if r == '4' {
+				sensorReader <- Trigger{"S3", 80, time.Now()}
+			}
+		}
 	}
 }
 

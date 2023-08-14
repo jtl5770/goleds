@@ -1,6 +1,7 @@
 package hardware
 
 import (
+	"fmt"
 	"log"
 
 	c "lautenbacher.net/goleds/config"
@@ -10,6 +11,9 @@ import (
 const SPLIT_AT = 70
 
 func DisplayDriver(display chan ([]p.Led), sig chan bool) {
+	if !c.CONFIG.RealHW {
+		fmt.Println("[  Enter 1,2,3 or 4 to fire a sensor   ]")
+	}
 	for {
 		select {
 		case <-sig:
