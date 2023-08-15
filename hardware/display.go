@@ -6,14 +6,13 @@ import (
 
 	c "lautenbacher.net/goleds/config"
 	p "lautenbacher.net/goleds/producer"
-	"lautenbacher.net/goleds/tui"
 )
 
 const SPLIT_AT = 70
 
 func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 	if !c.CONFIG.RealHW {
-		tui.SetupDebugUI()
+		SetupDebugUI()
 	}
 	for {
 		select {
@@ -28,7 +27,7 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 				buf.WriteString(simulateLed(0, led1))
 				buf.WriteString("                  ")
 				buf.WriteString(simulateLed(1, led2))
-				tui.CONTENT.SetText(buf.String())
+				CONTENT.SetText(buf.String())
 			} else {
 				spiMutex.Lock()
 				setLedSegment(0, led1)

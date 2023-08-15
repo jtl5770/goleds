@@ -53,8 +53,14 @@ func (s *Sensor) smoothValue(val int) int {
 
 func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan bool) {
 	if !c.CONFIG.RealHW {
-		simulateSensors(sensorReader, sig)
-		return
+		// Sensor triggers will be simulated via key presses
+		// we just wait for the signal on the sig channel and return
+		KEYCHAN = sensorReader
+		select {
+		case <-sig:
+			log.Println("Ending SensorDriver go-routine")
+			return
+		}
 	}
 	statistics := make(chan os.Signal)
 	signal.Notify(statistics, syscall.SIGUSR1)
