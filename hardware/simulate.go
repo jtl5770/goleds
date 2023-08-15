@@ -16,7 +16,7 @@ func simulateLed(segmentID int, values []p.Led) {
 	var buf strings.Builder
 	buf.Grow(len(values))
 
-	fmt.Print("[")
+	fmt.Printf("[%d]", segmentID*2+1)
 	for _, v := range values {
 		if v.IsEmpty() {
 			buf.WriteString(" ")
@@ -42,11 +42,7 @@ func simulateLed(segmentID int, values []p.Led) {
 		}
 	}
 	fmt.Print(buf.String())
-	if segmentID == 0 {
-		fmt.Print("]       ")
-	} else {
-		fmt.Print("]\r")
-	}
+	fmt.Printf("[%d]     ", segmentID*2+2)
 }
 
 func readSingle(w chan rune) {

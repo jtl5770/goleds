@@ -32,6 +32,7 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 			if !c.CONFIG.RealHW {
 				simulateLed(0, led1)
 				simulateLed(1, led2)
+				fmt.Print("\r")
 			} else {
 				spiMutex.Lock()
 				setLedSegment(0, led1)
