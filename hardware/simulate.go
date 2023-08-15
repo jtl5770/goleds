@@ -11,27 +11,25 @@ import (
 	"lautenbacher.net/goleds/tui"
 )
 
+// magic numbers to account for different intensities of color
+// components in led stripe to get a warm white. Needed because
+// terminal output doesn't have such a huge color cast
+var (
+	magic_factor_green float64 = 5.7
+	magic_factor_blue  float64 = 28.3
+)
+
 func scaledColor(led p.Led) string {
 	var factor float64
-	red := led.Red
-	// magic numbers to account for different intensities in led stripe to get a warm white
-	green := byte(math.Min(float64(led.Green)*5.7, 255))
-	blue := byte(math.Min(float64(led.Blue)*28.3, 255))
-	if red >= green && red >= blue {
-		// red biggest
-		factor = float64(255 / red)
-	} else if green >= red && green >= blue {
-		// green biggest
-		factor = float64(255 / green)
-	} else if blue >= red && blue >= green {
-		// blue biggest
-		factor = float64(255 / blue)
-	}
-	red = byte(math.Min(float64(red)*factor, 255))
-	green = byte(math.Min(float64(green)*factor, 255))
-	blue = byte(math.Min(float64(blue)*factor, 255))
-	color := fmt.Sprintf("[#%02x%02x%02x]", red, green, blue)
-	// log.Printf("%v scaledColor: %s", factor, color)
+	red := float64(led.Red)
+	green := math.Min(float64(led.Green)*magic_factor_green, 255)
+	blue := math.Min(float64(led.Blue)*magic_factor_blue, 255)
+
+	factor = float64(255 / math.Max(red, math.Max(green, blue)))
+	red = math.Min(red*factor, 255)
+	green = math.Min(green*factor, 255)
+	blue = math.Min(blue*factor, 255)
+	color := fmt.Sprintf("[#%02x%02x%02x]", byte(red), byte(green), byte(blue))
 	return color
 }
 
