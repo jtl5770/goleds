@@ -15,7 +15,7 @@ func scaledColor(led p.Led) string {
 	var factor float64
 	red := led.Red
 	// magic numbers to account for different intensities in led stripe to get a warm white
-	green := byte(math.Min(float64(led.Green)*5.6, 255))
+	green := byte(math.Min(float64(led.Green)*5.7, 255))
 	blue := byte(math.Min(float64(led.Blue)*28.3, 255))
 	if red >= green && red >= blue {
 		// red biggest

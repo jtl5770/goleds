@@ -26,7 +26,7 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 			if !c.CONFIG.RealHW {
 				var buf strings.Builder
 				buf.WriteString(simulateLed(0, led1))
-				buf.WriteString("                 ")
+				buf.WriteString("                  ")
 				buf.WriteString(simulateLed(1, led2))
 				tui.CONTENT.SetText(buf.String())
 			} else {
