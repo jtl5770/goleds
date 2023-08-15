@@ -76,7 +76,6 @@ func main() {
 		select {
 		case <-osSig:
 			log.Println("Exiting...")
-			reset()
 			os.Exit(0)
 		case <-reload:
 			reset()
