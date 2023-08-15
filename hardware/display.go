@@ -24,9 +24,11 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 			led2 := sumLeds[SPLIT_AT:]
 			if !c.CONFIG.RealHW {
 				var buf strings.Builder
+				buf.WriteString(" ① ")
 				buf.WriteString(simulateLed(0, led1))
-				buf.WriteString("                  ")
+				buf.WriteString(" ② ······· ③ ")
 				buf.WriteString(simulateLed(1, led2))
+				buf.WriteString(" ④ ")
 				CONTENT.SetText(buf.String())
 			} else {
 				spiMutex.Lock()

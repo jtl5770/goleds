@@ -14,6 +14,8 @@ import (
 )
 
 var (
+	// used to communicate with the TUI the display updates and the
+	// keypresses (aka sensor triggers)
 	CONTENT *tview.TextView
 	KEYCHAN chan Trigger
 
@@ -89,7 +91,7 @@ func SetupDebugUI() {
 	stripe := tview.NewTextView()
 	layout.AddItem(intro, 4, 1, false)
 	layout.AddItem(stripe, 3, 1, false)
-	layout.SetRect(2, 10, c.CONFIG.Hardware.Display.LedsTotal+20, 10)
+	layout.SetRect(1, 10, c.CONFIG.Hardware.Display.LedsTotal+21, 10)
 
 	stripe.SetBorder(true)
 	stripe.SetTextAlign(3)
