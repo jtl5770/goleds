@@ -85,8 +85,8 @@ func simulateLed(segmentID int, values []p.Led) string {
 // I obviously have no clue what I am doing here
 func SetupDebugUI() {
 	var buf strings.Builder
-	buf.WriteString("Enter [blue]1[-],[blue]2[-],[blue]3[-] or [blue]4[-] to fire a sensor\n")
-	buf.WriteString("Enter [red]Ctrl-C[-] to drop back to the terminal")
+	buf.WriteString("Hit [blue]1[-],[blue]2[-],[blue]3[-] or [blue]4[-] to fire a sensor\n")
+	buf.WriteString("Hit [red]Ctrl-C[-] to drop back to the terminal")
 
 	layout := tview.NewFlex()
 	layout.SetDirection(tview.FlexRow)
