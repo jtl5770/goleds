@@ -2,7 +2,6 @@ package hardware
 
 import (
 	"log"
-	"strings"
 
 	c "lautenbacher.net/goleds/config"
 	p "lautenbacher.net/goleds/producer"
@@ -23,13 +22,7 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 			led1 := sumLeds[:SPLIT_AT]
 			led2 := sumLeds[SPLIT_AT:]
 			if !c.CONFIG.RealHW {
-				var buf strings.Builder
-				buf.WriteString(" ① ")
-				buf.WriteString(simulateLed(0, led1))
-				buf.WriteString(" ② ······· ③ ")
-				buf.WriteString(simulateLed(1, led2))
-				buf.WriteString(" ④ ")
-				CONTENT.SetText(buf.String())
+				createSimulationContent(led1, led2)
 			} else {
 				spiMutex.Lock()
 				setLedSegment(0, led1)

@@ -40,6 +40,16 @@ func scaledColor(led p.Led) string {
 	return color
 }
 
+func createSimulationContent(led1 []p.Led, led2 []p.Led) {
+	var buf strings.Builder
+	buf.WriteString(" ① ")
+	buf.WriteString(simulateLed(0, led1))
+	buf.WriteString(" ② ······· ③ ")
+	buf.WriteString(simulateLed(1, led2))
+	buf.WriteString(" ④ ")
+	CONTENT.SetText(buf.String())
+}
+
 func simulateLed(segmentID int, values []p.Led) string {
 	var buf strings.Builder
 	buf.Grow(len(values))
