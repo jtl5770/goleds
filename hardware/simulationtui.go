@@ -3,6 +3,7 @@ package hardware
 import (
 	"fmt"
 	"math"
+	"os"
 	"strings"
 	"time"
 
@@ -73,7 +74,7 @@ func simulateLed(segmentID int, values []p.Led) string {
 func SetupDebugUI() {
 	var buf strings.Builder
 	buf.WriteString("Enter [blue]1[-],[blue]2[-],[blue]3[-] or [blue]4[-] to fire a sensor\n")
-	buf.WriteString("Enter [red]Ctrl-C[-] to drop back to the terminal, repeat to quit completely")
+	buf.WriteString("Enter [red]Ctrl-C[-] to drop back to the termina")
 
 	layout := tview.NewFlex()
 	layout.SetDirection(tview.FlexRow)
@@ -98,9 +99,12 @@ func SetupDebugUI() {
 	app := tview.NewApplication()
 	app.SetRoot(layout, false)
 	app.SetInputCapture(capture)
-	go app.Run()
 	stripe.SetChangedFunc(func() { app.Draw() })
 	CONTENT = stripe
+	go func() {
+		app.Run()
+		os.Exit(0)
+	}()
 }
 
 func capture(event *tcell.EventKey) *tcell.EventKey {
