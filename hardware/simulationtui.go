@@ -102,8 +102,8 @@ func SetupDebugUI() {
 	stripe.SetChangedFunc(func() { app.Draw() })
 	CONTENT = stripe
 	go func() {
+		defer os.Exit(0)
 		app.Run()
-		os.Exit(0)
 	}()
 }
 
