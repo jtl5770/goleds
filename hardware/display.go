@@ -12,7 +12,7 @@ const SPLIT_AT = 70
 
 func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 	if !c.CONFIG.RealHW {
-		go SetupDebugUI()
+		SetupDebugUI()
 	}
 	for {
 		select {

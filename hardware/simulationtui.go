@@ -101,8 +101,10 @@ func SetupDebugUI() {
 	app.SetInputCapture(capture)
 	stripe.SetChangedFunc(func() { app.Draw() })
 	CONTENT = stripe
-	app.Run()
-	os.Exit(0)
+	go func() {
+		app.Run()
+		os.Exit(0)
+	}()
 }
 
 func capture(event *tcell.EventKey) *tcell.EventKey {
