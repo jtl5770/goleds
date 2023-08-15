@@ -1,25 +1,19 @@
 package hardware
 
 import (
-	"fmt"
 	"log"
+	"strings"
 
 	c "lautenbacher.net/goleds/config"
 	p "lautenbacher.net/goleds/producer"
+	"lautenbacher.net/goleds/tui"
 )
 
 const SPLIT_AT = 70
 
 func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 	if !c.CONFIG.RealHW {
-		fmt.Println("")
-		fmt.Println("*****************  SIMULATION MODE  ****************")
-		fmt.Println("*                                                  *")
-		fmt.Println("*         Enter 1,2,3 or 4 to fire a sensor        *")
-		fmt.Println("*         Enter q to exit                          *")
-		fmt.Println("*                                                  *")
-		fmt.Println("****************************************************")
-		fmt.Println("")
+		tui.SetupDebugUI()
 	}
 	for {
 		select {
@@ -30,9 +24,11 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 			led1 := sumLeds[:SPLIT_AT]
 			led2 := sumLeds[SPLIT_AT:]
 			if !c.CONFIG.RealHW {
-				simulateLed(0, led1)
-				simulateLed(1, led2)
-				fmt.Print("\r")
+				var buf strings.Builder
+				buf.WriteString(simulateLed(0, led1))
+				buf.WriteString("                 ")
+				buf.WriteString(simulateLed(1, led2))
+				tui.CONTENT.SetText(buf.String())
 			} else {
 				spiMutex.Lock()
 				setLedSegment(0, led1)
