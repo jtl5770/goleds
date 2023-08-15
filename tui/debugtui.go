@@ -17,7 +17,7 @@ var (
 func SetupDebugUI() {
 	var buf strings.Builder
 	buf.WriteString("Enter [blue]1[-],[blue]2[-],[blue]3[-] or [blue]4[-] to fire a sensor\n")
-	buf.WriteString("Enter [blue:b]Ctrl-C[-] to drop back to the terminal, repeat to quit completely")
+	buf.WriteString("Enter [red]Ctrl-C[-] to drop back to the terminal, repeat to quit completely")
 
 	layout := tview.NewFlex()
 	layout.SetDirection(tview.FlexRow)
