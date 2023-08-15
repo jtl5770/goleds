@@ -15,12 +15,10 @@ import (
 var (
 	CONTENT *tview.TextView
 	KEYCHAN chan Trigger
-)
 
-// magic numbers to account for different intensities of color
-// components in led stripe to get a warm white. Needed because
-// terminal output doesn't have such a huge color cast
-var (
+	// magic numbers to account for different intensities of color
+	// components in led stripe to get a warm white. Needed because
+	// terminal output doesn't have such a huge color cast
 	magic_factor_green float64 = 5.7
 	magic_factor_blue  float64 = 28.3
 )
@@ -96,7 +94,6 @@ func SetupDebugUI() {
 	stripe.SetTextAlign(3)
 	stripe.SetDynamicColors(true)
 	stripe.SetBackgroundColor(tcell.ColorBlack)
-	stripe.SetText("This is the [red]CONTENT[-] to be displayed")
 
 	app := tview.NewApplication()
 	app.SetRoot(layout, false)
