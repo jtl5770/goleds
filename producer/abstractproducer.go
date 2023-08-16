@@ -95,7 +95,11 @@ func (s *AbstractProducer) Stop() {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 	if s.isRunning && !s.hasExited {
-		s.stop <- true
+		select {
+		case s.stop <- true:
+		default:
+			// log.Println("In Stop() method of ", s.GetUID(), " COULD NOT send stop signal")
+		}
 	}
 }
 
