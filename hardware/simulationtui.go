@@ -47,19 +47,19 @@ func simulateLed(segmentID int, values []p.Led) string {
 		} else {
 			value := byte(math.Round(float64(v.Red+v.Green+v.Blue) / 3.0))
 			buf.WriteString(scaledColor(v))
-			if value == 1 {
+			if value <= 2 {
 				buf.WriteString("▁")
-			} else if value == 2 {
+			} else if value == 6 {
 				buf.WriteString("▂")
-			} else if value <= 4 {
+			} else if value <= 10 {
 				buf.WriteString("▃")
-			} else if value <= 8 {
+			} else if value <= 14 {
 				buf.WriteString("▄")
-			} else if value <= 16 {
+			} else if value <= 18 {
 				buf.WriteString("▅")
-			} else if value <= 24 {
+			} else if value <= 22 {
 				buf.WriteString("▆")
-			} else if value <= 32 {
+			} else if value <= 26 {
 				buf.WriteString("▇")
 			} else {
 				buf.WriteString("█")
