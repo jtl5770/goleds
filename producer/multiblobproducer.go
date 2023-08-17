@@ -96,9 +96,6 @@ func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {
 		}
 		s.ledsChanged <- s
 		time.Sleep(delay)
-		if s.nproducer != nil && !s.nproducer.GetIsRunning() {
-			s.nproducer.Start()
-		}
 	}
 }
 
@@ -114,22 +111,20 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 		triggerduration.Stop()
 	}()
 
-	// directly stop the Trigger to control the duration of the effect
+	// directly stop the Trigger (to control the duration of the effect)
 	// whenever it is configured to run all the time (and not only
-	// MultiBlobLED.Duration after a trigger)
+	// MultiBlobLED.Duration after a start)
 	if !c.CONFIG.MultiBlobLED.Trigger {
 		triggerduration.Stop()
-	}
-
-	// if the NightlightProducer is running, stop it
-	if s.nproducer != nil && s.nproducer.GetIsRunning() {
-		s.nproducer.Stop()
 	}
 
 	for {
 		select {
 		case <-triggerduration.C:
 			// Doing the fadeout after the time is up
+			if s.nproducer != nil && !s.nproducer.GetIsRunning() {
+				s.nproducer.Start()
+			}
 			s.fade_in_or_out(false)
 			return
 		case <-s.stop:
@@ -163,6 +158,10 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 				// at the start of the blob period
 				s.fade_in_or_out(true)
 				countup_run = true
+				// if the NightlightProducer is running, stop it
+				if s.nproducer != nil && s.nproducer.GetIsRunning() {
+					s.nproducer.Stop()
+				}
 			}
 			// update last_x value to current x
 			for _, blob := range s.allblobs {
