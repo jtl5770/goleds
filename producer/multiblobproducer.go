@@ -183,8 +183,10 @@ func detectAndHandleCollisions(blobs map[string]*Blob) {
 			blob.switchDirection()
 			collblobs[blob.uid] = blob
 		} else {
-			// we will look only for collisions between blobs which are not right now also hitting the stripe boundaries
-			// to make sure that a blob colliding with the boundary always changes direction away from the boundary
+			// we will look only for collisions between blobs which
+			// are not right now also hitting the stripe boundaries to
+			// make sure that a blob colliding with the boundary
+			// always changes direction away from the boundary
 			checkinter = append(checkinter, blob)
 		}
 	}
@@ -201,7 +203,8 @@ func detectAndHandleCollisions(blobs map[string]*Blob) {
 				}
 			}
 		}
-		// for all blobs that take part in a collision we set their x value back to the last know value
+		// for all blobs that take part in a collision we set their x
+		// value back to the last know value
 		for _, blob := range collblobs {
 			blob.x = blob.last_x
 		}
@@ -221,7 +224,8 @@ func detectBlobColl(blob_a *Blob, blob_b *Blob) bool {
 		var left *Blob
 		var right *Blob
 
-		// find out which one is the "left one" and which is the "right one", to simplify handling
+		// find out which one is the "left one" and which is the
+		// "right one", to simplify handling
 		if blob_a.last_x < blob_b.last_x {
 			left = blob_a
 			right = blob_b
