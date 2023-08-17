@@ -3,9 +3,9 @@ package producer
 import c "lautenbacher.net/goleds/config"
 
 type Led struct {
-	Red   byte
-	Green byte
-	Blue  byte
+	Red   float64
+	Green float64
+	Blue  float64
 }
 
 // True if all components are zero, false otherwise
@@ -14,7 +14,7 @@ func (s Led) IsEmpty() bool {
 }
 
 // Return a Led with per component the max value of the caller and the
-// in Led parameter
+// Led input parameter
 func (s Led) Max(in Led) Led {
 	if s.Red > in.Red {
 		in.Red = s.Red

@@ -18,21 +18,15 @@ var (
 	// keypresses (aka sensor triggers)
 	CONTENT *tview.TextView
 	KEYCHAN chan Trigger
-
-	// magic numbers to account for different intensities of color
-	// components in led stripe. Needed because terminal output
-	// doesn't have such a huge color cast
-	magic_factor_green float64 = 5.7
-	magic_factor_blue  float64 = 28.3
 )
 
 func scaledColor(led p.Led) string {
 	var factor float64
-	red := float64(led.Red)
-	green := math.Min(float64(led.Green)*magic_factor_green, 255)
-	blue := math.Min(float64(led.Blue)*magic_factor_blue, 255)
+	red := led.Red
+	green := led.Green
+	blue := led.Blue
 
-	factor = float64(255 / math.Max(red, math.Max(green, blue)))
+	factor = 255 / math.Max(red, math.Max(green, blue))
 	red = math.Min(red*factor, 255)
 	green = math.Min(green*factor, 255)
 	blue = math.Min(blue*factor, 255)
@@ -40,7 +34,7 @@ func scaledColor(led p.Led) string {
 	return color
 }
 
-func createSimulationContent(led1 []p.Led, led2 []p.Led) {
+func simulateLedDisplay(led1 []p.Led, led2 []p.Led) {
 	var buf strings.Builder
 	buf.WriteString(" ① ")
 	buf.WriteString(simulateLed(0, led1))

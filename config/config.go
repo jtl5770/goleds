@@ -20,20 +20,20 @@ type Config struct {
 		RunUpDelay   time.Duration `yaml:"RunUpDelay"`
 		RunDownDelay time.Duration `yaml:"RunDownDelay"`
 		HoldTime     time.Duration `yaml:"HoldTime"`
-		LedRGB       []byte        `yaml:"LedRGB"`
+		LedRGB       []float64     `yaml:"LedRGB"`
 	} `yaml:"SensorLED"`
 	NightLED struct {
-		Enabled   bool     `yaml:"Enabled"`
-		Latitude  float64  `yaml:"Latitude"`
-		Longitude float64  `yaml:"Longitude"`
-		LedRGB    [][]byte `yaml:"LedRGB"`
+		Enabled   bool        `yaml:"Enabled"`
+		Latitude  float64     `yaml:"Latitude"`
+		Longitude float64     `yaml:"Longitude"`
+		LedRGB    [][]float64 `yaml:"LedRGB"`
 	} `yaml:"NightLED"`
 	HoldLED struct {
 		Enabled      bool          `yaml:"Enabled"`
 		HoldTime     time.Duration `yaml:"HoldTime"`
 		TriggerDelay time.Duration `yaml:"TriggerDelay"`
 		TriggerValue int           `yaml:"TriggerValue"`
-		LedRGB       []byte        `yaml:"LedRGB"`
+		LedRGB       []float64     `yaml:"LedRGB"`
 	} `yaml:"HoldLED"`
 	MultiBlobLED struct {
 		Enabled  bool          `yaml:"Enabled"`
@@ -41,10 +41,10 @@ type Config struct {
 		Duration time.Duration `yaml:"Duration"`
 		Delay    time.Duration `yaml:"Delay"`
 		BlobCfg  map[string]struct {
-			DeltaX float64 `yaml:"DeltaX"`
-			X      float64 `yaml:"X"`
-			Width  float64 `yaml:"Width"`
-			LedRGB []byte  `yaml:"LedRGB"`
+			DeltaX float64   `yaml:"DeltaX"`
+			X      float64   `yaml:"X"`
+			Width  float64   `yaml:"Width"`
+			LedRGB []float64 `yaml:"LedRGB"`
 		} `yaml:"BlobCfg"`
 	} `yaml:"MultiBlobLED"`
 	Hardware struct {
@@ -52,6 +52,7 @@ type Config struct {
 		Display      struct {
 			ForceUpdateDelay time.Duration `yaml:"ForceUpdateDelay"`
 			LedsTotal        int           `yaml:"LedsTotal"`
+			ColorCorrection  []float64     `yaml:"ColorCorrection"`
 		} `yaml:"Display"`
 		Sensors struct {
 			SmoothingSize int           `yaml:"SmoothingSize"`

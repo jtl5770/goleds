@@ -47,11 +47,7 @@ func (s *Blob) getBlobLeds() []Led {
 
 	for i := 0; i < c.CONFIG.Hardware.Display.LedsTotal; i++ {
 		y := math.Exp(-1 * (math.Pow(float64(i)-s.x, 2) / s.width))
-		leds[i] = Led{
-			byte(math.Round(float64(s.led.Red) * y)),
-			byte(math.Round(float64(s.led.Green) * y)),
-			byte(math.Round(float64(s.led.Blue) * y)),
-		}
+		leds[i] = Led{s.led.Red * y, s.led.Green * y, s.led.Blue * y}
 	}
 	return leds
 }
@@ -96,11 +92,7 @@ func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {
 		factor := float64(step) / float64(intervals)
 
 		for i, led := range currentleds {
-			s.setLed(i, Led{
-				byte(math.Round(float64(led.Red) * factor)),
-				byte(math.Round(float64(led.Green) * factor)),
-				byte(math.Round(float64(led.Blue) * factor)),
-			})
+			s.setLed(i, Led{led.Red * factor, led.Green * factor, led.Blue * factor})
 		}
 		s.ledsChanged <- s
 		time.Sleep(delay)

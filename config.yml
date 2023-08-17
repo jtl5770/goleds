@@ -3,14 +3,14 @@ SensorLED:
   RunUpDelay: 5ms
   RunDownDelay: 20ms
   HoldTime: 10s
-  LedRGB: [85, 15, 3]
+  LedRGB: [85, 85, 85]
 
 NightLED:
   Enabled: true
   Latitude: 49.014
   Longitude: 8.4043
   LedRGB:
-    - [3, 0, 0]
+    - [1, 0, 0]
     - [0, 0, 1]
 
 HoldLED:
@@ -18,7 +18,7 @@ HoldLED:
   HoldTime: 5m
   TriggerDelay: 3s
   TriggerValue: 160
-  LedRGB: [140, 25, 6]
+  LedRGB: [140, 140, 140]
 
 MultiBlobLED:
   Enabled: true
@@ -35,12 +35,12 @@ MultiBlobLED:
       DeltaX: 0.4
       X: 50
       Width: 512
-      LedRGB: [0, 10, 0]
+      LedRGB: [0, 30, 0]
     BlobBlue:
       DeltaX: -0.2
       X: 90
       Width: 512 
-      LedRGB: [0, 0, 5]
+      LedRGB: [0, 0, 30]
     BlobRed2:
       DeltaX: 0.2
       X: 110
@@ -52,6 +52,7 @@ Hardware:
   Display:
     ForceUpdateDelay: 1000ms
     LedsTotal: 125
+    ColorCorrection: [1, 0.175, 0,035]
   Sensors:
     SmoothingSize: 3
     LoopDelay: 10ms
