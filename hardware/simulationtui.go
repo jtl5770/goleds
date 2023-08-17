@@ -25,8 +25,7 @@ func scaledColor(led p.Led) string {
 	red := math.Min(led.Red*factor, 255)
 	green := math.Min(led.Green*factor, 255)
 	blue := math.Min(led.Blue*factor, 255)
-	color := fmt.Sprintf("[#%02x%02x%02x]", byte(red), byte(green), byte(blue))
-	return color
+	return fmt.Sprintf("[#%02x%02x%02x]", byte(red), byte(green), byte(blue))
 }
 
 func simulateLedDisplay(led1 []p.Led, led2 []p.Led) {
