@@ -100,7 +100,7 @@ func (s *AbstractProducer) Stop() {
 			select {
 			case s.stop <- true:
 			case <-t.After(1 * t.Second):
-				log.Println("Timeout in ", s.GetUID(), ": could NOT send stop signal although worker is still running")
+				log.Println("Timeout in ", s.GetUID(), ": could NOT send stop signal")
 			}
 		}()
 	}
