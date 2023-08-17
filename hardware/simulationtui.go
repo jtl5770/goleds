@@ -21,15 +21,10 @@ var (
 )
 
 func scaledColor(led p.Led) string {
-	var factor float64
-	red := led.Red
-	green := led.Green
-	blue := led.Blue
-
-	factor = 255 / math.Max(red, math.Max(green, blue))
-	red = math.Min(red*factor, 255)
-	green = math.Min(green*factor, 255)
-	blue = math.Min(blue*factor, 255)
+	factor := 255 / math.Max(led.Red, math.Max(led.Green, led.Blue))
+	red := math.Min(led.Red*factor, 255)
+	green := math.Min(led.Green*factor, 255)
+	blue := math.Min(led.Blue*factor, 255)
 	color := fmt.Sprintf("[#%02x%02x%02x]", byte(red), byte(green), byte(blue))
 	return color
 }
