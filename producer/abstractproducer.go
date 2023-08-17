@@ -1,6 +1,7 @@
 package producer
 
 import (
+	"log"
 	"sync"
 	t "time"
 
@@ -95,11 +96,13 @@ func (s *AbstractProducer) Stop() {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 	if s.isRunning && !s.hasExited {
-		select {
-		case s.stop <- true:
-		default:
-			// log.Println("In Stop() method of ", s.GetUID(), " COULD NOT send stop signal")
-		}
+		go func() {
+			select {
+			case s.stop <- true:
+			case <-t.After(1 * t.Second):
+				log.Println("Timeout in ", s.GetUID(), ": could NOT send stop signal although worker is still running")
+			}
+		}()
 	}
 }
 
