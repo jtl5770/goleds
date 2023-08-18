@@ -30,44 +30,84 @@ func scaledColor(led p.Led) string {
 
 func simulateLedDisplay(led1 []p.Led, led2 []p.Led) {
 	var buf strings.Builder
+	top1, bot1 := simulateLed(0, led1)
+	top2, bot2 := simulateLed(1, led2)
 	buf.WriteString(" ① ")
-	buf.WriteString(simulateLed(0, led1))
+	buf.WriteString(top1)
 	buf.WriteString(" ② ······· ③ ")
-	buf.WriteString(simulateLed(1, led2))
-	buf.WriteString(" ④ ")
+	buf.WriteString(top2)
+	buf.WriteString(" ④ \n")
+	buf.WriteString("   " + bot1 + "             " + bot2 + "   ")
 	CONTENT.SetText(buf.String())
 }
 
-func simulateLed(segmentID int, values []p.Led) string {
-	var buf strings.Builder
-	buf.Grow(len(values))
+func simulateLed(segmentID int, values []p.Led) (string, string) {
+	var buf1 strings.Builder
+	var buf2 strings.Builder
+	buf1.Grow(len(values))
+	buf2.Grow(len(values))
 	for _, v := range values {
 		if v.IsEmpty() {
-			buf.WriteString(" ")
+			buf1.WriteString(" ")
+			buf2.WriteString(" ")
 		} else {
 			value := byte(math.Round(float64(v.Red+v.Green+v.Blue) / 3.0))
-			buf.WriteString(scaledColor(v))
+			buf1.WriteString(scaledColor(v))
+			buf2.WriteString(scaledColor(v))
 			if value <= 2 {
-				buf.WriteString("▁")
-			} else if value == 6 {
-				buf.WriteString("▂")
+				buf1.WriteString(" ")
+				buf2.WriteString("▁")
+			} else if value == 4 {
+				buf1.WriteString(" ")
+				buf2.WriteString("▂")
+			} else if value <= 6 {
+				buf1.WriteString(" ")
+				buf2.WriteString("▃")
+			} else if value <= 8 {
+				buf1.WriteString(" ")
+				buf2.WriteString("▄")
 			} else if value <= 10 {
-				buf.WriteString("▃")
+				buf1.WriteString(" ")
+				buf2.WriteString("▅")
+			} else if value <= 12 {
+				buf1.WriteString(" ")
+				buf2.WriteString("▆")
 			} else if value <= 14 {
-				buf.WriteString("▄")
-			} else if value <= 18 {
-				buf.WriteString("▅")
+				buf1.WriteString(" ")
+				buf2.WriteString("▇")
+			} else if value <= 16 {
+				buf1.WriteString(" ")
+				buf2.WriteString("█")
+			} else if value == 18 {
+				buf1.WriteString("▁")
+				buf2.WriteString("█")
+			} else if value <= 20 {
+				buf1.WriteString("▂")
+				buf2.WriteString("█")
 			} else if value <= 22 {
-				buf.WriteString("▆")
+				buf1.WriteString("▃")
+				buf2.WriteString("█")
+			} else if value <= 24 {
+				buf1.WriteString("▄")
+				buf2.WriteString("█")
 			} else if value <= 26 {
-				buf.WriteString("▇")
+				buf1.WriteString("▅")
+				buf2.WriteString("█")
+			} else if value <= 28 {
+				buf1.WriteString("▆ ")
+				buf2.WriteString("█")
+			} else if value <= 30 {
+				buf1.WriteString("▇")
+				buf2.WriteString("█")
 			} else {
-				buf.WriteString("█")
+				buf1.WriteString("█")
+				buf2.WriteString("█")
 			}
-			buf.WriteString("[-]")
+			buf1.WriteString("[-]")
+			buf2.WriteString("[-]")
 		}
 	}
-	return buf.String()
+	return buf1.String(), buf2.String()
 }
 
 // I obviously have no clue what I am doing here
@@ -88,7 +128,7 @@ func SetupDebugUI() {
 
 	stripe := tview.NewTextView()
 	layout.AddItem(intro, 4, 1, false)
-	layout.AddItem(stripe, 3, 1, false)
+	layout.AddItem(stripe, 4, 1, false)
 	layout.SetRect(1, 10, c.CONFIG.Hardware.Display.LedsTotal+21, 10)
 
 	stripe.SetBorder(true)
