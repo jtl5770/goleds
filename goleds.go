@@ -230,6 +230,16 @@ func fireController(sensor chan (hw.Trigger), sig chan bool) {
 				firstSameTrigger = hw.Trigger{}
 				if producer, ok := ledproducers[trigger.ID]; ok {
 					if c.CONFIG.MultiBlobLED.Enabled {
+						// *FIXME*: there is a race condition here in
+						// that this called unexpectedly too often
+						// (and in a way that the check inside the
+						// Stop() method for isrunning being false is
+						// not guarding against trying to stop again
+						// because somehow the first stop call is
+						// still in the middle of being executed. Need
+						// to investigate why that happens. Solved for
+						// now by making Stop() not block in any case
+						// (see there)
 						ledproducers[MULTI_BLOB_UID].Stop()
 					}
 					producer.Start()
