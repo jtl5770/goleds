@@ -94,7 +94,7 @@ func simulateLed(segmentID int, values []p.Led) (string, string) {
 				buf1.WriteString("▅")
 				buf2.WriteString("█")
 			} else if value <= 28 {
-				buf1.WriteString("▆ ")
+				buf1.WriteString("▆")
 				buf2.WriteString("█")
 			} else if value <= 30 {
 				buf1.WriteString("▇")
