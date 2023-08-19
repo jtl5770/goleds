@@ -108,7 +108,7 @@ func initialise() {
 		// produces for longer than a configurable time a signal > a
 		// configurable value (see config file for TriggerDelay and
 		// TriggerValue) It will generate a brighter, full lit LED
-		// stripe and keep it for FULL_HIGH_HOLD time, if not being
+		// stripe and keep it for HoldTime time, if not being
 		// triggered again in this time - then it will shut off
 		// earlier
 		prodhold := p.NewHoldProducer(HOLD_LED_UID, ledReader)
@@ -183,6 +183,8 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 				// and we can now Start() the multiblobproducer
 				if old_sensorledsrunning && !isrunning {
 					ledproducers[MULTI_BLOB_UID].Start()
+				} else if !old_sensorledsrunning && isrunning {
+					ledproducers[MULTI_BLOB_UID].Stop()
 				}
 				old_sensorledsrunning = isrunning
 			}
@@ -223,28 +225,12 @@ func fireController(sensor chan (hw.Trigger), sig chan bool) {
 					firstSameTrigger = hw.Trigger{}
 					// Don't want to compare against too old timestamps
 					if newStamp.Sub(oldStamp) < (triggerDelay + (1 * time.Second)) {
-						if c.CONFIG.MultiBlobLED.Enabled {
-							ledproducers[MULTI_BLOB_UID].Stop()
-						}
 						ledproducers[HOLD_LED_UID].Start()
 					}
 				}
 			} else {
 				firstSameTrigger = hw.Trigger{}
 				if producer, ok := ledproducers[trigger.ID]; ok {
-					if c.CONFIG.MultiBlobLED.Enabled {
-						// *FIXME*: there is a race condition here in
-						// that this called unexpectedly too often
-						// (and in a way that the check inside the
-						// Stop() method for isrunning being false is
-						// not guarding against trying to stop again
-						// because somehow the first stop call is
-						// still in the middle of being executed. Need
-						// to investigate why that happens. Solved for
-						// now by making Stop() not block in any case
-						// (see there)
-						ledproducers[MULTI_BLOB_UID].Stop()
-					}
 					producer.Start()
 				} else {
 					log.Printf("Unknown UID %s", trigger.ID)
