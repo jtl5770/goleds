@@ -24,9 +24,7 @@ func NewHoldProducer(uid string, ledsChanged chan LedProducer) *HoldProducer {
 }
 
 func (s *HoldProducer) runner(startime t.Time) {
-	ticker := time.NewTicker(time.Second)
 	defer func() {
-		ticker.Stop()
 		for idx := range s.leds {
 			s.setLed(idx, Led{})
 		}
@@ -36,7 +34,6 @@ func (s *HoldProducer) runner(startime t.Time) {
 		s.updateMutex.Unlock()
 	}()
 
-	initial := s.getLastStart()
 	for idx := range s.leds {
 		s.setLed(idx, s.ledOnHold)
 	}
@@ -45,12 +42,9 @@ func (s *HoldProducer) runner(startime t.Time) {
 	for {
 		select {
 		case <-s.stop:
-			// log.Println("Stopped HoldProducer...")
 			return
-		case <-ticker.C:
-			if (time.Now().Sub(initial) >= s.holdT) || s.getLastStart().After(initial) {
-				return
-			}
+		case <-time.After(s.holdT):
+			return
 		}
 	}
 }
