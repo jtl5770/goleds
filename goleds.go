@@ -184,6 +184,7 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 				if old_sensorledsrunning && !isrunning {
 					ledproducers[MULTI_BLOB_UID].Start()
 				} else if !old_sensorledsrunning && isrunning {
+					// or the other way around: Stopping the multiblobproducer
 					ledproducers[MULTI_BLOB_UID].Stop()
 				}
 				old_sensorledsrunning = isrunning
