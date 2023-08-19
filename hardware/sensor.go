@@ -100,13 +100,7 @@ func printStatisticsAndReset(max *map[string]int) {
 	for k := range *max {
 		keys = append(keys, k)
 	}
-	sort.Slice(keys, func(i, j int) bool {
-		if keys[i] < keys[j] {
-			return true
-		} else {
-			return false
-		}
-	})
+	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
 	var output string
 	for _, name := range keys {
 		output = output + fmt.Sprintf("[%3d] ", (*max)[name])
