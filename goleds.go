@@ -198,8 +198,9 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 			oldSumLeds = sumLeds
 		case <-ticker.C:
 			// We do this purely because there occasionally are
-			// artifacts on the led line from - maybe/somehow - electrical distortions
-			// so we make sure to regularily force an update of the Led stripe
+			// artifacts on the led line from - maybe/somehow -
+			// electrical distortions or crosstalk so we make sure to
+			// regularily force an update of the Led stripe
 			w <- p.CombineLeds(allLedRanges)
 		case <-sig:
 			log.Println("Ending combineAndupdateDisplay go-routine")
@@ -210,7 +211,7 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 }
 
 func fireController(sensor chan (hw.Trigger), sig chan bool) {
-	var firstSameTrigger hw.Trigger
+	var firstSameTrigger hw.Trigger = hw.Trigger{}
 	triggerDelay := c.CONFIG.HoldLED.TriggerDelay
 
 	for {
@@ -223,11 +224,14 @@ func fireController(sensor chan (hw.Trigger), sig chan bool) {
 				if trigger.ID != firstSameTrigger.ID {
 					firstSameTrigger = trigger
 				} else if newStamp.Sub(oldStamp) > triggerDelay {
-					firstSameTrigger = hw.Trigger{}
-					// Don't want to compare against too old timestamps
-					if newStamp.Sub(oldStamp) < (triggerDelay + (1 * time.Second)) {
-						ledproducers[HOLD_LED_UID].Start()
+					if newStamp.Sub(oldStamp) < (triggerDelay + 1*time.Second) {
+						if ledproducers[HOLD_LED_UID].GetIsRunning() {
+							ledproducers[HOLD_LED_UID].Stop()
+						} else {
+							ledproducers[HOLD_LED_UID].Start()
+						}
 					}
+					firstSameTrigger = trigger
 				}
 			} else {
 				firstSameTrigger = hw.Trigger{}
