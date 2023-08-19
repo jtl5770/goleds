@@ -14,7 +14,7 @@ NightLED:
     - [0, 0, 1]
 
 HoldLED:
-  Enabled: false
+  Enabled: true
   HoldTime: 5m
   TriggerDelay: 3s
   TriggerValue: 160
