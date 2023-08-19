@@ -3,7 +3,7 @@ SensorLED:
   RunUpDelay: 5ms
   RunDownDelay: 20ms
   HoldTime: 10s
-  LedRGB: [85, 85, 85]
+  LedRGB: [70, 70, 70]
 
 NightLED:
   Enabled: true
@@ -39,8 +39,8 @@ MultiBlobLED:
     BlobBlue:
       DeltaX: -0.2
       X: 90
-      Width: 512 
-      LedRGB: [0, 0, 30]
+      Width: 768 
+      LedRGB: [0, 0, 40]
     BlobRed2:
       DeltaX: 0.2
       X: 110
@@ -52,7 +52,7 @@ Hardware:
   Display:
     ForceUpdateDelay: 1000ms
     LedsTotal: 125
-    ColorCorrection: [1, 0.175, 0,035]
+    ColorCorrection: [1, 0.175, 0.05]
   Sensors:
     SmoothingSize: 3
     LoopDelay: 10ms
