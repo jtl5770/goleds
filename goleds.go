@@ -67,14 +67,14 @@ func main() {
 	c.ReadConfig(*cfile, *realp)
 	initialise()
 
-	osSig := make(chan os.Signal)
+	exit := make(chan os.Signal)
 	reload := make(chan os.Signal)
-	signal.Notify(osSig, os.Interrupt)
+	signal.Notify(exit, os.Interrupt)
 	signal.Notify(reload, syscall.SIGHUP)
 
 	for {
 		select {
-		case <-osSig:
+		case <-exit:
 			log.Println("Exiting...")
 			os.Exit(0)
 		case <-reload:
