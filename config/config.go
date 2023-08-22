@@ -75,10 +75,12 @@ func ReadConfig(cfile string, realhw bool) {
 	}
 	defer f.Close()
 	decoder := yaml.NewDecoder(f)
-	err = decoder.Decode(&CONFIG)
+	var conf Config
+	err = decoder.Decode(&conf)
 	if err != nil {
 		panic(err)
 	}
+	CONFIG = conf
 	CONFIG.RealHW = realhw
 	CONFIG.Configfile = cfile
 	log.Printf("%+v\n", CONFIG)
