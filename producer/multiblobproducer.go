@@ -1,3 +1,8 @@
+// This producer displays multiple colored blobs moving along the
+// stripes, with collision detection between the blobs and the stripe
+// boundaries and between the blobs themselves, resulting in the
+// colliding blobs to change direction.
+
 package producer
 
 import (

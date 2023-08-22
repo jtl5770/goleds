@@ -1,3 +1,18 @@
+// This is the main producer: reacting to a sensor trigger to light
+// the stripes starting at the position of the sensor and moving
+// outwards in both directions. The producer is configured with a hold
+// time (how long the stripes should stay fully lit after the sensor
+// has triggered) and a run-up and run-down time (how long it takes to
+// light up the whole stripe and how long it takes to turn off the
+// whole stripe). The producer reacts to new sensor triggers while it
+// is running by extending the hold time and by switching back to
+// run-up if it is already in run-down. The producer is configured
+// with one color for the LEDs on the stripes. The producer is stopped
+// when the hold time has expired and there have been no new sensor
+// triggers in the meantime. The producer switches back to run-up mode
+// when a new sensor trigger is received while it is running in
+// run-down mode.
+
 package producer
 
 import (

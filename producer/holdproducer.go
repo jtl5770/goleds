@@ -1,3 +1,10 @@
+// this producer lights the whole strip with another (maybe brighter)
+// color, when ever a sensor is triggered with a configurable (usually
+// high) value for a configurable time.  It will hold this color for a
+// configurable time and then switch off again. Triggering the sensor
+// again for the configured duration while it is running will stop the
+// producer.
+
 package producer
 
 import (

@@ -1,3 +1,7 @@
+// This producer displays a constant color on the stripes between
+// sunset and sunrise. There can be different colors for different
+// times of the night. The colors are configured in the config file.
+
 package producer
 
 import (
