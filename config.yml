@@ -28,7 +28,7 @@ CylonLED:
   Delay: 30ms
   Step: 1.7
   Width: 7
-  LedRGB: [150, 0, 0]
+  LedRGB: [255, 0, 0]
 
 MultiBlobLED:
   Enabled: false
