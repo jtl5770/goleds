@@ -17,9 +17,9 @@ type AbstractProducer struct {
 	hasExited bool
 	lastStart t.Time
 	// Guards getting and setting LED values
-	ledsMutex sync.Mutex
+	ledsMutex sync.RWMutex
 	// Guards changes to lastStart & isRunning & hasExited
-	updateMutex sync.Mutex
+	updateMutex sync.RWMutex
 	ledsChanged chan LedProducer
 	// the method Start() should call. MUST be set by the concrete
 	// implementation upon constructing a new instance
@@ -51,8 +51,8 @@ func (s *AbstractProducer) setLed(index int, value Led) {
 // Returns a slice with the current values of all the LEDs.
 // Guarded by s.ledsMutex
 func (s *AbstractProducer) GetLeds() []Led {
-	s.ledsMutex.Lock()
-	defer s.ledsMutex.Unlock()
+	s.ledsMutex.RLock()
+	defer s.ledsMutex.RUnlock()
 	ret := make([]Led, len(s.leds))
 	copy(ret, s.leds)
 	return ret
@@ -66,8 +66,8 @@ func (s *AbstractProducer) GetUID() string {
 // Returns last time when s.Start() has been called. This is
 // guarded by s.updateMutex
 func (s *AbstractProducer) getLastStart() t.Time {
-	s.updateMutex.Lock()
-	defer s.updateMutex.Unlock()
+	s.updateMutex.RLock()
+	defer s.updateMutex.RUnlock()
 
 	return s.lastStart
 }
@@ -93,8 +93,8 @@ func (s *AbstractProducer) Start() {
 
 // Stop method to signal the worker go routine on the stop channel.
 func (s *AbstractProducer) Stop() {
-	s.updateMutex.Lock()
-	defer s.updateMutex.Unlock()
+	s.updateMutex.RLock()
+	defer s.updateMutex.RUnlock()
 	if s.isRunning && !s.hasExited {
 		go func() {
 			select {
@@ -117,9 +117,15 @@ func (s *AbstractProducer) Exit() {
 }
 
 func (s *AbstractProducer) GetIsRunning() bool {
+	s.updateMutex.RLock()
+	defer s.updateMutex.RUnlock()
+	return s.isRunning
+}
+
+func (s *AbstractProducer) setIsRunning(running bool) {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
-	return s.isRunning
+	s.isRunning = running
 }
 
 // Local Variables:
