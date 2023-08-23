@@ -34,25 +34,23 @@ func NewNightlightProducer(uid string, ledsChanged chan (LedProducer)) *Nightlig
 	return &inst
 }
 
-func (s *NightlightProducer) setLed(on bool, index int) {
-	s.ledsMutex.Lock()
-	defer s.ledsMutex.Unlock()
+func (s *NightlightProducer) setNightLed(on bool, index int) {
 	if on {
 		for i := range s.leds {
-			s.leds[i] = s.ledNight[index]
+			s.setLed(i, s.ledNight[index])
 		}
 	} else {
 		for i := range s.leds {
-			s.leds[i] = Led{}
+			s.setLed(i, Led{})
 		}
 	}
 }
 
 func (s *NightlightProducer) runner(starttime t.Time) {
 	defer func() {
-		s.updateMutex.Lock()
-		s.isRunning = false
-		s.updateMutex.Unlock()
+		s.setNightLed(false, 0)
+		s.ledsChanged <- s
+		s.setIsRunning(false)
 	}()
 
 	for {
@@ -65,7 +63,7 @@ func (s *NightlightProducer) runner(starttime t.Time) {
 		var wakeupAfter time.Duration
 		if now.After(rise) && now.Before(set) {
 			// During the day - between sunrise and sunset
-			s.setLed(false, 0)
+			s.setNightLed(false, 0)
 			s.ledsChanged <- s
 			wakeupAfter = set.Sub(now)
 		} else {
@@ -90,7 +88,7 @@ func (s *NightlightProducer) runner(starttime t.Time) {
 				tillNextInterval = set.Add(time.Duration((currInterval + 1)) * waitIntervalDuration).Sub(now)
 			}
 			// log.Printf("Current NightLED index %d : waitInterval %d : tillNextInterval %d", currInterval, waitIntervalDuration, tillNextInterval)
-			s.setLed(true, currInterval)
+			s.setNightLed(true, currInterval)
 			s.ledsChanged <- s
 			// + 1s maybe not needed, but so we are sure to really be
 			// in the next interval
@@ -100,8 +98,6 @@ func (s *NightlightProducer) runner(starttime t.Time) {
 		case <-time.After(wakeupAfter):
 			// nothing, just continue
 		case <-s.stop:
-			s.setLed(false, 0)
-			s.ledsChanged <- s
 			// log.Println("Stopped NightlightProducer...")
 			return
 		}

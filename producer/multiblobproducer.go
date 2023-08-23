@@ -109,9 +109,7 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 	tick := time.NewTicker(c.CONFIG.MultiBlobLED.Delay)
 	countup_run := false
 	defer func() {
-		s.updateMutex.Lock()
-		s.isRunning = false
-		s.updateMutex.Unlock()
+		s.setIsRunning(false)
 		tick.Stop()
 		triggerduration.Stop()
 	}()

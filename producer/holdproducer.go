@@ -36,9 +36,7 @@ func (s *HoldProducer) runner(startime t.Time) {
 			s.setLed(idx, Led{})
 		}
 		s.ledsChanged <- s
-		s.updateMutex.Lock()
-		s.isRunning = false
-		s.updateMutex.Unlock()
+		s.setIsRunning(false)
 	}()
 
 	for idx := range s.leds {
