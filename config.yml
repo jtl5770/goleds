@@ -25,10 +25,10 @@ HoldLED:
 CylonLED:
   Enabled: true
   Duration: 120s
-  Delay: 15ms
-  Step: 0.4
+  Delay: 20ms
+  Step: 0.8
   Width: 7
-  LedRGB: [100, 0, 0]
+  LedRGB: [150, 0, 0]
 
 MultiBlobLED:
   Enabled: true
