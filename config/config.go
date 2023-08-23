@@ -35,6 +35,14 @@ type Config struct {
 		TriggerValue int           `yaml:"TriggerValue"`
 		LedRGB       []float64     `yaml:"LedRGB"`
 	} `yaml:"HoldLED"`
+	CylonLED struct {
+		Enabled  bool          `yaml:"Enabled"`
+		Duration time.Duration `yaml:"Duration"`
+		Delay    time.Duration `yaml:"Delay"`
+		Step     float64       `yaml:"Step"`
+		Width    int           `yaml:"Width"`
+		LedRGB   []float64     `yaml:"LedRGB"`
+	} `yaml:"CylonLED"`
 	MultiBlobLED struct {
 		Enabled  bool          `yaml:"Enabled"`
 		Trigger  bool          `yaml:"Trigger"`
