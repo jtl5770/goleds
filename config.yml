@@ -25,34 +25,34 @@ HoldLED:
 CylonLED:
   Enabled: true
   Duration: 120s
-  Delay: 20ms
-  Step: 0.8
+  Delay: 30ms
+  Step: 1.7
   Width: 7
   LedRGB: [150, 0, 0]
 
 MultiBlobLED:
-  Enabled: true
+  Enabled: false
   Trigger: true
   Duration: 120s
-  Delay: 80ms
+  Delay: 120ms
   BlobCfg:
     BlobRed:                    
-      DeltaX: 0.2
+      DeltaX: 0.3
       X: 20
       Width: 512
       LedRGB: [30, 0, 0]
     BlobGreen:
-      DeltaX: 0.4
+      DeltaX: 0.5
       X: 50
       Width: 512
       LedRGB: [0, 30, 0]
     BlobBlue:
-      DeltaX: -0.2
+      DeltaX: -0.3
       X: 90
       Width: 768 
       LedRGB: [0, 0, 40]
     BlobRed2:
-      DeltaX: 0.2
+      DeltaX: 0.3
       X: 110
       Width: 512 
       LedRGB: [30, 0, 0]

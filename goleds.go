@@ -136,7 +136,7 @@ func initialise() {
 	if c.CONFIG.CylonLED.Enabled {
 		cylon := p.NewCylonProducer(CYLON_LED_UID, ledReader)
 		ledproducers[CYLON_LED_UID] = cylon
-		cylon.Start() // *FIXME* onlyfor testing now
+		// cylon.Start() // *FIXME* only for testing now
 	}
 
 	// *FUTURE* init more types of ledproducers if needed/wanted
@@ -175,7 +175,7 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 	for {
 		select {
 		case s := <-r:
-			if c.CONFIG.MultiBlobLED.Enabled {
+			if c.CONFIG.MultiBlobLED.Enabled || c.CONFIG.CylonLED.Enabled {
 				isrunning := false
 				for uid := range hw.Sensors {
 					isrunning = (isrunning || ledproducers[uid].GetIsRunning())
@@ -189,10 +189,18 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 				// to OFF exactly when old_sensorledsrunning is true;
 				// and we can now Start() the multiblobproducer
 				if old_sensorledsrunning && !isrunning {
-					ledproducers[MULTI_BLOB_UID].Start()
+					if c.CONFIG.MultiBlobLED.Enabled {
+						ledproducers[MULTI_BLOB_UID].Start()
+					} else if c.CONFIG.CylonLED.Enabled {
+						ledproducers[CYLON_LED_UID].Start()
+					}
 				} else if !old_sensorledsrunning && isrunning {
 					// or the other way around: Stopping the multiblobproducer
-					ledproducers[MULTI_BLOB_UID].Stop()
+					if c.CONFIG.MultiBlobLED.Enabled {
+						ledproducers[MULTI_BLOB_UID].Stop()
+					} else if c.CONFIG.CylonLED.Enabled {
+						ledproducers[CYLON_LED_UID].Stop()
+					}
 				}
 				old_sensorledsrunning = isrunning
 			}
