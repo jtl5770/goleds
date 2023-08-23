@@ -45,6 +45,7 @@ const (
 	HOLD_LED_UID   = "__hold_producer"
 	NIGHT_LED_UID  = "__night_producer"
 	MULTI_BLOB_UID = "__multiblob_producer"
+	CYLON_LED_UID  = "__cylon_producer"
 )
 
 var (
@@ -124,12 +125,18 @@ func initialise() {
 	}
 
 	if c.CONFIG.MultiBlobLED.Enabled {
-		// multiblobproducer gehts the - maybe nil - prodnight instance to control it
+		// multiblobproducer gets the - maybe nil - prodnight instance to control it
 		multiblob := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader, prodnight)
 		ledproducers[MULTI_BLOB_UID] = multiblob
 		if !c.CONFIG.MultiBlobLED.Trigger {
 			multiblob.Start()
 		}
+	}
+
+	if c.CONFIG.CylonLED.Enabled {
+		cylon := p.NewCylonProducer(CYLON_LED_UID, ledReader)
+		ledproducers[CYLON_LED_UID] = cylon
+		cylon.Start() // *FIXME* onlyfor testing now
 	}
 
 	// *FUTURE* init more types of ledproducers if needed/wanted
