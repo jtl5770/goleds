@@ -1,7 +1,7 @@
 package producer
 
 import (
-	"log"
+	"math"
 	"time"
 	t "time"
 
@@ -65,18 +65,18 @@ func (s *CylonProducer) runner(startTime t.Time) {
 			}
 			s.x += float64(s.direction) * s.step
 			s.ledsMutex.Lock()
+			left := s.x - float64(s.sidewidth)
+			right := s.x + float64(s.sidewidth)
+			// log.Printf("x: %f, left: %f, right: %f\n", s.x, left, right)
 			for i := range s.leds {
-				left := s.x - float64(s.sidewidth)
-				right := s.x + float64(s.sidewidth)
-				log.Printf("i: %d, left: %f, right: %f\n", i, left, right)
 				if i < int(left) || i > int(right+1) {
 					s.leds[i] = Led{}
 				} else {
-					if left-float64(i) > 0 {
+					if i == int(math.Floor(left)) {
 						f := 1 - (left - float64(i))
 						s.leds[i] = Led{s.color.Red * f, s.color.Green * f, s.color.Blue * f}
-					} else if float64(i)-right > 0 && float64(i)-right < 1 {
-						f := float64(i) - right
+					} else if i == int(math.Floor(right+1)) {
+						f := 1 - (float64(i) - right)
 						s.leds[i] = Led{s.color.Red * f, s.color.Green * f, s.color.Blue * f}
 					} else {
 						s.leds[i] = s.color
