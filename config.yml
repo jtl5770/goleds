@@ -32,7 +32,6 @@ CylonLED:
 
 MultiBlobLED:
   Enabled: true
-  Trigger: true
   Duration: 120s
   Delay: 120ms
   BlobCfg:

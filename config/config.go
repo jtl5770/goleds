@@ -45,7 +45,6 @@ type Config struct {
 	} `yaml:"CylonLED"`
 	MultiBlobLED struct {
 		Enabled  bool          `yaml:"Enabled"`
-		Trigger  bool          `yaml:"Trigger"`
 		Duration time.Duration `yaml:"Duration"`
 		Delay    time.Duration `yaml:"Delay"`
 		BlobCfg  map[string]struct {
