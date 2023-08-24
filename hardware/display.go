@@ -8,9 +8,45 @@ import (
 	p "lautenbacher.net/goleds/producer"
 )
 
-const SPLIT_AT = 70
+type Segment struct {
+	firstled     int
+	lastled      int
+	visible      bool
+	spimultiplex int
+	leds         []p.Led
+}
+
+func SegmentNew(firstled, lastled, spimultiplex int, visible bool) *Segment {
+	inst := Segment{
+		firstled:     firstled,
+		lastled:      lastled,
+		visible:      visible,
+		spimultiplex: spimultiplex,
+	}
+	return &inst
+}
+
+func (s *Segment) getSegmentLeds() []p.Led {
+	if s.visible {
+		return s.leds
+	} else {
+		return nil
+	}
+}
+
+func (s *Segment) setSegmentLeds(sumleds []p.Led) {
+	if s.visible {
+		s.leds = sumleds[s.firstled : s.lastled+1]
+	}
+}
+
+var SEGMENTS []*Segment
 
 func DisplayDriver(display chan ([]p.Led), sig chan bool) {
+	SEGMENTS = make([]*Segment, 0, len(c.CONFIG.Hardware.Display.Segments))
+	for _, seg := range c.CONFIG.Hardware.Display.Segments {
+		SEGMENTS = append(SEGMENTS, SegmentNew(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Visible))
+	}
 	if !c.CONFIG.RealHW {
 		SetupDebugUI()
 	}
@@ -20,14 +56,19 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 			log.Println("Ending DisplayDriver go-routine")
 			return
 		case sumLeds := <-display:
-			led1 := sumLeds[:SPLIT_AT]
-			led2 := sumLeds[SPLIT_AT:]
+			for _, seg := range SEGMENTS {
+				seg.setSegmentLeds(sumLeds)
+			}
+
 			if !c.CONFIG.RealHW {
-				simulateLedDisplay(led1, led2)
+				simulateLedDisplay()
 			} else {
 				spiMutex.Lock()
-				setLedSegment(0, led1)
-				setLedSegment(1, led2)
+				for _, seg := range SEGMENTS {
+					if seg.visible {
+						setLedSegment(seg.spimultiplex, seg.getSegmentLeds())
+					}
+				}
 				spiMutex.Unlock()
 			}
 		}

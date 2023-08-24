@@ -28,86 +28,106 @@ func scaledColor(led p.Led) string {
 	return fmt.Sprintf("[#%02x%02x%02x]", byte(red), byte(green), byte(blue))
 }
 
-func simulateLedDisplay(led1 []p.Led, led2 []p.Led) {
+func simulateLedDisplay() {
 	var buf strings.Builder
-	top1, bot1 := simulateLed(0, led1)
-	top2, bot2 := simulateLed(1, led2)
-	buf.WriteString(" ① ")
-	buf.WriteString(top1)
-	buf.WriteString(" ② ······· ③ ")
-	buf.WriteString(top2)
-	buf.WriteString(" ④ \n")
-	buf.WriteString("   " + bot1 + "             " + bot2 + "   ")
+	tops := make([]string, len(SEGMENTS))
+	bots := make([]string, len(SEGMENTS))
+	for i, seg := range SEGMENTS {
+		// led := seg.getSegmentLeds()
+		tops[i], bots[i] = simulateLed(seg)
+	}
+	buf.WriteString(" ")
+	for i := range SEGMENTS {
+		buf.WriteString(tops[i])
+	}
+	buf.WriteString("\n ")
+	for i := range SEGMENTS {
+		buf.WriteString(bots[i])
+	}
+
+	// buf.WriteString(" ① ")
+	// buf.WriteString(top1)
+	// buf.WriteString(" ② ······· ③ ")
+	// buf.WriteString(top2)
+	// buf.WriteString(" ④ \n")
+	// buf.WriteString("   " + bot1 + "             " + bot2 + "   ")
 	CONTENT.SetText(buf.String())
 }
 
-func simulateLed(segmentID int, values []p.Led) (string, string) {
-	var buf1 strings.Builder
-	var buf2 strings.Builder
-	buf1.Grow(len(values))
-	buf2.Grow(len(values))
-	for _, v := range values {
-		if v.IsEmpty() {
-			buf1.WriteString(" ")
-			buf2.WriteString(" ")
-		} else {
-			value := byte(math.Round(float64(v.Red+v.Green+v.Blue) / 3.0))
-			buf1.WriteString(scaledColor(v))
-			buf2.WriteString(scaledColor(v))
-			if value <= 2 {
+func simulateLed(segment *Segment) (string, string) {
+	if !segment.visible {
+		var retval string
+		retval = strings.Repeat("·", segment.lastled-segment.firstled+1)
+		return retval, retval
+	} else {
+		values := segment.getSegmentLeds()
+		var buf1 strings.Builder
+		var buf2 strings.Builder
+		buf1.Grow(len(values))
+		buf2.Grow(len(values))
+		for _, v := range values {
+			if v.IsEmpty() {
 				buf1.WriteString(" ")
-				buf2.WriteString("▁")
-			} else if value == 4 {
-				buf1.WriteString(" ")
-				buf2.WriteString("▂")
-			} else if value <= 6 {
-				buf1.WriteString(" ")
-				buf2.WriteString("▃")
-			} else if value <= 8 {
-				buf1.WriteString(" ")
-				buf2.WriteString("▄")
-			} else if value <= 10 {
-				buf1.WriteString(" ")
-				buf2.WriteString("▅")
-			} else if value <= 12 {
-				buf1.WriteString(" ")
-				buf2.WriteString("▆")
-			} else if value <= 14 {
-				buf1.WriteString(" ")
-				buf2.WriteString("▇")
-			} else if value <= 16 {
-				buf1.WriteString(" ")
-				buf2.WriteString("█")
-			} else if value == 18 {
-				buf1.WriteString("▁")
-				buf2.WriteString("█")
-			} else if value <= 20 {
-				buf1.WriteString("▂")
-				buf2.WriteString("█")
-			} else if value <= 22 {
-				buf1.WriteString("▃")
-				buf2.WriteString("█")
-			} else if value <= 24 {
-				buf1.WriteString("▄")
-				buf2.WriteString("█")
-			} else if value <= 26 {
-				buf1.WriteString("▅")
-				buf2.WriteString("█")
-			} else if value <= 28 {
-				buf1.WriteString("▆")
-				buf2.WriteString("█")
-			} else if value <= 30 {
-				buf1.WriteString("▇")
-				buf2.WriteString("█")
+				buf2.WriteString(" ")
 			} else {
-				buf1.WriteString("█")
-				buf2.WriteString("█")
+				value := byte(math.Round(float64(v.Red+v.Green+v.Blue) / 3.0))
+				buf1.WriteString(scaledColor(v))
+				buf2.WriteString(scaledColor(v))
+				if value <= 2 {
+					buf1.WriteString(" ")
+					buf2.WriteString("▁")
+				} else if value == 4 {
+					buf1.WriteString(" ")
+					buf2.WriteString("▂")
+				} else if value <= 6 {
+					buf1.WriteString(" ")
+					buf2.WriteString("▃")
+				} else if value <= 8 {
+					buf1.WriteString(" ")
+					buf2.WriteString("▄")
+				} else if value <= 10 {
+					buf1.WriteString(" ")
+					buf2.WriteString("▅")
+				} else if value <= 12 {
+					buf1.WriteString(" ")
+					buf2.WriteString("▆")
+				} else if value <= 14 {
+					buf1.WriteString(" ")
+					buf2.WriteString("▇")
+				} else if value <= 16 {
+					buf1.WriteString(" ")
+					buf2.WriteString("█")
+				} else if value == 18 {
+					buf1.WriteString("▁")
+					buf2.WriteString("█")
+				} else if value <= 20 {
+					buf1.WriteString("▂")
+					buf2.WriteString("█")
+				} else if value <= 22 {
+					buf1.WriteString("▃")
+					buf2.WriteString("█")
+				} else if value <= 24 {
+					buf1.WriteString("▄")
+					buf2.WriteString("█")
+				} else if value <= 26 {
+					buf1.WriteString("▅")
+					buf2.WriteString("█")
+				} else if value <= 28 {
+					buf1.WriteString("▆")
+					buf2.WriteString("█")
+				} else if value <= 30 {
+					buf1.WriteString("▇")
+					buf2.WriteString("█")
+				} else {
+					buf1.WriteString("█")
+					buf2.WriteString("█")
+				}
+				buf1.WriteString("[-]")
+				buf2.WriteString("[-]")
 			}
-			buf1.WriteString("[-]")
-			buf2.WriteString("[-]")
 		}
+		return buf1.String(), buf2.String()
 	}
-	return buf1.String(), buf2.String()
 }
 
 // I obviously have no clue what I am doing here
@@ -129,7 +149,7 @@ func SetupDebugUI() {
 	stripe := tview.NewTextView()
 	layout.AddItem(intro, 4, 1, false)
 	layout.AddItem(stripe, 4, 1, false)
-	layout.SetRect(1, 10, c.CONFIG.Hardware.Display.LedsTotal+21, 10)
+	layout.SetRect(1, 10, c.CONFIG.Hardware.Display.LedsTotal+4, 10)
 
 	stripe.SetBorder(true)
 	stripe.SetTextAlign(3)
