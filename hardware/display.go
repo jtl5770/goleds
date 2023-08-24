@@ -16,7 +16,7 @@ type Segment struct {
 	leds         []p.Led
 }
 
-func SegmentNew(firstled, lastled, spimultiplex int, visible bool) *Segment {
+func NewSegment(firstled, lastled, spimultiplex int, visible bool) *Segment {
 	inst := Segment{
 		firstled:     firstled,
 		lastled:      lastled,
@@ -45,7 +45,7 @@ var SEGMENTS []*Segment
 func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 	SEGMENTS = make([]*Segment, 0, len(c.CONFIG.Hardware.Display.Segments))
 	for _, seg := range c.CONFIG.Hardware.Display.Segments {
-		SEGMENTS = append(SEGMENTS, SegmentNew(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Visible))
+		SEGMENTS = append(SEGMENTS, NewSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Visible))
 	}
 	if !c.CONFIG.RealHW {
 		SetupDebugUI()
