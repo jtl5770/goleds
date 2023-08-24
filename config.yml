@@ -61,18 +61,18 @@ Hardware:
   SPIFrequency: 2097152
   Display:
     ForceUpdateDelay: 1000ms
-    LedsTotal: 165
+    LedsTotal: 125
     ColorCorrection: [1, 0.175, 0.05]
-    Segments:
-      - FirstLed: 0
-        LastLed: 69
-        Visible: true
-      - FirstLed: 70
-        LastLed: 110
-        Visible: false
-      - FirstLed: 111
-        LastLed: 164
-        Visible: true
+    # Segments:
+    #   - FirstLed: 0
+    #     LastLed: 69
+    #     Visible: true
+    #   - FirstLed: 70
+    #     LastLed: 110
+    #     Visible: false
+    #   - FirstLed: 111
+    #     LastLed: 164
+    #     Visible: true
   Sensors:
     SmoothingSize: 3
     LoopDelay: 10ms
