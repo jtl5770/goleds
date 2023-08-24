@@ -54,9 +54,9 @@ func simulateLedDisplay() {
 
 func simulateLed(segment *Segment) (string, string) {
 	if !segment.visible {
-		var retval string
-		retval = strings.Repeat("·", segment.lastled-segment.firstled+1)
-		return retval, retval
+		retvalt := strings.Repeat(" ", segment.lastled-segment.firstled+1)
+		retvalb := strings.Repeat("·", segment.lastled-segment.firstled+1)
+		return retvalt, retvalb
 	} else {
 		values := segment.getSegmentLeds()
 		var buf1 strings.Builder
@@ -131,7 +131,7 @@ func simulateLed(segment *Segment) (string, string) {
 // I obviously have no clue what I am doing here
 func SetupDebugUI() {
 	var buf strings.Builder
-	buf.WriteString("Hit [blue]1[-] ... [blue]" + fmt.Sprintf("%d", len(c.CONFIG.Hardware.Sensors.SensorCfg)) + "[-] to fire a sensor\n")
+	buf.WriteString("Hit [blue]1[-]...[blue]" + fmt.Sprintf("%d", len(c.CONFIG.Hardware.Sensors.SensorCfg)) + "[-] to fire a sensor\n")
 	buf.WriteString("Hit [red]Ctrl-C[-] to drop back to the terminal")
 
 	layout := tview.NewFlex()
