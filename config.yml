@@ -45,12 +45,12 @@ MultiBlobLED:
       Width: 512
       LedRGB: [0, 30, 0]
     BlobBlue:
-      DeltaX: 0.5
+      DeltaX: 0.4
       X: 130
       Width: 768 
       LedRGB: [0, 0, 40]
     BlobRed2:
-      DeltaX: -0.3
+      DeltaX: -0.2
       X: 150
       Width: 512 
       LedRGB: [30, 0, 0]
