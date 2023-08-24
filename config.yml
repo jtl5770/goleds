@@ -24,7 +24,7 @@ HoldLED:
 
 CylonLED:
   Enabled: false
-  Duration: 120s
+  Duration: 20s
   Delay: 30ms
   Step: 1.7
   Width: 7

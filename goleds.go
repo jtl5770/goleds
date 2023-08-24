@@ -187,14 +187,16 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 				if old_sensorledsrunning && !isrunning {
 					if c.CONFIG.MultiBlobLED.Enabled {
 						ledproducers[MULTI_BLOB_UID].Start()
-					} else if c.CONFIG.CylonLED.Enabled {
+					}
+					if c.CONFIG.CylonLED.Enabled {
 						ledproducers[CYLON_LED_UID].Start()
 					}
 				} else if !old_sensorledsrunning && isrunning {
 					// or the other way around: Stopping the multiblobproducer
 					if c.CONFIG.MultiBlobLED.Enabled {
 						ledproducers[MULTI_BLOB_UID].Stop()
-					} else if c.CONFIG.CylonLED.Enabled {
+					}
+					if c.CONFIG.CylonLED.Enabled {
 						ledproducers[CYLON_LED_UID].Stop()
 					}
 				}
