@@ -18,9 +18,10 @@ import (
 var (
 	// used to communicate with the TUI the display updates and the
 	// keypresses (aka sensor triggers)
-	CONTENT    *tview.TextView
-	KEYCHAN    chan Trigger
-	sensorline string
+	CONTENT      *tview.TextView
+	KEYCHAN      chan Trigger
+	sensorline   string
+	chartosensor map[string]string
 )
 
 func scaledColor(led p.Led) string {
@@ -159,12 +160,14 @@ func SetupDebugUI() {
 	stripe.SetChangedFunc(func() { app.Draw() })
 	CONTENT = stripe
 
+	chartosensor = make(map[string]string, len(Sensors))
 	sensorline = strings.Repeat(" ", c.CONFIG.Hardware.Display.LedsTotal)
-	sensorcfgs := maps.Values(c.CONFIG.Hardware.Sensors.SensorCfg)
-	sort.Slice(sensorcfgs, func(i, j int) bool { return sensorcfgs[i].LedIndex < sensorcfgs[j].LedIndex })
-	for i, scfg := range sensorcfgs {
-		index := scfg.LedIndex
+	sensorvals := maps.Values(Sensors)
+	sort.Slice(sensorvals, func(i, j int) bool { return sensorvals[i].LedIndex < sensorvals[j].LedIndex })
+	for i, sen := range sensorvals {
+		index := sen.LedIndex
 		sensorline = sensorline[0:index] + fmt.Sprintf("%d", i+1) + sensorline[index+1:c.CONFIG.Hardware.Display.LedsTotal]
+		chartosensor[fmt.Sprintf("%d", i+1)] = sen.uid
 	}
 
 	go func() {
@@ -174,15 +177,10 @@ func SetupDebugUI() {
 }
 
 func capture(event *tcell.EventKey) *tcell.EventKey {
-	key := event.Rune()
-	if key == '1' {
-		KEYCHAN <- Trigger{"S0", 80, time.Now()}
-	} else if key == '2' {
-		KEYCHAN <- Trigger{"S1", 80, time.Now()}
-	} else if key == '3' {
-		KEYCHAN <- Trigger{"S2", 80, time.Now()}
-	} else if key == '4' {
-		KEYCHAN <- Trigger{"S3", 80, time.Now()}
+	key := string(event.Rune())
+	senuid, exist := chartosensor[key]
+	if exist {
+		KEYCHAN <- Trigger{senuid, 80, time.Now()}
 	}
 	return event
 }
