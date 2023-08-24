@@ -89,12 +89,12 @@ Hardware:
         AdcChannel: 7
         TriggerValue: 50
       S2:
-        LedIndex: 70
+        LedIndex: 111
         Adc: 1
         AdcChannel: 0
         TriggerValue: 60
       S3:
-        LedIndex: 124
+        LedIndex: 164
         Adc: 1
         AdcChannel: 5
         TriggerValue: 52
