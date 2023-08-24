@@ -98,7 +98,7 @@ func initialise() {
 
 	// This is the main producer: reacting to a sensor trigger to light the stripes
 	for uid, cfg := range c.CONFIG.Hardware.Sensors.SensorCfg {
-		hw.Sensors[uid] = hw.NewSensor(cfg.LedIndex, cfg.Adc, cfg.AdcChannel, cfg.TriggerValue)
+		hw.Sensors[uid] = hw.NewSensor(uid, cfg.LedIndex, cfg.Adc, cfg.AdcChannel, cfg.TriggerValue)
 		if c.CONFIG.SensorLED.Enabled {
 			ledproducers[uid] = p.NewSensorLedProducer(uid, cfg.LedIndex, ledReader)
 		}

@@ -15,6 +15,7 @@ import (
 var Sensors map[string]Sensor
 
 type Sensor struct {
+	uid          string
 	LedIndex     int
 	adc          int
 	adcChannel   byte
@@ -28,9 +29,10 @@ type Trigger struct {
 	Timestamp time.Time
 }
 
-func NewSensor(ledIndex int, adc int, adcChannel byte, triggerValue int) Sensor {
+func NewSensor(uid string, ledIndex int, adc int, adcChannel byte, triggerValue int) Sensor {
 	smoothing := c.CONFIG.Hardware.Sensors.SmoothingSize
 	return Sensor{
+		uid:          uid,
 		LedIndex:     ledIndex,
 		adc:          adc,
 		adcChannel:   adcChannel,
