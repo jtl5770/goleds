@@ -20,10 +20,13 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 			log.Println("Ending DisplayDriver go-routine")
 			return
 		case sumLeds := <-display:
-			led1 := sumLeds[:SPLIT_AT]
-			led2 := sumLeds[SPLIT_AT:]
+			var segments [][]p.Led
+			for _, seg := range c.CONFIG.Hardware.Display.Segments {
+				if seg.LastLed > SPLIT_AT {
+					segments = append(segments, sumLeds[seg.FirstLed:seg.LastLed+1])
+				}
 			if !c.CONFIG.RealHW {
-				simulateLedDisplay(led1, led2)
+				simulateLedDisplay(segments)
 			} else {
 				spiMutex.Lock()
 				setLedSegment(0, led1)

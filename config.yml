@@ -23,7 +23,7 @@ HoldLED:
   LedRGB: [140, 140, 140]
 
 CylonLED:
-  Enabled: true
+  Enabled: false
   Duration: 120s
   Delay: 30ms
   Step: 1.7
@@ -31,7 +31,7 @@ CylonLED:
   LedRGB: [255, 0, 0]
 
 MultiBlobLED:
-  Enabled: false
+  Enabled: true
   Trigger: true
   Duration: 120s
   Delay: 120ms
@@ -61,8 +61,18 @@ Hardware:
   SPIFrequency: 2097152
   Display:
     ForceUpdateDelay: 1000ms
-    LedsTotal: 125
+    LedsTotal: 165
     ColorCorrection: [1, 0.175, 0.05]
+    Segments:
+      - FirstLed: 0
+        LastLed: 69
+        Visible: true
+      - FirstLed: 70
+        LastLed: 110
+        Visible: false
+      - FirstLed: 111
+        LastLed: 164
+        Visible: true
   Sensors:
     SmoothingSize: 3
     LoopDelay: 10ms
