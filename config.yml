@@ -9,7 +9,6 @@ NightLED:
   Enabled: true
   Latitude: 49.014
   Longitude: 8.4043
-#  Longitude: -172.0
   LedRGB:
     - [1, 0, 0]
     - [1, 0, 0]
