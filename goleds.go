@@ -133,7 +133,6 @@ func initialise() {
 	if c.CONFIG.CylonLED.Enabled {
 		cylon := p.NewCylonProducer(CYLON_LED_UID, ledReader)
 		ledproducers[CYLON_LED_UID] = cylon
-		// cylon.Start() // *FIXME* only for testing now
 	}
 
 	// *FUTURE* init more types of ledproducers if needed/wanted
