@@ -128,9 +128,6 @@ func initialise() {
 		// multiblobproducer gets the - maybe nil - prodnight instance to control it
 		multiblob := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader, prodnight)
 		ledproducers[MULTI_BLOB_UID] = multiblob
-		if !c.CONFIG.MultiBlobLED.Trigger {
-			multiblob.Start()
-		}
 	}
 
 	if c.CONFIG.CylonLED.Enabled {

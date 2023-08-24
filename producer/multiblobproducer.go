@@ -114,13 +114,6 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 		triggerduration.Stop()
 	}()
 
-	// directly stop the Trigger (to control the duration of the effect)
-	// whenever it is configured to run all the time (and not only
-	// MultiBlobLED.Duration after a start)
-	if !c.CONFIG.MultiBlobLED.Trigger {
-		triggerduration.Stop()
-	}
-
 	for {
 		select {
 		case <-triggerduration.C:
