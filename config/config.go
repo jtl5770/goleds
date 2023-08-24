@@ -60,11 +60,12 @@ type Config struct {
 			ForceUpdateDelay time.Duration `yaml:"ForceUpdateDelay"`
 			LedsTotal        int           `yaml:"LedsTotal"`
 			ColorCorrection  []float64     `yaml:"ColorCorrection"`
-			// Segments         []struct {
-			// 	FirstLed int  `yaml:"FirstLed"`
-			// 	LastLed  int  `yaml:"LastLed"`
-			// 	Visible  bool `yaml:"Visible"`
-			// } `yaml:"Segments"`
+			Segments         []struct {
+				FirstLed     int  `yaml:"FirstLed"`
+				LastLed      int  `yaml:"LastLed"`
+				Visible      bool `yaml:"Visible"`
+				SpiMultiplex int  `yaml:"SpiMultiplex"`
+			} `yaml:"Segments"`
 		} `yaml:"Display"`
 		Sensors struct {
 			SmoothingSize int           `yaml:"SmoothingSize"`
