@@ -19,6 +19,7 @@ var (
 	// used to communicate with the TUI the display updates and the
 	// keypresses (aka sensor triggers)
 	content      *tview.TextView
+	app          *tview.Application
 	sensorline   string
 	chartosensor map[string]string
 )
@@ -154,7 +155,7 @@ func InitSimulationTUI() {
 	stripe.SetDynamicColors(true)
 	stripe.SetBackgroundColor(tcell.ColorBlack)
 
-	app := tview.NewApplication()
+	app = tview.NewApplication()
 	app.SetRoot(layout, false)
 	app.SetInputCapture(capture)
 	stripe.SetChangedFunc(func() { app.Draw() })
