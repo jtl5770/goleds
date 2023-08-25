@@ -157,6 +157,7 @@ func reset() {
 	}
 	time.Sleep(1 * time.Second)
 	hw.CloseGPIO()
+	// *FIXME* i should close the simulation TUI here, but how...
 }
 
 func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan bool) {

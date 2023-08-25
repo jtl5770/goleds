@@ -127,7 +127,7 @@ func simulateLed(segment *Segment) (string, string) {
 	}
 }
 
-// I obviously have no clue what I am doing here
+// *FIXME* I obviously have no clue what I am doing here. Closing the app is a hack
 func InitSimulationTUI() {
 	var buf strings.Builder
 	buf.WriteString("Hit [blue]1[-]...[blue]" +
