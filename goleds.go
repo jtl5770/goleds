@@ -146,7 +146,7 @@ func initialise() {
 	go combineAndUpdateDisplay(ledReader, ledWriter, cAUDsignal)
 	go fireController(sensorReader, fCsignal)
 	go hw.DisplayDriver(ledWriter, DDsignal)
-	go hw.SensorDriver(sensorReader, hw.Sensors, SDsignal)
+	go hw.SensorDriver(sensorReader, SDsignal)
 }
 
 func reset() {

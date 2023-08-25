@@ -53,7 +53,7 @@ func (s *Sensor) smoothValue(val int) int {
 	return ret / smoothing
 }
 
-func SensorDriver(sensorReader chan Trigger, sensors map[string]*Sensor, sig chan bool) {
+func SensorDriver(sensorReader chan Trigger, sig chan bool) {
 	if !c.CONFIG.RealHW {
 		// Sensor triggers will be simulated via key presses
 		// we just wait for the signal on the sig channel and return
@@ -80,7 +80,7 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]*Sensor, sig cha
 			return
 		case <-ticker.C:
 			spiMutex.Lock()
-			for name, sensor := range sensors {
+			for name, sensor := range Sensors {
 				selectAdc(sensor.adc)
 				sensorvalues[name] = sensor.smoothValue(readAdc(sensor.adcChannel))
 			}
@@ -89,7 +89,7 @@ func SensorDriver(sensorReader chan Trigger, sensors map[string]*Sensor, sig cha
 				if value > sensormax[name] {
 					sensormax[name] = value
 				}
-				if value > sensors[name].triggerValue {
+				if value > Sensors[name].triggerValue {
 					sensorReader <- Trigger{name, value, time.Now()}
 				}
 			}
