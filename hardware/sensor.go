@@ -12,7 +12,7 @@ import (
 	c "lautenbacher.net/goleds/config"
 )
 
-var Sensors map[string]Sensor
+var Sensors map[string]*Sensor
 
 type Sensor struct {
 	uid          string
@@ -29,9 +29,9 @@ type Trigger struct {
 	Timestamp time.Time
 }
 
-func NewSensor(uid string, ledIndex int, adc int, adcChannel byte, triggerValue int) Sensor {
+func NewSensor(uid string, ledIndex int, adc int, adcChannel byte, triggerValue int) *Sensor {
 	smoothing := c.CONFIG.Hardware.Sensors.SmoothingSize
-	return Sensor{
+	return &Sensor{
 		uid:          uid,
 		LedIndex:     ledIndex,
 		adc:          adc,
@@ -53,7 +53,7 @@ func (s *Sensor) smoothValue(val int) int {
 	return ret / smoothing
 }
 
-func SensorDriver(sensorReader chan Trigger, sensors map[string]Sensor, sig chan bool) {
+func SensorDriver(sensorReader chan Trigger, sensors map[string]*Sensor, sig chan bool) {
 	if !c.CONFIG.RealHW {
 		// Sensor triggers will be simulated via key presses
 		// we just wait for the signal on the sig channel and return

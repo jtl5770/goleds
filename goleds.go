@@ -89,7 +89,7 @@ func main() {
 func initialise() {
 	log.Println("Initialising...")
 	hw.InitGPIO()
-	hw.Sensors = make(map[string]hw.Sensor)
+	hw.Sensors = make(map[string]*hw.Sensor)
 	ledproducers = make(map[string]p.LedProducer)
 	sigchans = make([](chan bool), 0, 4)
 	ledReader := make(chan (p.LedProducer))
