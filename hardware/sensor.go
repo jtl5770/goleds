@@ -23,12 +23,6 @@ type Sensor struct {
 	values       []int
 }
 
-type Trigger struct {
-	ID        string
-	Value     int
-	Timestamp time.Time
-}
-
 func NewSensor(uid string, ledIndex int, adc int, adcChannel byte, triggerValue int) *Sensor {
 	smoothing := c.CONFIG.Hardware.Sensors.SmoothingSize
 	return &Sensor{
@@ -53,13 +47,28 @@ func (s *Sensor) smoothValue(val int) int {
 	return ret / smoothing
 }
 
-func SensorDriver(sensorReader chan Trigger, sig chan bool) {
+type Trigger struct {
+	ID        string
+	Value     int
+	Timestamp time.Time
+}
+
+func NewTrigger(id string, value int, time time.Time) *Trigger {
+	inst := Trigger{
+		ID:        id,
+		Value:     value,
+		Timestamp: time,
+	}
+	return &inst
+}
+
+func SensorDriver(sensorReader chan *Trigger, stop chan bool) {
 	if !c.CONFIG.RealHW {
 		// Sensor triggers will be simulated via key presses
-		// we just wait for the signal on the sig channel and return
+		// we just wait for the signal on the stop channel and return
 		KEYCHAN = sensorReader
 		select {
-		case <-sig:
+		case <-stop:
 			log.Println("Ending SensorDriver go-routine")
 			return
 		}
@@ -74,7 +83,7 @@ func SensorDriver(sensorReader chan Trigger, sig chan bool) {
 		select {
 		case <-statistics:
 			printStatisticsAndReset(&sensormax)
-		case <-sig:
+		case <-stop:
 			log.Println("Ending SensorDriver go-routine")
 			ticker.Stop()
 			return
@@ -90,7 +99,7 @@ func SensorDriver(sensorReader chan Trigger, sig chan bool) {
 					sensormax[name] = value
 				}
 				if value > Sensors[name].triggerValue {
-					sensorReader <- Trigger{name, value, time.Now()}
+					sensorReader <- NewTrigger(name, value, time.Now())
 				}
 			}
 		}

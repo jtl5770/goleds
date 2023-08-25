@@ -94,7 +94,7 @@ func initialise() {
 	sigchans = make([](chan bool), 0, 4)
 	ledReader := make(chan (p.LedProducer))
 	ledWriter := make(chan []p.Led, c.CONFIG.Hardware.Display.LedsTotal)
-	sensorReader := make(chan hw.Trigger)
+	sensorReader := make(chan *hw.Trigger)
 
 	// This is the main producer: reacting to a sensor trigger to light the stripes
 	for uid, cfg := range c.CONFIG.Hardware.Sensors.SensorCfg {
@@ -223,8 +223,8 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 	}
 }
 
-func fireController(sensor chan (hw.Trigger), sig chan bool) {
-	var firstSameTrigger hw.Trigger = hw.Trigger{}
+func fireController(sensor chan *hw.Trigger, sig chan bool) {
+	var firstSameTrigger *hw.Trigger = hw.NewTrigger("", 0, time.Now())
 	triggerDelay := c.CONFIG.HoldLED.TriggerDelay
 
 	for {
@@ -247,7 +247,7 @@ func fireController(sensor chan (hw.Trigger), sig chan bool) {
 					firstSameTrigger = trigger
 				}
 			} else {
-				firstSameTrigger = hw.Trigger{}
+				firstSameTrigger = hw.NewTrigger("", 0, time.Now())
 				if producer, ok := ledproducers[trigger.ID]; ok {
 					producer.Start()
 				} else {

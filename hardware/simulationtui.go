@@ -19,7 +19,7 @@ var (
 	// used to communicate with the TUI the display updates and the
 	// keypresses (aka sensor triggers)
 	CONTENT      *tview.TextView
-	KEYCHAN      chan Trigger
+	KEYCHAN      chan *Trigger
 	sensorline   string
 	chartosensor map[string]string
 )
@@ -180,7 +180,7 @@ func capture(event *tcell.EventKey) *tcell.EventKey {
 	key := string(event.Rune())
 	senuid, exist := chartosensor[key]
 	if exist {
-		KEYCHAN <- Trigger{senuid, 80, time.Now()}
+		KEYCHAN <- NewTrigger(senuid, 80, time.Now())
 	}
 	return event
 }
