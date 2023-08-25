@@ -18,8 +18,7 @@ import (
 var (
 	// used to communicate with the TUI the display updates and the
 	// keypresses (aka sensor triggers)
-	CONTENT      *tview.TextView
-	KEYCHAN      chan *Trigger
+	content      *tview.TextView
 	sensorline   string
 	chartosensor map[string]string
 )
@@ -49,7 +48,7 @@ func simulateLedDisplay() {
 		buf.WriteString(bots[i])
 	}
 	buf.WriteString("\n [blue]" + sensorline + "[:]")
-	CONTENT.SetText(buf.String())
+	content.SetText(buf.String())
 }
 
 func simulateLed(segment *Segment) (string, string) {
@@ -129,9 +128,10 @@ func simulateLed(segment *Segment) (string, string) {
 }
 
 // I obviously have no clue what I am doing here
-func SetupDebugUI() {
+func InitSimulationTUI() {
 	var buf strings.Builder
-	buf.WriteString("Hit [blue]1[-]...[blue]" + fmt.Sprintf("%d", len(c.CONFIG.Hardware.Sensors.SensorCfg)) + "[-] to fire a sensor\n")
+	buf.WriteString("Hit [blue]1[-]...[blue]" +
+		fmt.Sprintf("%d", len(c.CONFIG.Hardware.Sensors.SensorCfg)) + "[-] to fire a sensor\n")
 	buf.WriteString("Hit [red]Ctrl-C[-] to drop back to the terminal")
 
 	layout := tview.NewFlex()
@@ -158,7 +158,7 @@ func SetupDebugUI() {
 	app.SetRoot(layout, false)
 	app.SetInputCapture(capture)
 	stripe.SetChangedFunc(func() { app.Draw() })
-	CONTENT = stripe
+	content = stripe
 
 	chartosensor = make(map[string]string, len(Sensors))
 	sensorline = strings.Repeat(" ", c.CONFIG.Hardware.Display.LedsTotal)
@@ -180,7 +180,7 @@ func capture(event *tcell.EventKey) *tcell.EventKey {
 	key := string(event.Rune())
 	senuid, exist := chartosensor[key]
 	if exist {
-		KEYCHAN <- NewTrigger(senuid, 80, time.Now())
+		SensorReader <- NewTrigger(senuid, 80, time.Now())
 	}
 	return event
 }

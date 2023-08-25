@@ -13,7 +13,7 @@ var (
 	spiMutex                   sync.Mutex
 )
 
-func InitGPIO() {
+func InitHardware() {
 	if c.CONFIG.RealHW {
 		log.Println("Initialise GPI and Spi...")
 		if err := rpio.Open(); err != nil {

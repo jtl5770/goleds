@@ -8,6 +8,8 @@ import (
 	p "lautenbacher.net/goleds/producer"
 )
 
+var SEGMENTS []*Segment
+
 type Segment struct {
 	firstled     int
 	lastled      int
@@ -40,16 +42,14 @@ func (s *Segment) setSegmentLeds(sumleds []p.Led) {
 	}
 }
 
-var SEGMENTS []*Segment
-
-func DisplayDriver(display chan ([]p.Led), sig chan bool) {
+func InitDisplay() {
 	SEGMENTS = make([]*Segment, 0, len(c.CONFIG.Hardware.Display.Segments))
 	for _, seg := range c.CONFIG.Hardware.Display.Segments {
 		SEGMENTS = append(SEGMENTS, NewSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Visible))
 	}
-	if !c.CONFIG.RealHW {
-		SetupDebugUI()
-	}
+}
+
+func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 	for {
 		select {
 		case <-sig:

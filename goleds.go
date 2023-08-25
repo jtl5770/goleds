@@ -50,7 +50,7 @@ const (
 
 var (
 	ledproducers map[string]p.LedProducer
-	sigchans     [](chan bool)
+	sigchans     []chan bool
 )
 
 // main driver loop to setup hardware, go routines etc., listen for signals
@@ -88,30 +88,26 @@ func main() {
 
 func initialise() {
 	log.Println("Initialising...")
-	hw.InitGPIO()
-	hw.Sensors = make(map[string]*hw.Sensor)
+	hw.InitHardware()
+	hw.InitSensor()
+	hw.InitDisplay()
+	if !c.CONFIG.RealHW {
+		hw.InitSimulationTUI()
+	}
+
 	ledproducers = make(map[string]p.LedProducer)
-	sigchans = make([](chan bool), 0, 4)
+	sigchans = make([]chan bool, 4)
 	ledReader := make(chan (p.LedProducer))
 	ledWriter := make(chan []p.Led, c.CONFIG.Hardware.Display.LedsTotal)
-	sensorReader := make(chan *hw.Trigger)
 
 	// This is the main producer: reacting to a sensor trigger to light the stripes
-	for uid, cfg := range c.CONFIG.Hardware.Sensors.SensorCfg {
-		hw.Sensors[uid] = hw.NewSensor(uid, cfg.LedIndex, cfg.Adc, cfg.AdcChannel, cfg.TriggerValue)
-		if c.CONFIG.SensorLED.Enabled {
-			ledproducers[uid] = p.NewSensorLedProducer(uid, cfg.LedIndex, ledReader)
+	if c.CONFIG.SensorLED.Enabled {
+		for uid, sen := range hw.Sensors {
+			ledproducers[uid] = p.NewSensorLedProducer(uid, sen.LedIndex, ledReader)
 		}
 	}
 
 	if c.CONFIG.HoldLED.Enabled {
-		// The HoldLight producer will be started whenever a sensor
-		// produces for longer than a configurable time a signal > a
-		// configurable value (see config file for TriggerDelay and
-		// TriggerValue) It will generate a brighter, full lit LED
-		// stripe and keep it for HoldTime time, if not being
-		// triggered again in this time - then it will shut off
-		// earlier
 		prodhold := p.NewHoldProducer(HOLD_LED_UID, ledReader)
 		ledproducers[HOLD_LED_UID] = prodhold
 	}
@@ -144,9 +140,9 @@ func initialise() {
 	sigchans = append(sigchans, cAUDsignal, fCsignal, DDsignal, SDsignal)
 
 	go combineAndUpdateDisplay(ledReader, ledWriter, cAUDsignal)
-	go fireController(sensorReader, fCsignal)
+	go fireController(fCsignal)
 	go hw.DisplayDriver(ledWriter, DDsignal)
-	go hw.SensorDriver(sensorReader, SDsignal)
+	go hw.SensorDriver(SDsignal)
 }
 
 func reset() {
@@ -223,13 +219,13 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 	}
 }
 
-func fireController(sensor chan *hw.Trigger, sig chan bool) {
+func fireController(sig chan bool) {
 	var firstSameTrigger *hw.Trigger = hw.NewTrigger("", 0, time.Now())
 	triggerDelay := c.CONFIG.HoldLED.TriggerDelay
 
 	for {
 		select {
-		case trigger := <-sensor:
+		case trigger := <-hw.SensorReader:
 			oldStamp := firstSameTrigger.Timestamp
 			newStamp := trigger.Timestamp
 

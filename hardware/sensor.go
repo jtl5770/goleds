@@ -12,7 +12,10 @@ import (
 	c "lautenbacher.net/goleds/config"
 )
 
-var Sensors map[string]*Sensor
+var (
+	Sensors      map[string]*Sensor
+	SensorReader chan *Trigger
+)
 
 type Sensor struct {
 	uid          string
@@ -62,11 +65,18 @@ func NewTrigger(id string, value int, time time.Time) *Trigger {
 	return &inst
 }
 
-func SensorDriver(sensorReader chan *Trigger, stop chan bool) {
+func InitSensor() {
+	Sensors = make(map[string]*Sensor, len(c.CONFIG.Hardware.Sensors.SensorCfg))
+	SensorReader = make(chan *Trigger)
+	for uid, cfg := range c.CONFIG.Hardware.Sensors.SensorCfg {
+		Sensors[uid] = NewSensor(uid, cfg.LedIndex, cfg.Adc, cfg.AdcChannel, cfg.TriggerValue)
+	}
+}
+
+func SensorDriver(stop chan bool) {
 	if !c.CONFIG.RealHW {
 		// Sensor triggers will be simulated via key presses
 		// we just wait for the signal on the stop channel and return
-		KEYCHAN = sensorReader
 		select {
 		case <-stop:
 			log.Println("Ending SensorDriver go-routine")
@@ -99,7 +109,7 @@ func SensorDriver(sensorReader chan *Trigger, stop chan bool) {
 					sensormax[name] = value
 				}
 				if value > Sensors[name].triggerValue {
-					sensorReader <- NewTrigger(name, value, time.Now())
+					SensorReader <- NewTrigger(name, value, time.Now())
 				}
 			}
 		}
