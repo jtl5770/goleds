@@ -152,11 +152,11 @@ func reset() {
 		prod.Exit()
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(500 * time.Millisecond)
 	log.Println("Stopping running go-routines... ")
 	close(stopsignal)
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(500 * time.Millisecond)
 	hw.CloseGPIO()
 	// *FIXME* I should close the simulation TUI here to be able to
 	// re-init correctly... But then, a restart will hardly ever
