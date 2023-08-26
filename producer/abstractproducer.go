@@ -111,7 +111,7 @@ func (s *AbstractProducer) Exit() {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 	if s.isRunning {
-		s.stop <- true
+		close(s.stop)
 	}
 	s.hasExited = true
 }

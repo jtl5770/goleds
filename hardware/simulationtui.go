@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -21,6 +22,7 @@ var (
 	content      *tview.TextView
 	app          *tview.Application
 	sensorline   string
+	intent       string
 	chartosensor map[string]string
 )
 
@@ -128,12 +130,11 @@ func simulateLed(segment *Segment) (string, string) {
 	}
 }
 
-// *FIXME* I obviously have no clue what I am doing here. Closing the app is a hack
-func InitSimulationTUI() {
+func InitSimulationTUI(ossignal chan os.Signal) {
 	var buf strings.Builder
 	buf.WriteString("Hit [blue]1[-]...[blue]" +
 		fmt.Sprintf("%d", len(c.CONFIG.Hardware.Sensors.SensorCfg)) + "[-] to fire a sensor\n")
-	buf.WriteString("Hit [red]Ctrl-C[-] to drop back to the terminal")
+	buf.WriteString("Hit [red]q[-] to exit, [green]r[-] to reload config file and restart")
 
 	layout := tview.NewFlex()
 	layout.SetDirection(tview.FlexRow)
@@ -172,8 +173,12 @@ func InitSimulationTUI() {
 	}
 
 	go func() {
-		defer os.Exit(0)
 		app.Run()
+		if intent == "quit" {
+			ossignal <- os.Interrupt
+		} else if intent == "restart" {
+			ossignal <- syscall.SIGHUP
+		}
 	}()
 }
 
@@ -182,6 +187,12 @@ func capture(event *tcell.EventKey) *tcell.EventKey {
 	senuid, exist := chartosensor[key]
 	if exist {
 		SensorReader <- NewTrigger(senuid, 80, time.Now())
+	} else if key == "q" || key == "Q" {
+		intent = "quit"
+		app.Stop()
+	} else if key == "r" || key == "R" {
+		intent = "restart"
+		app.Stop()
 	}
 	return event
 }

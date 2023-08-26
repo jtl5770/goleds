@@ -50,7 +50,7 @@ const (
 
 var (
 	ledproducers map[string]p.LedProducer
-	sigchans     []chan bool
+	stopsignal   chan bool
 )
 
 // main driver loop to setup hardware, go routines etc., listen for signals
@@ -63,42 +63,48 @@ func main() {
 	exPath := filepath.Dir(ex)
 	cfile := flag.String("config", exPath+"/"+c.CONFILE, "Config file to use")
 	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
+	hidetuip := flag.Bool("hidetui", false, "Set to true if hiding the TUI even when in simulation mode")
 	flag.Parse()
 
-	c.ReadConfig(*cfile, *realp)
-	initialise()
+	c.ReadConfig(*cfile, *realp, *hidetuip)
 
-	exit := make(chan os.Signal)
-	reload := make(chan os.Signal)
-	signal.Notify(exit, os.Interrupt)
-	signal.Notify(reload, syscall.SIGHUP)
+	ossignal := make(chan os.Signal)
+	signal.Notify(ossignal, os.Interrupt)
+	signal.Notify(ossignal, syscall.SIGHUP)
+
+	initialise(ossignal)
 
 	for {
 		select {
-		case <-exit:
-			log.Println("Exiting...")
-			os.Exit(0)
-		case <-reload:
-			reset()
-			c.ReadConfig(*cfile, *realp)
-			initialise()
+		case sig := <-ossignal:
+			if sig == os.Interrupt {
+				log.Println("Exiting...")
+				os.Exit(0)
+			} else if sig == syscall.SIGHUP {
+				reset()
+				c.ReadConfig(*cfile, *realp, *hidetuip)
+				initialise(ossignal)
+			}
 		}
 	}
 }
 
-func initialise() {
+func initialise(ossignal chan os.Signal) {
 	log.Println("Initialising...")
 	hw.InitHardware()
 	hw.InitSensor()
 	hw.InitDisplay()
-	if !c.CONFIG.RealHW {
-		hw.InitSimulationTUI()
+
+	if !c.CONFIG.RealHW && !c.CONFIG.HideTUI {
+		hw.InitSimulationTUI(ossignal)
 	}
 
 	ledproducers = make(map[string]p.LedProducer)
-	sigchans = make([]chan bool, 4)
+	stopsignal = make(chan bool)
+
 	ledReader := make(chan (p.LedProducer))
-	ledWriter := make(chan []p.Led, c.CONFIG.Hardware.Display.LedsTotal)
+	//	ledWriter := make(chan []p.Led, c.CONFIG.Hardware.Display.LedsTotal)
+	ledWriter := make(chan []p.Led)
 
 	// This is the main producer: reacting to a sensor trigger to light the stripes
 	if c.CONFIG.SensorLED.Enabled {
@@ -133,16 +139,10 @@ func initialise() {
 
 	// *FUTURE* init more types of ledproducers if needed/wanted
 
-	cAUDsignal := make(chan bool)
-	fCsignal := make(chan bool)
-	DDsignal := make(chan bool)
-	SDsignal := make(chan bool)
-	sigchans = append(sigchans, cAUDsignal, fCsignal, DDsignal, SDsignal)
-
-	go combineAndUpdateDisplay(ledReader, ledWriter, cAUDsignal)
-	go fireController(fCsignal)
-	go hw.DisplayDriver(ledWriter, DDsignal)
-	go hw.SensorDriver(SDsignal)
+	go combineAndUpdateDisplay(ledReader, ledWriter, stopsignal)
+	go fireController(stopsignal)
+	go hw.DisplayDriver(ledWriter, stopsignal)
+	go hw.SensorDriver(stopsignal)
 }
 
 func reset() {
@@ -151,13 +151,16 @@ func reset() {
 		log.Println("Exiting producer: ", prod.GetUID())
 		prod.Exit()
 	}
+
 	time.Sleep(1 * time.Second)
-	for _, sig := range sigchans {
-		sig <- true
-	}
+	log.Println("Stopping running go-routines... ")
+	close(stopsignal)
+
 	time.Sleep(1 * time.Second)
 	hw.CloseGPIO()
-	// *FIXME* i should close the simulation TUI here, but how...
+	// *FIXME* I should close the simulation TUI here to be able to
+	// re-init correctly... But then, a restart will hardly ever
+	// be needed when running in simulation mode...
 }
 
 func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan bool) {
