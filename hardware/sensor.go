@@ -98,12 +98,12 @@ func SensorDriver(stop chan bool) {
 			ticker.Stop()
 			return
 		case <-ticker.C:
-			spiMutex.Lock()
+			// spiMutex.Lock()
 			for name, sensor := range Sensors {
-				selectAdc(sensor.adc)
-				sensorvalues[name] = sensor.smoothValue(readAdc(sensor.adcChannel))
+				// selectAdc(sensor.adc)
+				sensorvalues[name] = sensor.smoothValue(readAdc(sensor.adc, sensor.adcChannel))
 			}
-			spiMutex.Unlock()
+			// spiMutex.Unlock()
 			for name, value := range sensorvalues {
 				if value > sensormax[name] {
 					sensormax[name] = value
@@ -130,8 +130,9 @@ func printStatisticsAndReset(max *map[string]int) {
 	log.Print(output)
 }
 
-func readAdc(channel byte) int {
+func readAdc(multiplex int, channel byte) int {
 	write := []byte{1, (8 + channel) << 4, 0}
-	read := SPIExchange(write)
+	// read := SPIExchange(write)
+	read := SPIExchangeMultiplex(multiplex, write)
 	return ((int(read[1]) & 3) << 8) + int(read[2])
 }

@@ -63,27 +63,28 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 			if !c.CONFIG.RealHW && !c.CONFIG.HideTUI {
 				simulateLedDisplay()
 			} else if c.CONFIG.RealHW {
-				spiMutex.Lock()
+				// spiMutex.Lock()
 				for _, seg := range SEGMENTS {
 					if seg.visible {
 						setLedSegment(seg.spimultiplex, seg.getSegmentLeds())
 					}
 				}
-				spiMutex.Unlock()
+				// spiMutex.Unlock()
 			}
 		}
 	}
 }
 
-func setLedSegment(segmentID int, values []p.Led) {
+func setLedSegment(multiplex int, values []p.Led) {
 	display := make([]byte, 3*len(values))
 	for idx, led := range values {
 		display[3*idx] = byte(math.Min(led.Red*c.CONFIG.Hardware.Display.ColorCorrection[0], 255))
 		display[(3*idx)+1] = byte(math.Min(led.Green*c.CONFIG.Hardware.Display.ColorCorrection[1], 255))
 		display[(3*idx)+2] = byte(math.Min(led.Blue*c.CONFIG.Hardware.Display.ColorCorrection[2], 255))
 	}
-	selectLed(segmentID)
-	SPIExchange(display)
+	// selectLed(segmentID)
+	// SPIExchange(display)
+	SPIExchangeMultiplex(multiplex, display)
 }
 
 // Local Variables:

@@ -53,12 +53,14 @@ func CloseGPIO() {
 	}
 }
 
-func SPIExchange(write []byte) []byte {
-	rpio.SpiExchange(write)
-	return write
-}
+// func SPIExchange(write []byte) []byte {
+// 	rpio.SpiExchange(write)
+// 	return write
+// }
 
-func selectLed(index int) {
+func SPIExchangeMultiplex(index int, write []byte) []byte {
+	spiMutex.Lock()
+	defer spiMutex.Unlock()
 	if index == 0 {
 		pin17.Low()
 		pin22.High()
@@ -69,27 +71,51 @@ func selectLed(index int) {
 		pin22.Low()
 		pin23.High()
 		pin24.High()
-	} else {
-		panic("No LED")
-	}
-}
-
-func selectAdc(index int) {
-	if index == 0 {
+	} else if index == 2 {
 		pin17.Low()
 		pin22.Low()
 		pin23.Low()
 		pin24.High()
-	} else if index == 1 {
+	} else if index == 3 {
 		pin17.Low()
 		pin22.Low()
 		pin23.High()
 		pin24.Low()
 	} else {
-		panic("No ADC")
+		panic("Wrong SPI multiplex index")
 	}
+	rpio.SpiExchange(write)
+	return write
 }
 
-// Local Variables:
-// compile-command: "cd .. && go build"
-// End:
+// func selectLed(index int) {
+// 	if index == 0 {
+// 		pin17.Low()
+// 		pin22.High()
+// 		pin23.High()
+// 		pin24.High()
+// 	} else if index == 1 {
+// 		pin17.High()
+// 		pin22.Low()
+// 		pin23.High()
+// 		pin24.High()
+// 	} else {
+// 		panic("No LED")
+// 	}
+// }
+
+// func selectAdc(index int) {
+// 	if index == 2 {
+// 		pin17.Low()
+// 		pin22.Low()
+// 		pin23.Low()
+// 		pin24.High()
+// 	} else if index == 3 {
+// 		pin17.Low()
+// 		pin22.Low()
+// 		pin23.High()
+// 		pin24.Low()
+// 	} else {
+// 		panic("No ADC")
+// 	}
+// }
