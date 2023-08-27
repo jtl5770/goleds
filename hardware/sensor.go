@@ -65,7 +65,7 @@ func NewTrigger(id string, value int, time time.Time) *Trigger {
 	return &inst
 }
 
-func InitSensor() {
+func InitSensors() {
 	Sensors = make(map[string]*Sensor, len(c.CONFIG.Hardware.Sensors.SensorCfg))
 	SensorReader = make(chan *Trigger)
 	for uid, cfg := range c.CONFIG.Hardware.Sensors.SensorCfg {

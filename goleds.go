@@ -8,10 +8,15 @@
 // because of heavy crosstalk of the sensors. Now there is only a
 // sensor at both sides of each stripe (4 in total). The LED stripe
 // layout is due to the special situation in my hallway with a door
-// seperating the two stripes. All hardware related things are defined
-// in the hardware/ directory (package hardware)
+// seperating the two stripes.
 //
-// The software is designed to be configurable via a config file
+// The devices (stripes, MCPs) are talked to via SPI. The multiplexing
+// is done via AND and OR gates driven by GPIOs.  All hardware related
+// things are defined in the hardware/ directory (package hardware)
+// but the layout (number of stripe segments, MCPs, sensors) can be
+// changed dynamically via the config file.
+//
+// The software is designed to be configured via an config file
 // (default: config.yml) and to be able to react to signals to
 // reload the config file or to exit. The config file is read by the
 // config package (package config) and the config is stored in a
@@ -19,7 +24,7 @@
 // whenever a SIGHUP signal is received.
 //
 // The main functionality is to read the sensors and to drive the LED
-// stripes accordingly. The sensor data is read by the hardware packag
+// stripes accordingly. The sensor data is read by the hardware package
 // and the LED stripes are driven by the producer package. The
 // producer package is designed to be able to handle different types
 // of producers, e.g.  the HoldProducer which is triggered by a sensor
@@ -92,7 +97,7 @@ func main() {
 func initialise(ossignal chan os.Signal) {
 	log.Println("Initialising...")
 	hw.InitHardware()
-	hw.InitSensor()
+	hw.InitSensors()
 	hw.InitDisplay()
 
 	if !c.CONFIG.RealHW && !c.CONFIG.HideTUI {
