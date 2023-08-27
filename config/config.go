@@ -78,6 +78,10 @@ type Config struct {
 				TriggerValue int  `yaml:"TriggerValue"`
 			} `yaml:"SensorCfg"`
 		} `yaml:"Sensors"`
+		SpiMultiplexGPIO map[int]struct {
+			Low  []int `yaml:"Low"`
+			High []int `yaml:"High"`
+		} `yaml:"SpiMultiplexGPIO"`
 	} `yaml:"Hardware"`
 }
 
@@ -100,7 +104,3 @@ func ReadConfig(cfile string, realhw bool, hidetui bool) {
 	CONFIG.Configfile = cfile
 	log.Printf("%+v\n", CONFIG)
 }
-
-// Local Variables:D
-// compile-command: "cd .. && go build"
-// End:

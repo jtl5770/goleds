@@ -97,3 +97,16 @@ Hardware:
         SpiMultiplex: 3
         AdcChannel: 5
         TriggerValue: 52
+  SpiMultiplexGPIO:
+    0:
+      Low: [17]
+      High: [22,23,24]
+    1:
+      Low: [22]
+      High: [17,23,24]
+    2:
+      Low: [17,22,23]
+      High: [24]
+    3:
+      Low: [17,22,24]
+      High: [23]
