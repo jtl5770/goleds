@@ -9,9 +9,14 @@ import (
 )
 
 var (
-	pin17, pin22, pin23, pin24 rpio.Pin
-	spiMutex                   sync.Mutex
+	spiMutex        sync.Mutex
+	spimultiplexcfg map[int]gpiocfg
 )
+
+type gpiocfg struct {
+	low  []rpio.Pin
+	high []rpio.Pin
+}
 
 func InitHardware() {
 	if c.CONFIG.RealHW {
@@ -24,21 +29,27 @@ func InitHardware() {
 		}
 
 		rpio.SpiSpeed(c.CONFIG.Hardware.SPIFrequency)
-		pin17 = rpio.Pin(17)
-		pin17.Output()
-		pin17.Low()
 
-		pin22 = rpio.Pin(22)
-		pin22.Output()
-		pin22.Low()
+		spimultiplexcfg = make(map[int]gpiocfg, len(c.CONFIG.Hardware.SpiMultiplexGPIO))
 
-		pin23 = rpio.Pin(23)
-		pin23.Output()
-		pin23.High()
-
-		pin24 = rpio.Pin(24)
-		pin24.Output()
-		pin24.High()
+		for key, cfg := range c.CONFIG.Hardware.SpiMultiplexGPIO {
+			low := make([]rpio.Pin, 0, len(cfg.Low))
+			high := make([]rpio.Pin, 0, len(cfg.High))
+			for _, pin := range cfg.Low {
+				rpiopin := rpio.Pin(pin)
+				rpiopin.Output()
+				low = append(low, rpiopin)
+			}
+			for _, pin := range cfg.High {
+				rpiopin := rpio.Pin(pin)
+				rpiopin.Output()
+				high = append(high, rpiopin)
+			}
+			spimultiplexcfg[key] = gpiocfg{
+				low:  low,
+				high: high,
+			}
+		}
 	} else {
 		log.Println("No GPI init done as we are not running on real hardware...")
 	}
@@ -56,29 +67,19 @@ func CloseGPIO() {
 func SPIExchangeMultiplex(index int, write []byte) []byte {
 	spiMutex.Lock()
 	defer spiMutex.Unlock()
-	if index == 0 {
-		pin17.Low()
-		pin22.High()
-		pin23.High()
-		pin24.High()
-	} else if index == 1 {
-		pin17.High()
-		pin22.Low()
-		pin23.High()
-		pin24.High()
-	} else if index == 2 {
-		pin17.Low()
-		pin22.Low()
-		pin23.Low()
-		pin24.High()
-	} else if index == 3 {
-		pin17.Low()
-		pin22.Low()
-		pin23.High()
-		pin24.Low()
-	} else {
+
+	cfg, found := spimultiplexcfg[index]
+	if !found {
 		panic("No SPI multiplexd device with index " + string(rune(index)) + " found. Valid values are 0,1,2,3")
+	} else {
+		for _, pin := range cfg.low {
+			pin.Low()
+		}
+		for _, pin := range cfg.high {
+			pin.High()
+		}
 	}
+
 	rpio.SpiExchange(write)
 	return write
 }
