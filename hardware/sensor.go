@@ -20,18 +20,18 @@ var (
 type Sensor struct {
 	uid          string
 	LedIndex     int
-	adc          int
+	spimultiplex int
 	adcChannel   byte
 	triggerValue int
 	values       []int
 }
 
-func NewSensor(uid string, ledIndex int, adc int, adcChannel byte, triggerValue int) *Sensor {
+func NewSensor(uid string, ledIndex int, spimultiplex int, adcChannel byte, triggerValue int) *Sensor {
 	smoothing := c.CONFIG.Hardware.Sensors.SmoothingSize
 	return &Sensor{
 		uid:          uid,
 		LedIndex:     ledIndex,
-		adc:          adc,
+		spimultiplex: spimultiplex,
 		adcChannel:   adcChannel,
 		triggerValue: triggerValue,
 		values:       make([]int, smoothing, smoothing+1),
@@ -69,7 +69,7 @@ func InitSensor() {
 	Sensors = make(map[string]*Sensor, len(c.CONFIG.Hardware.Sensors.SensorCfg))
 	SensorReader = make(chan *Trigger)
 	for uid, cfg := range c.CONFIG.Hardware.Sensors.SensorCfg {
-		Sensors[uid] = NewSensor(uid, cfg.LedIndex, cfg.Adc, cfg.AdcChannel, cfg.TriggerValue)
+		Sensors[uid] = NewSensor(uid, cfg.LedIndex, cfg.SpiMultiplex, cfg.AdcChannel, cfg.TriggerValue)
 	}
 }
 
@@ -100,8 +100,7 @@ func SensorDriver(stop chan bool) {
 		case <-ticker.C:
 			// spiMutex.Lock()
 			for name, sensor := range Sensors {
-				// selectAdc(sensor.adc)
-				sensorvalues[name] = sensor.smoothValue(readAdc(sensor.adc, sensor.adcChannel))
+				sensorvalues[name] = sensor.smoothValue(readAdc(sensor.spimultiplex, sensor.adcChannel))
 			}
 			// spiMutex.Unlock()
 			for name, value := range sensorvalues {
@@ -132,7 +131,6 @@ func printStatisticsAndReset(max *map[string]int) {
 
 func readAdc(multiplex int, channel byte) int {
 	write := []byte{1, (8 + channel) << 4, 0}
-	// read := SPIExchange(write)
 	read := SPIExchangeMultiplex(multiplex, write)
 	return ((int(read[1]) & 3) << 8) + int(read[2])
 }

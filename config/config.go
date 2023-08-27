@@ -73,7 +73,7 @@ type Config struct {
 			LoopDelay     time.Duration `yaml:"LoopDelay"`
 			SensorCfg     map[string]struct {
 				LedIndex     int  `yaml:"LedIndex"`
-				Adc          int  `yaml:"Adc"`
+				SpiMultiplex int  `yaml:"SpiMultiplex"`
 				AdcChannel   byte `yaml:"AdcChannel"`
 				TriggerValue int  `yaml:"TriggerValue"`
 			} `yaml:"SensorCfg"`

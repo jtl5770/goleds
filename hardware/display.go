@@ -82,8 +82,6 @@ func setLedSegment(multiplex int, values []p.Led) {
 		display[(3*idx)+1] = byte(math.Min(led.Green*c.CONFIG.Hardware.Display.ColorCorrection[1], 255))
 		display[(3*idx)+2] = byte(math.Min(led.Blue*c.CONFIG.Hardware.Display.ColorCorrection[2], 255))
 	}
-	// selectLed(segmentID)
-	// SPIExchange(display)
 	SPIExchangeMultiplex(multiplex, display)
 }
 

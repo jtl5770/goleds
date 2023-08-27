@@ -79,21 +79,21 @@ Hardware:
     SensorCfg:
       S0:
         LedIndex: 0
-        Adc: 0
+        SpiMultiplex: 2
         AdcChannel: 0
         TriggerValue: 47
       S1:
         LedIndex: 69
-        Adc: 0
+        SpiMultiplex: 2
         AdcChannel: 7
         TriggerValue: 50
       S2:
         LedIndex: 111
-        Adc: 1
+        SpiMultiplex: 3
         AdcChannel: 0
         TriggerValue: 60
       S3:
         LedIndex: 164
-        Adc: 1
+        SpiMultiplex: 3
         AdcChannel: 5
         TriggerValue: 52
