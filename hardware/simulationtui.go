@@ -17,12 +17,9 @@ import (
 )
 
 var (
-	// used to communicate with the TUI the display updates and the
-	// keypresses (aka sensor triggers)
+	// used to communicate with the TUI the display updates
 	content      *tview.TextView
-	app          *tview.Application
 	sensorline   string
-	intent       string
 	chartosensor map[string]string
 )
 
@@ -39,7 +36,6 @@ func simulateLedDisplay() {
 	tops := make([]string, len(SEGMENTS))
 	bots := make([]string, len(SEGMENTS))
 	for i, seg := range SEGMENTS {
-		// led := seg.getSegmentLeds()
 		tops[i], bots[i] = simulateLed(seg)
 	}
 	buf.WriteString(" ")
@@ -56,9 +52,8 @@ func simulateLedDisplay() {
 
 func simulateLed(segment *Segment) (string, string) {
 	if !segment.visible {
-		retvalt := strings.Repeat(" ", segment.lastled-segment.firstled+1)
-		retvalb := strings.Repeat("·", segment.lastled-segment.firstled+1)
-		return retvalt, retvalb
+		return strings.Repeat(" ", segment.lastled-segment.firstled+1),
+			strings.Repeat("·", segment.lastled-segment.firstled+1)
 	} else {
 		values := segment.getSegmentLeds()
 		var buf1 strings.Builder
@@ -156,9 +151,23 @@ func InitSimulationTUI(ossignal chan os.Signal) {
 	stripe.SetDynamicColors(true)
 	stripe.SetBackgroundColor(tcell.ColorBlack)
 
-	app = tview.NewApplication()
+	app := tview.NewApplication()
 	app.SetRoot(layout, false)
-	app.SetInputCapture(capture)
+	app.SetInputCapture(
+		func(event *tcell.EventKey) *tcell.EventKey {
+			key := string(event.Rune())
+			senuid, exist := chartosensor[key]
+			if exist {
+				SensorReader <- NewTrigger(senuid, 80, time.Now())
+			} else if key == "q" || key == "Q" {
+				app.Stop()
+				ossignal <- os.Interrupt
+			} else if key == "r" || key == "R" {
+				app.Stop()
+				ossignal <- syscall.SIGHUP
+			}
+			return event
+		})
 	stripe.SetChangedFunc(func() { app.Draw() })
 	content = stripe
 
@@ -172,27 +181,5 @@ func InitSimulationTUI(ossignal chan os.Signal) {
 		chartosensor[fmt.Sprintf("%d", i+1)] = sen.uid
 	}
 
-	go func() {
-		app.Run()
-		if intent == "quit" {
-			ossignal <- os.Interrupt
-		} else if intent == "restart" {
-			ossignal <- syscall.SIGHUP
-		}
-	}()
-}
-
-func capture(event *tcell.EventKey) *tcell.EventKey {
-	key := string(event.Rune())
-	senuid, exist := chartosensor[key]
-	if exist {
-		SensorReader <- NewTrigger(senuid, 80, time.Now())
-	} else if key == "q" || key == "Q" {
-		intent = "quit"
-		app.Stop()
-	} else if key == "r" || key == "R" {
-		intent = "restart"
-		app.Stop()
-	}
-	return event
+	go func() { app.Run() }()
 }
