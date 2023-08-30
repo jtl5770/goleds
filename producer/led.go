@@ -37,7 +37,3 @@ func CombineLeds(allLedRanges map[string][]Led) []Led {
 	}
 	return sumLeds
 }
-
-// Local Variables:
-// compile-command: "cd .. && go build"
-// End:

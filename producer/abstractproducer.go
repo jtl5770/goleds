@@ -127,7 +127,3 @@ func (s *AbstractProducer) setIsRunning(running bool) {
 	defer s.updateMutex.Unlock()
 	s.isRunning = running
 }
-
-// Local Variables:
-// compile-command: "cd .. && go build"
-// End:

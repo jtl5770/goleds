@@ -167,7 +167,3 @@ func (s *SensorLedProducer) runner(starttime t.Time) {
 		}
 	}
 }
-
-// Local Variables:
-// compile-command: "cd .. && go build"
-// End:

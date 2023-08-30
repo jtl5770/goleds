@@ -53,7 +53,3 @@ func (s *HoldProducer) runner(startime t.Time) {
 		}
 	}
 }
-
-// Local Variables:
-// compile-command: "cd .. && go build"
-// End:

@@ -265,7 +265,3 @@ func fireController(sig chan bool) {
 		}
 	}
 }
-
-// Local Variables:
-// compile-command: "go build"
-// End:

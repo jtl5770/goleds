@@ -103,7 +103,3 @@ func (s *NightlightProducer) runner(starttime t.Time) {
 		}
 	}
 }
-
-// Local Variables:
-// compile-command: "cd .. && go build"
-// End:

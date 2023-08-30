@@ -84,7 +84,3 @@ func setLedSegment(multiplex int, values []p.Led) {
 	}
 	SPIExchangeMultiplex(multiplex, display)
 }
-
-// Local Variables:
-// compile-command: "cd .. && go build"
-// End:

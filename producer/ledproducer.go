@@ -9,7 +9,3 @@ type LedProducer interface {
 	Exit()
 	GetIsRunning() bool
 }
-
-// Local Variables:
-// compile-command: "cd .. && go build"
-// End:
