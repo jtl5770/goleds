@@ -1,12 +1,7 @@
 package hardware
 
 import (
-	"fmt"
 	"log"
-	"os"
-	"os/signal"
-	"sort"
-	"syscall"
 	"time"
 
 	c "lautenbacher.net/goleds/config"
@@ -83,16 +78,11 @@ func SensorDriver(stop chan bool) {
 			return
 		}
 	}
-	statistics := make(chan os.Signal)
-	signal.Notify(statistics, syscall.SIGUSR1)
 
 	sensorvalues := make(map[string]int)
-	sensormax := make(map[string]int)
 	ticker := time.NewTicker(c.CONFIG.Hardware.Sensors.LoopDelay)
 	for {
 		select {
-		case <-statistics:
-			printStatisticsAndReset(&sensormax)
 		case <-stop:
 			log.Println("Ending SensorDriver go-routine")
 			ticker.Stop()
@@ -104,29 +94,12 @@ func SensorDriver(stop chan bool) {
 			}
 			// spiMutex.Unlock()
 			for name, value := range sensorvalues {
-				if value > sensormax[name] {
-					sensormax[name] = value
-				}
 				if value > Sensors[name].triggerValue {
 					SensorReader <- NewTrigger(name, value, time.Now())
 				}
 			}
 		}
 	}
-}
-
-func printStatisticsAndReset(max *map[string]int) {
-	keys := make([]string, 0, len(*max))
-	for k := range *max {
-		keys = append(keys, k)
-	}
-	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
-	var output string
-	for _, name := range keys {
-		output = output + fmt.Sprintf("[%3d] ", (*max)[name])
-		delete(*max, name)
-	}
-	log.Print(output)
 }
 
 func readAdc(multiplex int, channel byte) int {
