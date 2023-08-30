@@ -68,10 +68,9 @@ func main() {
 	exPath := filepath.Dir(ex)
 	cfile := flag.String("config", exPath+"/"+c.CONFILE, "Config file to use")
 	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
-	hidetuip := flag.Bool("hidetui", false, "Set to true if hiding the TUI even when in simulation mode")
 	flag.Parse()
 
-	c.ReadConfig(*cfile, *realp, *hidetuip)
+	c.ReadConfig(*cfile, *realp)
 
 	ossignal := make(chan os.Signal)
 	signal.Notify(ossignal, os.Interrupt)
@@ -87,7 +86,7 @@ func main() {
 				os.Exit(0)
 			} else if sig == syscall.SIGHUP {
 				reset()
-				c.ReadConfig(*cfile, *realp, *hidetuip)
+				c.ReadConfig(*cfile, *realp)
 				initialise(ossignal)
 			}
 		}
@@ -100,7 +99,7 @@ func initialise(ossignal chan os.Signal) {
 	hw.InitSensors()
 	hw.InitDisplay()
 
-	if !c.CONFIG.RealHW && !c.CONFIG.HideTUI {
+	if !c.CONFIG.RealHW {
 		hw.InitSimulationTUI(ossignal)
 	}
 

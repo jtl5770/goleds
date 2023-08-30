@@ -60,7 +60,7 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 				seg.setSegmentLeds(sumLeds)
 			}
 
-			if !c.CONFIG.RealHW && !c.CONFIG.HideTUI {
+			if !c.CONFIG.RealHW {
 				simulateLedDisplay()
 			} else if c.CONFIG.RealHW {
 				// spiMutex.Lock()

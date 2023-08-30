@@ -14,7 +14,6 @@ var CONFIG Config
 
 type Config struct {
 	RealHW     bool
-	HideTUI    bool
 	Configfile string
 	SensorLED  struct {
 		Enabled      bool          `yaml:"Enabled"`
@@ -85,7 +84,7 @@ type Config struct {
 	} `yaml:"Hardware"`
 }
 
-func ReadConfig(cfile string, realhw bool, hidetui bool) {
+func ReadConfig(cfile string, realhw bool) {
 	log.Printf("Reading config file %s...", cfile)
 	f, err := os.Open(cfile)
 	if err != nil {
@@ -100,7 +99,6 @@ func ReadConfig(cfile string, realhw bool, hidetui bool) {
 	}
 	CONFIG = conf
 	CONFIG.RealHW = realhw
-	CONFIG.HideTUI = hidetui
 	CONFIG.Configfile = cfile
 	log.Printf("%+v\n", CONFIG)
 }
