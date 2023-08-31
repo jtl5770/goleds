@@ -32,22 +32,24 @@ func scaledColor(led p.Led) string {
 }
 
 func simulateLedDisplay() {
-	var buf strings.Builder
-	tops := make([]string, len(SEGMENTS))
-	bots := make([]string, len(SEGMENTS))
-	for i, seg := range SEGMENTS {
-		tops[i], bots[i] = simulateLed(seg)
+	if !c.CONFIG.SensorShow {
+		var buf strings.Builder
+		tops := make([]string, len(SEGMENTS))
+		bots := make([]string, len(SEGMENTS))
+		for i, seg := range SEGMENTS {
+			tops[i], bots[i] = simulateLed(seg)
+		}
+		buf.WriteString(" ")
+		for i := range SEGMENTS {
+			buf.WriteString(tops[i])
+		}
+		buf.WriteString("\n ")
+		for i := range SEGMENTS {
+			buf.WriteString(bots[i])
+		}
+		buf.WriteString("\n [blue]" + sensorline + "[:]")
+		content.SetText(buf.String())
 	}
-	buf.WriteString(" ")
-	for i := range SEGMENTS {
-		buf.WriteString(tops[i])
-	}
-	buf.WriteString("\n ")
-	for i := range SEGMENTS {
-		buf.WriteString(bots[i])
-	}
-	buf.WriteString("\n [blue]" + sensorline + "[:]")
-	content.SetText(buf.String())
 }
 
 func simulateLed(segment *Segment) (string, string) {
@@ -127,9 +129,14 @@ func simulateLed(segment *Segment) (string, string) {
 
 func InitSimulationTUI(ossignal chan os.Signal) {
 	var buf strings.Builder
-	buf.WriteString("Hit [blue]1[-]...[blue]" +
-		fmt.Sprintf("%d", len(c.CONFIG.Hardware.Sensors.SensorCfg)) + "[-] to fire a sensor\n")
+	if !c.CONFIG.SensorShow {
+		buf.WriteString("Hit [blue]1[-]...[blue]" +
+			fmt.Sprintf("%d", len(c.CONFIG.Hardware.Sensors.SensorCfg)) + "[-] to fire a sensor\n")
+	}
 	buf.WriteString("Hit [red]q[-] to exit, [green]r[-] to reload config file and restart")
+	if c.CONFIG.SensorShow && !c.CONFIG.RealHW {
+		buf.WriteString("\n[red] '-real' flag not given, using random numbers for testing![-]")
+	}
 
 	layout := tview.NewFlex()
 	layout.SetDirection(tview.FlexRow)
@@ -137,7 +144,7 @@ func InitSimulationTUI(ossignal chan os.Signal) {
 	intro := tview.NewTextView()
 	intro.SetBorder(true).SetTitle(" GOLEDS Simulation ").SetTitleColor(tcell.ColorLightBlue)
 	intro.SetText(buf.String())
-	intro.SetTextAlign(3)
+	intro.SetTextAlign(1)
 	intro.SetDynamicColors(true)
 	intro.SetBackgroundColor(tcell.ColorBlack)
 
@@ -147,7 +154,7 @@ func InitSimulationTUI(ossignal chan os.Signal) {
 	layout.SetRect(1, 10, c.CONFIG.Hardware.Display.LedsTotal+4, 10)
 
 	stripe.SetBorder(true)
-	stripe.SetTextAlign(3)
+	stripe.SetTextAlign(0)
 	stripe.SetDynamicColors(true)
 	stripe.SetBackgroundColor(tcell.ColorBlack)
 
@@ -157,7 +164,7 @@ func InitSimulationTUI(ossignal chan os.Signal) {
 		func(event *tcell.EventKey) *tcell.EventKey {
 			key := string(event.Rune())
 			senuid, exist := chartosensor[key]
-			if exist {
+			if exist && !c.CONFIG.SensorShow {
 				SensorReader <- NewTrigger(senuid, 80, time.Now())
 			} else if key == "q" || key == "Q" {
 				app.Stop()
