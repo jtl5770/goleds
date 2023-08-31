@@ -68,9 +68,10 @@ func main() {
 	exPath := filepath.Dir(ex)
 	cfile := flag.String("config", exPath+"/"+c.CONFILE, "Config file to use")
 	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
+	sensp := flag.Bool("show-sensors", false, "Set to true if program should only display sensor values (will be random values if -real is not given)")
 	flag.Parse()
 
-	c.ReadConfig(*cfile, *realp)
+	c.ReadConfig(*cfile, *realp, *sensp)
 
 	ossignal := make(chan os.Signal)
 	signal.Notify(ossignal, os.Interrupt)
@@ -86,7 +87,7 @@ func main() {
 				os.Exit(0)
 			} else if sig == syscall.SIGHUP {
 				reset()
-				c.ReadConfig(*cfile, *realp)
+				c.ReadConfig(*cfile, *realp, *sensp)
 				initialise(ossignal)
 			}
 		}
