@@ -1,14 +1,11 @@
 package hardware
 
 import (
-	"fmt"
 	"log"
 	"math/rand"
-	"strings"
 	"time"
 
 	"github.com/gammazero/deque"
-	"github.com/montanaflynn/stats"
 	c "lautenbacher.net/goleds/config"
 )
 
@@ -68,6 +65,7 @@ func NewTrigger(id string, value int, time time.Time) *Trigger {
 }
 
 func InitSensors() {
+	rand.Seed(time.Now().UnixNano())
 	Sensors = make(map[string]*Sensor, len(c.CONFIG.Hardware.Sensors.SensorCfg))
 	SensorReader = make(chan *Trigger)
 	for uid, cfg := range c.CONFIG.Hardware.Sensors.SensorCfg {
@@ -77,15 +75,15 @@ func InitSensors() {
 
 func SensorDriver(stop chan bool) {
 	if !c.CONFIG.RealHW && !c.CONFIG.SensorShow {
-		// Sensor triggers will be simulated via key presses
-		// we just wait for the signal on the stop channel and return
+		// SimulationTUI is shown: Sensor triggers will be simulated
+		// via key presses we just wait for the signal on the stop
+		// channel and return
 		select {
 		case <-stop:
 			log.Println("Ending SensorDriver go-routine")
 			return
 		}
 	}
-	rand.Seed(time.Now().UnixNano())
 	sensorvalues := make(map[string]*deque.Deque[int])
 	for name := range Sensors {
 		sensorvalues[name] = deque.New[int]()
@@ -98,7 +96,6 @@ func SensorDriver(stop chan bool) {
 			ticker.Stop()
 			return
 		case <-ticker.C:
-			// spiMutex.Lock()
 			for name, sensor := range Sensors {
 				var value int
 				if c.CONFIG.SensorShow && !c.CONFIG.RealHW {
@@ -111,27 +108,11 @@ func SensorDriver(stop chan bool) {
 					sensorvalues[name].PopFront()
 				}
 			}
-			// spiMutex.Unlock()
-			var buft strings.Builder
-			var bufb strings.Builder
-			buft.WriteString(" [min|mean|max]  ")
-			bufb.WriteString(" (StdDev)        ")
-			for name, value := range sensorvalues {
-				val := value.Back()
-				if c.CONFIG.SensorShow {
-					data := make([]int, value.Len())
-					for i := 0; i < value.Len(); i++ {
-						data[i] = value.At(i)
-					}
-					stat := stats.LoadRawData(data)
-					mean, _ := stat.Mean()
-					stdev, _ := stat.StandardDeviation()
-					max, _ := stat.Max()
-					min, _ := stat.Min()
-					buft.WriteString(fmt.Sprintf(" [%3.0f|%3.0f|%3.0f] ", min, mean, max)) // 15 chars
-					bufb.WriteString(fmt.Sprintf(" (%5.1f)       ", stdev))                // 15 chars
-					content.SetText(buft.String() + "\n" + bufb.String())
-				} else {
+			if c.CONFIG.SensorShow {
+				sensorDisplay(sensorvalues)
+			} else {
+				for name, values := range sensorvalues {
+					val := values.Back()
 					if val > Sensors[name].triggerValue {
 						SensorReader <- NewTrigger(name, val, time.Now())
 					}

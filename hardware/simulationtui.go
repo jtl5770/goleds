@@ -9,7 +9,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gammazero/deque"
 	"github.com/gdamore/tcell/v2"
+	"github.com/montanaflynn/stats"
 	"github.com/rivo/tview"
 	"golang.org/x/exp/maps"
 	c "lautenbacher.net/goleds/config"
@@ -50,6 +52,37 @@ func simulateLedDisplay() {
 		buf.WriteString("\n [blue]" + sensorline + "[:]")
 		content.SetText(buf.String())
 	}
+}
+
+func sensorDisplay(sensorvalues map[string]*deque.Deque[int]) {
+	var buft strings.Builder
+	var bufm strings.Builder
+	var bufb strings.Builder
+	buft.WriteString(" [min|mean|max]       ")
+	bufm.WriteString(" Standard Deviation   ")
+	bufb.WriteString(" Name: Trigger value  ")
+	sensorvals := maps.Values(Sensors)
+	sort.Slice(sensorvals, func(i, j int) bool { return sensorvals[i].LedIndex < sensorvals[j].LedIndex })
+	for _, sen := range sensorvals {
+		name := sen.uid
+		values := sensorvalues[name]
+		data := make([]int, values.Len())
+		for i := 0; i < values.Len(); i++ {
+			data[i] = values.At(i)
+		}
+		stat := stats.LoadRawData(data)
+		mean, _ := stat.Mean()
+		mean, _ = stats.Round(mean, 0)
+		stdev, _ := stat.StandardDeviation()
+		max, _ := stat.Max()
+		max, _ = stats.Round(max, 0)
+		min, _ := stat.Min()
+		min, _ = stats.Round(min, 0)
+		buft.WriteString(fmt.Sprintf(" [%3.0f|%3.0f|%3.0f] ", min, mean, max)) // 15 chars
+		bufm.WriteString(fmt.Sprintf("  %5.1f        ", stdev))                // 15 chars
+		bufb.WriteString(fmt.Sprintf("  %3s: %3d     ", name, Sensors[name].triggerValue))
+	}
+	content.SetText(buft.String() + "\n" + bufm.String() + "\n" + bufb.String())
 }
 
 func simulateLed(segment *Segment) (string, string) {
