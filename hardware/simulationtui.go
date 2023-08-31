@@ -166,7 +166,7 @@ func InitSimulationTUI(ossignal chan os.Signal) {
 		buf.WriteString("Hit [blue]1[-]...[blue]" +
 			fmt.Sprintf("%d", len(c.CONFIG.Hardware.Sensors.SensorCfg)) + "[-] to fire a sensor\n")
 	}
-	buf.WriteString("Hit [red]q[-] to exit, [green]r[-] to reload config file and restart")
+	buf.WriteString("Hit [red]q[-] to exit, [red]r[-] to reload config file and restart")
 	if c.CONFIG.SensorShow && !c.CONFIG.RealHW {
 		buf.WriteString("\n[red] '-real' flag not given, using random numbers for testing![-]")
 	}
@@ -184,7 +184,7 @@ func InitSimulationTUI(ossignal chan os.Signal) {
 	stripe := tview.NewTextView()
 	layout.AddItem(intro, 4, 1, false)
 	layout.AddItem(stripe, 5, 1, false)
-	layout.SetRect(1, 10, c.CONFIG.Hardware.Display.LedsTotal+4, 10)
+	layout.SetRect(1, 1, c.CONFIG.Hardware.Display.LedsTotal+4, 10)
 
 	stripe.SetBorder(true)
 	stripe.SetTextAlign(0)
