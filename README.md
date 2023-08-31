@@ -49,8 +49,8 @@ sensors, GPIO pins used for multiplexing etc.)
                               ┃┃               ╏╏╏╏
                               ▼┃               ▼▼▼▼
      ┏╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺┓
-     ╏       Multiplexing via AND/OR gates        ╏
-     ╏            driven by GPIO Pins             ╏
+     ╏       Multiplexing via AND/OR gates       ╏
+     ╏            driven by GPIO Pins            ╏
      ┗╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺┛
          ┃▲        ┃▲            ┃▲         ┃▲
          ┃┃        ┃┃            ┃┃         ┃┃
