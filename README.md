@@ -34,32 +34,5 @@ configurable via the config file - you can easily change
 it to match your hardware (number and lenght of stripes, sensors, placement of
 sensors, GPIO pins used for multiplexing etc.)
 
-
-
-               ╔══════════════════════════════════╗
-               ║                                  ║
-               ║     Raspberry Pi                 ║
-               ║                                  ║
-               ║                                  ║
-               ╚══════════════════════════════════╝
-                              ┃▲               ╏╏╏╏
-                              ┃┃               ╏╏╏╏
-                         SPI  ┃┃               ╏╏╏╏ GPIO
-                              ┃┃               ╏╏╏╏
-                              ┃┃               ╏╏╏╏
-                              ▼┃               ▼▼▼▼
-     ┏╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺┓
-     ╏       Multiplexing via AND/OR gates       ╏
-     ╏            driven by GPIO Pins            ╏
-     ┗╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺╺┛
-         ┃▲        ┃▲            ┃▲         ┃▲
-         ┃┃        ┃┃            ┃┃         ┃┃
-         ┃┃ SPI    ┃┃ SPI        ┃┃ SPI     ┃┃ SPI
-         ┃┃        ┃┃            ┃┃         ┃┃
-         ┃┃        ┃┃            ┃┃         ┃┃
-         ▼┃        ▼┃            ▼┃         ▼┃
-    ╭─────────╮╭─────────╮   ╭─────────╮╭─────────╮
-    │         ││         │   │         ││         │
-    │ LED 1   ││ LED 2   │...│ ADC 1   ││ ADC 2   │
-    ╰─────────╯╰─────────╯   ╰─────────╯╰─────────╯
+![Overview](/docs/overview.png)
 
