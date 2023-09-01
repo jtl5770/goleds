@@ -34,5 +34,5 @@ configurable via the config file - you can easily change
 it to match your hardware (number and lenght of stripes, sensors, placement of
 sensors, GPIO pins used for multiplexing etc.)
 
-![Overview](/docs/overview.png)
+![Overview](docs/overview.png)
 
