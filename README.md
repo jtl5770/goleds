@@ -1,13 +1,44 @@
 # Go-LEDS
 
 This project implements a multi-part LED stripe (ws2801) that is
-controlled by multiple infrared sensors (Sharp GP2Y0A21YK0F) attached
-to analog-digital converters (MCP3008) to catch people passing by with
-the net effect of illuminating a room.  All sensors and LED stripes
-are connected to a Raspberry Pi via SPI via a small board of logic
-chips to enable SPI multiplexing.
+controlled by multiple infrared sensors (Sharp GP2Y0A21YK0F or
+similar) attached to analog-digital converters (MCP3008)
+to turn on the LED stripes whenever someone is passing by. Sensors and
+LED stripes are connected to a Raspberry Pi via SPI and a small board
+of logic chips (AND and OR gates) to enable SPI multiplexing.
 
 ![Overview](docs/overview.png)
+
+
+## Example setup 
+
+The specific layout used in my hallway is shown below:
+
+| Stripe 1        | Door                 |        Stripe 2 |
+|:----------------|:--------------------:|----------------:|
+| LED 0-69        | "virtual LED" 70-110 |     LED 111-164 |
+| Sensor S0 left  | (invisible segment)  |  Sensor S2 left |
+| Sensor S1 right |                      | Sensor S3 right |
+
+This can be easily changed in the config file _config.yml_. 4 devices
+are attached via SPI (2 LED stripes, and 2 MCP3008 as analog-digital
+converters (ADC) - these 2 ADCs allow for up to 16 sensors to be
+attached, although only 4 are used in my setup). The reason 2
+ADCs are used for 4 sensors is a left-over from the first setup where 14
+sensors were used spread out over the length of the two LED
+stripes. This turned out to bring heavy problems with crosstalk
+between the sensors, so reducing them to be placed only at the
+possible entry points for people passing by proofed to be enough. 
+
+Other setups may have a need for more sensors, so the hardware can
+easily accomodate for 12 more input channels.
+
+All hardware related stuff is held in the hardware package and is
+configurable via the config file - you can easily change it to match
+your hardware (number and lenght of stripes, sensors, placement of
+sensors, GPIO pins used for multiplexing etc.)
+
+## Mode of operation 
 
 A couple of "producers" are supplied with the software (see the
 directoy named accordingly) - these control different ways to illuminate
@@ -20,20 +51,5 @@ vanishes at the point where the sensor is located.
 
 Other producers are explained in more detail below (**TODO**)
 
-All hardware related stuff is held in the hardware package but mostly
-configurable via the config file - you can easily change
-it to match your hardware (number and lenght of stripes, sensors, placement of
-sensors, GPIO pins used for multiplexing etc.)
 
-The specific layout used in my apartment is shown below:
-
-| Stripe 1        | Door                |        Stripe 2 |
-|:----------------|:-------------------:|----------------:|
-| 0-69            | (invisible segment) |          70-124 |
-| Sensor S0 left  |                     |  Sensor S2 left |
-| Sensor S1 right |                     | Sensor S3 right |
-
-This can be easily changed in the config file _config.yml_. 4 devices are used via
-SPI (2 led stripes, and 2 MCP3008 as ADC - these 2 ADCs allow for up
-to 16 sensors to be attached, although only 4 are used in my setup)
 
