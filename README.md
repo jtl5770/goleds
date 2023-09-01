@@ -40,7 +40,7 @@ placement of sensors, GPIO pins used for multiplexing etc.)
 More drastic changes (other types of LED stripes, using other ADC
 chips) may require changes in the code (_hardware/hardware.go_), or
 even at the hardware level (attaching more than 4 device e.g. more LED
-stripes) by changeing the multiplexing circuit.
+stripes) by changing the multiplexing circuit.
 
 ## Mode of operation 
 
