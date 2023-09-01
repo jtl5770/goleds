@@ -27,11 +27,11 @@ sensors, GPIO pins used for multiplexing etc.)
 
 The specific layout used in my apartment is shown below:
 
-| Stripe 1        | Door       | Stripe 2        |
-|:----------------|:----------:|----------------:|
-| 0-69            | (invisible | 70-124          |
-| Sensor S0 left  | segment)   | Sensor S2 left  |
-| Sensor S1 right |            | Sensor S3 right |
+| Stripe 1        | Door                |        Stripe 2 |
+|:----------------|:-------------------:|----------------:|
+| 0-69            | (invisible segment) |          70-124 |
+| Sensor S0 left  |                     |  Sensor S2 left |
+| Sensor S1 right |                     | Sensor S3 right |
 
 This can be easily changed in the config file _config.yml_. 4 devices are used via
 SPI (2 led stripes, and 2 MCP3008 as ADC - these 2 ADCs allow for up
