@@ -18,15 +18,33 @@ type ledsegment struct {
 	leds         []p.Led
 }
 
+func clamp(led int) int {
+	if led < 0 {
+		log.Printf("led index %d is smaller than 0 - using 0", led)
+		return 0
+	} else if led >= 0 && led <= (c.CONFIG.Hardware.Display.LedsTotal-1) {
+		return led
+	} else {
+		log.Printf("led index %d is smaller than max index %d - using max", led, c.CONFIG.Hardware.Display.LedsTotal-1)
+		return c.CONFIG.Hardware.Display.LedsTotal - 1
+	}
+}
+
 func NewLedSegment(firstled, lastled, spimultiplex int, visible bool) *ledsegment {
-	inst := ledsegment{
-		firstled:     firstled,
-		lastled:      lastled,
-		visible:      visible,
-		spimultiplex: spimultiplex,
+	if firstled > lastled {
+		log.Printf("First led index %d is bigger than last led index %d - reversing", firstled, lastled)
+		tmp := firstled
+		firstled = lastled
+		lastled = tmp
 	}
 	if !visible {
-		inst.spimultiplex = -1
+		spimultiplex = -1
+	}
+	inst := ledsegment{
+		firstled:     clamp(firstled),
+		lastled:      clamp(lastled),
+		visible:      visible,
+		spimultiplex: spimultiplex,
 	}
 	return &inst
 }
