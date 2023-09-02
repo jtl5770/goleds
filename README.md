@@ -117,6 +117,10 @@ time mode like this:
 The program is called `goleds_pi` here as it is cross compiled via
 `build.sh` for ARM on my development machine.
 
+The command line switch `-real` is needed to tell the program to
+really try to interact with the GPIO and SPI on the Pi (see next
+section on what happens if you don't use the `-real` switch)
+
 ### Text based UI for simulating
 
 Go-LEDS comes with a little text user interface simulation program to
@@ -127,5 +131,6 @@ to develop away from the real hardware.
 
 ![Go-LEDS TUI](images/goleds-tui.png)
 
-Go-LEDS starts automatically whenever called without the `-real`
-command line parameter. 
+Go-LEDS starts automatically in TUI simulation mode whenever called
+without the `-real` command line parameter.
+
