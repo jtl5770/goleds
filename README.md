@@ -47,13 +47,19 @@ stripes) by changing the multiplexing circuit.
 ## Mode of operation 
 
 A couple of "producers" are supplied with the software (see the
-directoy named accordingly) - these control different ways to illuminate
-the stripes. The most important one is the sensorledproducer - each
-sensor is linked to one instance of those. It reacts to a sensor
-trigger by illuminating the stripe LED by LED starting from the
-position of the sensor to both ends of the stripe. After a while, the
-effect is reversed and the lighted area shrinks LED by LED until it
-vanishes at the point where the sensor is located.
+directory named accordingly) - these control different ways to
+illuminate the stripes. All stripe segments (including invisible ones)
+are combined into one, full stripe as far as the software is
+concerned. In the example above, the producers see a LED stripe of 165
+LEDs that can be illuminated independently (and also independently
+colored)
+
+The most important producer is the sensorledproducer - each sensor is
+linked to one instance of those. It reacts to a sensor trigger by
+illuminating the stripe LED by LED starting from the position of the
+sensor to both ends of the stripe. After a while, the effect is
+reversed and the lighted area shrinks LED by LED until it vanishes at
+the point where the sensor is located.
 
 Other producers are explained in more detail below (**TODO**)
 
