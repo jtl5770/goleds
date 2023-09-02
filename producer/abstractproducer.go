@@ -74,7 +74,7 @@ func (s *AbstractProducer) getLastStart() t.Time {
 
 // Used to start the main worker process as a go routine. Does never
 // block.  When the worker go routine is already running, it does
-// nothing besides updating s.lastFire to the current time. If the
+// nothing besides updating s.lastStart to the current time. If the
 // worker go routine is started and s.isRunning is set to true, no
 // intermediate call to Fire() will be able to start another worker
 // concurrently.  The method is guarded by s.updateMutex

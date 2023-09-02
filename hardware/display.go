@@ -84,13 +84,11 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 			if !c.CONFIG.RealHW {
 				simulateLedDisplay()
 			} else if c.CONFIG.RealHW {
-				// spiMutex.Lock()
 				for _, seg := range SEGMENTS {
 					if seg.visible {
 						setLedSegment(seg.spimultiplex, seg.getSegmentLeds())
 					}
 				}
-				// spiMutex.Unlock()
 			}
 		}
 	}
