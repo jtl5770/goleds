@@ -44,6 +44,11 @@ chips) may require changes in the code (`hardware/hardware.go`), or
 even at the hardware level (attaching more than 4 devices e.g. more LED
 stripes) by changing the multiplexing circuit.
 
+### Building the hardware
+
+The setup of the hardware used to implement the setup described above
+is detailed [here](Hardware.md)
+
 ## Mode of operation 
 
 A couple of "producers" are supplied with the software (see the
