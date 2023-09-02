@@ -54,14 +54,27 @@ concerned. In the example above, the producers see a LED stripe of 165
 LEDs that can be illuminated independently (and also independently
 colored)
 
-The most important producer is the sensorledproducer - each sensor is
-linked to one instance of those. It reacts to a sensor trigger by
+The most important producer is the `sensorledproducer` - each sensor
+is linked to one instance of those. It reacts to a sensor trigger by
 illuminating the stripe LED by LED starting from the position of the
 sensor to both ends of the stripe. After a while, the effect is
 reversed and the lighted area shrinks LED by LED until it vanishes at
-the point where the sensor is located.
+the point where the sensor is located.  Other producers are explained
+in more detail below.
 
-Other producers are explained in more detail below (**TODO**)
+All producers hold their independent internal representation of the
+full stripe. For displaying, all the data of all producers is combined
+and the result is displayed on the various LED stripe segments (or
+simply not displayed in the case of an invisible segment). That also
+means, that multiple producers can be active (and often are) at the
+same time.
+
+The combination of the different dedicated LED values from all
+producers is very naive - for each LED, take the max of all the
+producers data for that LED, but component wise for red, green and
+blue. E.g, if you combine a LED value of red,green,blue `[10,20,30]` with
+`[10,10,40]` and `[15,5,5]` the result will be `[15,20,40]`. 
+
 
 
 

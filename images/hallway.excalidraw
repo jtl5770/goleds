@@ -2944,9 +2944,9 @@
     {
       "id": "LFiM5-2PIc4TRO28zTkXA",
       "type": "text",
-      "x": 764.9135112626503,
+      "x": 741.9135112626503,
       "y": 593.7033132510527,
-      "width": 200.91241455078125,
+      "width": 252.35255432128906,
       "height": 40,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -2960,8 +2960,8 @@
       "frameId": null,
       "roundness": null,
       "seed": 478162139,
-      "version": 209,
-      "versionNonce": 1249716981,
+      "version": 242,
+      "versionNonce": 2105123317,
       "isDeleted": false,
       "boundElements": [
         {
@@ -2973,26 +2973,26 @@
           "type": "arrow"
         }
       ],
-      "updated": 1693645104289,
+      "updated": 1693652190843,
       "link": null,
       "locked": false,
-      "text": "LED stripe attached \nto the underside of shelf",
+      "text": "LED stripe segments attached \nto the underside of shelf",
       "fontSize": 16,
       "fontFamily": 1,
-      "textAlign": "left",
+      "textAlign": "center",
       "verticalAlign": "top",
       "baseline": 34,
       "containerId": null,
-      "originalText": "LED stripe attached \nto the underside of shelf",
+      "originalText": "LED stripe segments attached \nto the underside of shelf",
       "lineHeight": 1.25
     },
     {
       "id": "cd6Hm4NP51NSOibbR0_wG",
       "type": "arrow",
-      "x": 755.6154118558943,
-      "y": 613.0757637086045,
-      "width": 245.59897995994584,
-      "height": 174.5066327355093,
+      "x": 732.6154118558943,
+      "y": 608.7025518485905,
+      "width": 222.59897995994584,
+      "height": 170.13342087549523,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "#ffc9c9",
@@ -3007,11 +3007,11 @@
         "type": 2
       },
       "seed": 886532731,
-      "version": 175,
-      "versionNonce": 125233883,
+      "version": 207,
+      "versionNonce": 1776378843,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1693645104289,
+      "updated": 1693652190843,
       "link": null,
       "locked": false,
       "points": [
@@ -3020,12 +3020,12 @@
           0
         ],
         [
-          -149.3876924114138,
-          -54.55132979961934
+          -126.38769241141381,
+          -50.17811793960527
         ],
         [
-          -245.59897995994584,
-          -174.5066327355093
+          -222.59897995994584,
+          -170.13342087549523
         ]
       ],
       "lastCommittedPoint": null,
@@ -3041,10 +3041,10 @@
     {
       "id": "1mn1Rqqa9wPp8OG2KaPZQ",
       "type": "arrow",
-      "x": 977.7279224309796,
-      "y": 616.3933796539432,
-      "width": 162.30452997144607,
-      "height": 169.1864456982886,
+      "x": 1006.1680622014874,
+      "y": 610.2207640075868,
+      "width": 133.86439020093826,
+      "height": 163.01383005193225,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "#ffc9c9",
@@ -3059,11 +3059,11 @@
         "type": 2
       },
       "seed": 1787189173,
-      "version": 146,
-      "versionNonce": 2145780821,
+      "version": 178,
+      "versionNonce": 708549461,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1693645104289,
+      "updated": 1693652190843,
       "link": null,
       "locked": false,
       "points": [
@@ -3072,12 +3072,12 @@
           0
         ],
         [
-          101.45888300449451,
-          -62.59239384786872
+          73.0187432339867,
+          -56.41977820151237
         ],
         [
-          162.30452997144607,
-          -169.1864456982886
+          133.86439020093826,
+          -163.01383005193225
         ]
       ],
       "lastCommittedPoint": null,
@@ -3093,9 +3093,9 @@
     {
       "id": "DNYgJL9Z0MIJHwACHmQuR",
       "type": "text",
-      "x": 778.1013995711116,
+      "x": 774.9573871199398,
       "y": 479.9145322887832,
-      "width": 168.44834899902344,
+      "width": 174.7363739013672,
       "height": 60,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -3109,8 +3109,8 @@
       "frameId": null,
       "roundness": null,
       "seed": 153378677,
-      "version": 193,
-      "versionNonce": 390204373,
+      "version": 291,
+      "versionNonce": 1805566331,
       "isDeleted": false,
       "boundElements": [
         {
@@ -3118,25 +3118,25 @@
           "type": "arrow"
         }
       ],
-      "updated": 1693646089059,
+      "updated": 1693652382220,
       "link": null,
       "locked": false,
-      "text": "\"virtual\" LEDs\nused when calculating\nbut not displayed",
+      "text": "\"virtual\" segment used\nwhile calculating\nbut not for display",
       "fontSize": 16,
       "fontFamily": 1,
       "textAlign": "center",
       "verticalAlign": "top",
       "baseline": 54,
       "containerId": null,
-      "originalText": "\"virtual\" LEDs\nused when calculating\nbut not displayed",
+      "originalText": "\"virtual\" segment used\nwhile calculating\nbut not for display",
       "lineHeight": 1.25
     },
     {
       "id": "Ogzxhun7wtaG23dDCS5sG",
       "type": "arrow",
-      "x": 852.6649751551975,
+      "x": 852.2118782542874,
       "y": 476.754827721469,
-      "width": 21.472698921471498,
+      "width": 21.925795822381552,
       "height": 43.4391580824833,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -3152,11 +3152,11 @@
         "type": 2
       },
       "seed": 1125798741,
-      "version": 152,
-      "versionNonce": 2123696123,
+      "version": 250,
+      "versionNonce": 868509621,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1693646089060,
+      "updated": 1693652382220,
       "link": null,
       "locked": false,
       "points": [
@@ -3165,11 +3165,11 @@
           0
         ],
         [
-          14.03921687957234,
+          14.492313780482394,
           -17.808256216770374
         ],
         [
-          21.472698921471498,
+          21.925795822381552,
           -43.4391580824833
         ]
       ],
