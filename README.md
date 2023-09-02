@@ -109,11 +109,13 @@ normal walking speed fully to the right:
 ### How to start the program on the Raspberry Pi
 
 The SPI library used really wants to have full priority for getting
-its timing right. My best experience comes from having it run real
+its timing right. My best experience comes from having it run in real
 time mode like this:
 
 `chrt 99 /path/to/goleds/goleds_pi -real`
 
+The program is called `goleds_pi` here as it is cross compiled via
+`build.sh` for ARM on my development machine.
 
 ### Text based UI for simulating
 
