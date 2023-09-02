@@ -61,7 +61,7 @@ Hardware:
     ForceUpdateDelay: 1000ms
     LedsTotal: 165
     ColorCorrection: [1, 0.175, 0.05]
-    Segments:
+    LedSegments:
       - FirstLed: 0
         LastLed: 69
         Visible: true

@@ -85,7 +85,7 @@ func sensorDisplay(sensorvalues map[string]*deque.Deque[int]) {
 	content.SetText(buft.String() + "\n" + bufm.String() + "\n" + bufb.String())
 }
 
-func simulateLed(segment *Segment) (string, string) {
+func simulateLed(segment *ledsegment) (string, string) {
 	if !segment.visible {
 		return strings.Repeat(" ", segment.lastled-segment.firstled+1),
 			strings.Repeat("·", segment.lastled-segment.firstled+1)

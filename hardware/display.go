@@ -8,9 +8,9 @@ import (
 	p "lautenbacher.net/goleds/producer"
 )
 
-var SEGMENTS []*Segment
+var SEGMENTS []*ledsegment
 
-type Segment struct {
+type ledsegment struct {
 	firstled     int
 	lastled      int
 	visible      bool
@@ -18,17 +18,20 @@ type Segment struct {
 	leds         []p.Led
 }
 
-func NewSegment(firstled, lastled, spimultiplex int, visible bool) *Segment {
-	inst := Segment{
+func NewLedSegment(firstled, lastled, spimultiplex int, visible bool) *ledsegment {
+	inst := ledsegment{
 		firstled:     firstled,
 		lastled:      lastled,
 		visible:      visible,
 		spimultiplex: spimultiplex,
 	}
+	if !visible {
+		inst.spimultiplex = -1
+	}
 	return &inst
 }
 
-func (s *Segment) getSegmentLeds() []p.Led {
+func (s *ledsegment) getSegmentLeds() []p.Led {
 	if s.visible {
 		return s.leds
 	} else {
@@ -36,16 +39,16 @@ func (s *Segment) getSegmentLeds() []p.Led {
 	}
 }
 
-func (s *Segment) setSegmentLeds(sumleds []p.Led) {
+func (s *ledsegment) setSegmentLeds(sumleds []p.Led) {
 	if s.visible {
 		s.leds = sumleds[s.firstled : s.lastled+1]
 	}
 }
 
 func InitDisplay() {
-	SEGMENTS = make([]*Segment, 0, len(c.CONFIG.Hardware.Display.Segments))
-	for _, seg := range c.CONFIG.Hardware.Display.Segments {
-		SEGMENTS = append(SEGMENTS, NewSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Visible))
+	SEGMENTS = make([]*ledsegment, 0, len(c.CONFIG.Hardware.Display.LedSegments))
+	for _, seg := range c.CONFIG.Hardware.Display.LedSegments {
+		SEGMENTS = append(SEGMENTS, NewLedSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Visible))
 	}
 }
 
