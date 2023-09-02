@@ -84,25 +84,26 @@ With this information we can understand what happens when a person is
 entering the area of the LED stripes e.g. from left and passes in
 normal walking speed full to the right:
 
-1. passing S0, the stripe is illuminated starting at LED index 0,
+1. passing `S0`, the stripe is illuminated starting at LED index `0`,
    quickly growing to fully light all LEDs up to the rightmost one at
-   index 164
+   index `164`
    
-2. passing S1, the associated producer lights the LED at position 69,
-   and the effect grows in both directions to cover all LEDs. But
-   because of the delay between S0 and S1 triggering, and because of
-   both producers using exactly the same definition for their ON
-   state, this is not visible (S0 has always already switched on the
-   LEDs that are to be illuminated by S1)
+2. passing `S1`, the associated producer lights the LED at position
+   `69`, and the effect grows in both directions to cover all
+   LEDs. But because of the delay between `S0` and `S1` triggering,
+   and because of both producers using exactly the same definition for
+   their ON state, this is not visible (`S0` has always already
+   switched on the LEDs before they are illuminated by `S1`)
    
-3. similar for S2
+3. similar for `S2`
 
-4. Again similar for S3. In the meantime the S0 producer (or maybe
-   even S1, S2) may have already started or finished to shrink back to
-   the index of their origin. Again this is not visible because S3 is
-   the last one still illuminating the full stripe. After a
-   configurable time, S3 starts to shrink again the illuminated part
-   of the stripe with the effect that the LEDs start to go off one by
-   one starting at index 0 until all LEDs are off again.
+4. Again similar for `S3`. In the meantime the `S0` producer (or maybe
+   even `S1`, `S2`) may have already started or finished to shrink
+   back to the index of their origin. Again this is not visible
+   because `S3` is the last one still illuminating the full
+   stripe. After a configurable time, `S3` starts to shrink again the
+   illuminated part of the stripe with the effect that the LEDs start
+   to go off one by one starting at index `0` until all LEDs are off
+   again.
 
 
