@@ -82,7 +82,7 @@ blue. E.g, if you combine a LED value of red,green,blue `[10,20,30]` with
 
 With this information we can understand what happens when a person is
 entering the area of the LED stripes e.g. from left and passes in
-normal walking speed full to the right:
+normal walking speed fully to the right:
 
 1. passing `S0`, the stripe is illuminated starting at LED index `0`,
    quickly growing to fully light all LEDs up to the rightmost one at
@@ -106,4 +106,12 @@ normal walking speed full to the right:
    to go off one by one starting at index `0` until all LEDs are off
    again.
 
+### Text based UI for simulating
 
+Go-LEDS comes with a little text user interface simulation program to
+aid during the development of new producers. Brightness is represented
+here by different sizes of graphical block symbols for each LED. Color
+reproduction is not really faithful to reality, but enough to be able
+to develop away from the real hardware.
+
+![Go-LEDS TUI](images/goleds-tui.png)
