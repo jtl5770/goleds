@@ -46,8 +46,8 @@ stripes) by changing the multiplexing circuit.
 
 ### Building the hardware
 
-The setup of the hardware used to implement the setup described above
-is detailed [here](Hardware.md)
+The hardware used to implement the setup described above is detailed
+[here](Hardware.md)
 
 ## Mode of operation 
 
@@ -106,6 +106,15 @@ normal walking speed fully to the right:
    to go off one by one starting at index `0` until all LEDs are off
    again.
 
+### How to start the program on the Raspberry Pi
+
+The SPI library used really wants to have full priority for getting
+its timing right. My best experience comes from having it run real
+time mode like this:
+
+`chrt 99 /path/to/goleds/goleds_pi -real`
+
+
 ### Text based UI for simulating
 
 Go-LEDS comes with a little text user interface simulation program to
@@ -115,3 +124,6 @@ reproduction is not really faithful to reality, but enough to be able
 to develop away from the real hardware.
 
 ![Go-LEDS TUI](images/goleds-tui.png)
+
+Go-LEDS starts automatically whenever called without the `-real`
+command line parameter. 
