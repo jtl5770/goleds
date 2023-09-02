@@ -35,12 +35,12 @@ Other setups may have a need for more sensors, so the hardware can
 easily accomodate for 12 more input channels.
 
 All hardware related stuff is held in the hardware package and is
-configurable via the config file _config.yml_ - you can easily change
+configurable via the config file `config.yml` - you can easily change
 it to match your hardware (number and lenght of stripes, sensors,
 placement of sensors, GPIO pins used for multiplexing etc.)
 
 More drastic changes (other types of LED stripes, using other ADC
-chips) may require changes in the code (_hardware/hardware.go_), or
+chips) may require changes in the code (`hardware/hardware.go`), or
 even at the hardware level (attaching more than 4 devices e.g. more LED
 stripes) by changing the multiplexing circuit.
 
