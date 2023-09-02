@@ -7,7 +7,7 @@ to turn on the LED stripes whenever someone is passing by. Sensors and
 LED stripes are connected to a Raspberry Pi via SPI and a small board
 of logic chips (AND and OR gates) to enable SPI multiplexing.
 
-![Overview](docs/overview.png)
+![Overview](images/overview.png)
 
 
 ## Example setup 
@@ -39,7 +39,7 @@ placement of sensors, GPIO pins used for multiplexing etc.)
 
 More drastic changes (other types of LED stripes, using other ADC
 chips) may require changes in the code (_hardware/hardware.go_), or
-even at the hardware level (attaching more than 4 device e.g. more LED
+even at the hardware level (attaching more than 4 devices e.g. more LED
 stripes) by changing the multiplexing circuit.
 
 ## Mode of operation 
