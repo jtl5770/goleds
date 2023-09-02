@@ -68,11 +68,11 @@ the point where the sensor is located.  Other producers are explained
 in more detail below.
 
 All producers hold their independent internal representation of the
-full stripe. For displaying, all the data of all producers is combined
-and the result is displayed on the various LED stripe segments (or
-simply not displayed in the case of an invisible segment). That also
-means, that multiple producers can be active (and often are) at the
-same time.
+full stripe. For displaying on the real LEDs, all the
+data of all producers is combined and the result is displayed on the
+various LED stripe segments (or simply not displayed in the case of an
+invisible segment). That also means that multiple producers can be
+active (and often are) at the same time.
 
 The combination of the different dedicated LED values from all
 producers is very naive - for each LED, take the max of all the
@@ -80,6 +80,29 @@ producers data for that LED, but component wise for red, green and
 blue. E.g, if you combine a LED value of red,green,blue `[10,20,30]` with
 `[10,10,40]` and `[15,5,5]` the result will be `[15,20,40]`. 
 
+With this information we can understand what happens when a person is
+entering the area of the LED stripes e.g. from left and passes in
+normal walking speed full to the right:
 
+1. passing S0, the stripe is illuminated starting at LED index 0,
+   quickly growing to fully light all LEDs up to the rightmost one at
+   index 164
+   
+2. passing S1, the associated producer lights the LED at position 69,
+   and the effect grows in both directions to cover all LEDs. But
+   because of the delay between S0 and S1 triggering, and because of
+   both producers using exactly the same definition for their ON
+   state, this is not visible (S0 has always already switched on the
+   LEDs that are to be illuminated by S1)
+   
+3. similar for S2
+
+4. Again similar for S3. In the meantime the S0 producer (or maybe
+   even S1, S2) may have already started or finished to shrink back to
+   the index of their origin. Again this is not visible because S3 is
+   the last one still illuminating the full stripe. After a
+   configurable time, S3 starts to shrink again the illuminated part
+   of the stripe with the effect that the LEDs start to go off one by
+   one starting at index 0 until all LEDs are off again.
 
 
