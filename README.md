@@ -20,13 +20,15 @@ The specific layout used in my hallway is shown below:
 | Sensor S0 left  | (invisible segment)  |  Sensor S2 left |
 | Sensor S1 right |                      | Sensor S3 right |
 
+![Hallway](images/hallway.png)
+
 4 devices are connected via SPI (2 LED stripes, and 2 MCP3008 as
 analog-digital converters (ADC) - these 2 ADCs allow for up to 16
 sensors to be attached, although only 4 are used in my setup). The
 reason 2 ADCs are used for 4 sensors is a left-over from the first
 setup where 14 sensors were used spread out over the length of the two
 LED stripes. This turned out to be problematic because of heavy
-crosstalk between the sensors, so reducing them to be placed only at
+cross talk between the sensors, so reducing them to be placed only at
 the possible entry points for people passing by proofed to be enough.
 
 Other setups may have a need for more sensors, so the hardware can
