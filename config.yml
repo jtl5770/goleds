@@ -1,3 +1,59 @@
+Hardware:
+  SPIFrequency: 2097152
+  Display:
+    ForceUpdateDelay: 1000ms
+    LedsTotal: 165
+    ColorCorrection: [1, 0.175, 0.05]
+    LedSegments:
+      - FirstLed: 0
+        LastLed: 69
+        Visible: true
+        SpiMultiplex: 0
+      - FirstLed: 70
+        LastLed: 110
+        Visible: false
+      - FirstLed: 111
+        LastLed: 164
+        Visible: true
+        SpiMultiplex: 1
+  Sensors:
+    SmoothingSize: 3
+    LoopDelay: 10ms
+    SensorCfg:
+      S0:
+        LedIndex: 0
+        SpiMultiplex: 2
+        AdcChannel: 0
+        TriggerValue: 47
+      S1:
+        LedIndex: 69
+        SpiMultiplex: 2
+        AdcChannel: 7
+        TriggerValue: 50
+      S2:
+        LedIndex: 111
+        SpiMultiplex: 3
+        AdcChannel: 0
+        TriggerValue: 60
+      S3:
+        LedIndex: 164
+        SpiMultiplex: 3
+        AdcChannel: 5
+        TriggerValue: 52
+  SpiMultiplexGPIO:
+    0:
+      Low: [17]
+      High: [22,23,24]
+    1:
+      Low: [22]
+      High: [17,23,24]
+    2:
+      Low: [17,22,23]
+      High: [24]
+    3:
+      Low: [17,22,24]
+      High: [23]
+
 SensorLED:
   Enabled: true
   RunUpDelay: 5ms
@@ -54,59 +110,3 @@ MultiBlobLED:
       X: 150
       Width: 512 
       LedRGB: [30, 0, 0]
-
-Hardware:
-  SPIFrequency: 2097152
-  Display:
-    ForceUpdateDelay: 1000ms
-    LedsTotal: 165
-    ColorCorrection: [1, 0.175, 0.05]
-    LedSegments:
-      - FirstLed: 0
-        LastLed: 69
-        Visible: true
-        SpiMultiplex: 0
-      - FirstLed: 70
-        LastLed: 110
-        Visible: false
-      - FirstLed: 111
-        LastLed: 164
-        Visible: true
-        SpiMultiplex: 1
-  Sensors:
-    SmoothingSize: 3
-    LoopDelay: 10ms
-    SensorCfg:
-      S0:
-        LedIndex: 0
-        SpiMultiplex: 2
-        AdcChannel: 0
-        TriggerValue: 47
-      S1:
-        LedIndex: 69
-        SpiMultiplex: 2
-        AdcChannel: 7
-        TriggerValue: 50
-      S2:
-        LedIndex: 111
-        SpiMultiplex: 3
-        AdcChannel: 0
-        TriggerValue: 60
-      S3:
-        LedIndex: 164
-        SpiMultiplex: 3
-        AdcChannel: 5
-        TriggerValue: 52
-  SpiMultiplexGPIO:
-    0:
-      Low: [17]
-      High: [22,23,24]
-    1:
-      Low: [22]
-      High: [17,23,24]
-    2:
-      Low: [17,22,23]
-      High: [24]
-    3:
-      Low: [17,22,24]
-      High: [23]
