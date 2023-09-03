@@ -105,6 +105,14 @@ normal walking speed fully to the right:
    illuminated part of the stripe with the effect that the LEDs start
    to go off one by one starting at index `0` until all LEDs are off
    again.
+   
+### Full configuration
+
+The system is configured via a config file (default is `config.yml`
+but this can be overwritten on the command line with the switch
+`-config`)
+
+See the example configuration [here](config.yml).
 
 ### How to start the program on the Raspberry Pi
 
