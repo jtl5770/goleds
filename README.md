@@ -113,7 +113,7 @@ but this can be overwritten on the command line with the switch
 `-config`)
 
 **See the example configuration [here](config.yml). Please look into
-this for a description of all the config parameters.**
+this file for a description of all the config parameters.**
 
 Some more important aspects that need explanation that go beyond what
 can be learned from the configuration file and its comments:
