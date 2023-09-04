@@ -112,7 +112,13 @@ The system is configured via a config file (default is `config.yml`
 but this can be overwritten on the command line with the switch
 `-config`)
 
-See the example configuration [here](config.yml).
+See the example configuration [here](config.yml). Please look into
+this for explanations of all the config parameters.
+
+Some more important aspects that need explanation that go beyond what
+can be learned from the configuration file and its comments:
+
+TODO
 
 ### How to start the program on the Raspberry Pi
 
