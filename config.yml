@@ -22,9 +22,10 @@ Hardware:
     # translating to what the real LEDs should display, we apply these
     # correction factors (you can see how extremely heaavy I need to
     # dampen the blue and green component to arrive at a desired nice,
-    # warm white color). This is a very crude way to do so. The goal
-    # for me is to ensure that a white color setting for the sensorled
-    # (see below) is pleasant to my eyes.
+    # warm white color). This is a very crude way to do so, but enough
+    # for my needs for now. The goal for me is to ensure that a white
+    # color setting for the sensorled (see below) is pleasant to my
+    # eyes.
     ColorCorrection: [1, 0.175, 0.05]
     # Here comes the mapping of the internal repesentation of a single
     # linea stripe of "LedsTotal" LEDs to real worl segmeents of LEDs
