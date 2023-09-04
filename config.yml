@@ -122,26 +122,51 @@ Hardware:
 # the sensor determines where the zero point for the groe -> stay ->
 # shring effect on the stripe is
 SensorLED:
-  # well, you could potentiall just not enable the whole thing
+  # well, you could potentially just not enable the whole thing but
+  # that would effectively turn off the core functionality of the
+  # whole system
   Enabled: true
   # How fast it grows one LED at a time in both directions
   RunUpDelay: 5ms
   # How fast it shrinks down again
   RunDownDelay: 20ms
-  # How long it remians in the fully lit state
+  # How long it remains in the fully lit state
   HoldTime: 10s
-  # the color and intensity of the lit LEDs
+  # the color and intensity of the lit LEDs. See also the description
+  # of the ColorCorrection paramter above
   LedRGB: [70, 70, 70]
 
+# A producer that generates a continuous light during sunset and
+# sunrise identical for all LEDs
 NightLED:
   Enabled: true
+  # Sunrise and sunset depend on the geographical place where the
+  # system is installed
   Latitude: 49.014
   Longitude: 8.4043
+  # an array of color definitions to use during the night. The
+  # duration between sunset and sunrise is evenly divided between the
+  # different definitions. Repeating the same color multiple times
+  # essentially makes the time the color is shown proportionally
+  # longer (here: 2/3 of the night a low red glow, 1/3 a low blue glow)
   LedRGB:
     - [1, 0, 0]
     - [1, 0, 0]
+    # There is a 20 instead of a 1 here because of the ColorCorrection
+    # explained above, this would otherwise reduce the blue glow to
+    # not be visible at all. So 20 is already the lowest setting for
+    # blue (given the LED stripe in use).
     - [0, 0, 20]
 
+# A producer that reacts to getting continuous trigger events from one
+# sensor for minimum TriggerDelay and of Value of greater than
+# TriggerValue. This will light the full stripe for maximum HoldTime
+# with the color and intensity given in LedRGB. In other words: you
+# can hold your hand very close to one sensor for longer than
+# TriggerDelay, and the whole stripe will light up brighter for a
+# certain time. You can alternatively stop the producer when running
+# by holding your hand very close for the same time again (it
+# essentiall toggles between on and off)    
 HoldLED:
   Enabled: true
   HoldTime: 5m
@@ -149,25 +174,32 @@ HoldLED:
   TriggerValue: 160
   LedRGB: [140, 140, 140]
 
-CylonLED:
-  Enabled: false
-  Duration: 20s
-  Delay: 30ms
-  Step: 1.7
-  Width: 7
-  LedRGB: [255, 0, 0]
-
+# A cute little effect of colored blobs moving around on the stripe,
+# bouncing and reflecting of each other, and having their color
+# components mixed. It will be triggered by the end of the sensorled
+# effect (that means: wehen all LEDs are dark again after a
+# sensorledproducer has done its grow-stay-shrink cycle)  
 MultiBlobLED:
   Enabled: true
+  # How long to stay active after starting
   Duration: 120s
+  # How much delay between moving the blobs around one step. Smaller
+  # delay -> faster movement
   Delay: 120ms
+  # All the blobs that should be visible
   BlobCfg:
-    BlobRed:                    
+    BlobRed:
+      # How much to move with each step
       DeltaX: 0.3
+      # Where to start on the stripe
       X: 20
+      # A measure that influences the width of the blob. Just play
+      # around with the numbers here
       Width: 512
+      # The color and intensity of the blob
       LedRGB: [30, 0, 0]
     BlobGreen:
+      # negative means: start to move to the left
       DeltaX: -0.5
       X: 40
       Width: 512
@@ -182,3 +214,22 @@ MultiBlobLED:
       X: 150
       Width: 512 
       LedRGB: [30, 0, 0]
+
+# This is an example of a very simple producer. It produces a (default
+# red) dot that is moving rapidly from left to right and back (a bit
+# like the cylons from Battlestar Galactica... hence the name).  Look
+# into the source code of cylonproducer.go to see how to set up a
+# minimal producer.
+CylonLED:
+  Enabled: false
+  # How long to be active before shutting down again
+  Duration: 20s
+  # Delay between moving 1 Step to left or right. 
+  Delay: 30ms
+  # How far to move per step (in LEDs). Can be a float.
+  Step: 1.7
+  # Width of the dot moving around
+  Width: 7
+  # Color of the dot.
+  LedRGB: [255, 0, 0]
+
