@@ -118,7 +118,20 @@ this for a description of all the config parameters.**
 Some more important aspects that need explanation that go beyond what
 can be learned from the configuration file and its comments:
 
-
+There is a currently hard coded dependency between the different
+producers: 
+  * At the end of a trigger cycle of (maybe multiple)
+  sensorledproducers (in other words: when the lights have gone off
+  again) both multiblobproducer and cylonproducer are triggered to
+  start (if they are enabled in the ifrst place). They then run either
+  their configured time or are being stopped again when another
+  sensorledproducer cycle is being started.
+  * If the multiblobproducer is started, it stops for the time of its
+    activity a possibly running nightlightproducer.
+  * The cylonproducer does not stop the nightlightproducer
+    
+This is done so the different colors and LEDs don't mix with each
+other where we don't want that.
 
 ### How to start the program on the Raspberry Pi
 
