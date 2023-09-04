@@ -14,11 +14,11 @@ of logic chips (AND and OR gates) to enable SPI multiplexing.
 
 The specific layout used in my hallway is shown below:
 
-| Stripe 1                   | Door                 |                    Stripe 2 |
-|:---------------------------|:--------------------:|----------------------------:|
-| LED 0-69                   | "virtual LED" 70-110 |                 LED 111-164 |
-| Sensor S0 left (index 0)   | (invisible segment)  |  Sensor S2 left (index 111) |
-| Sensor S1 right (index 69) |                      | Sensor S3 right (index 164) |
+| Stripe 1                   | Door                                     |                    Stripe 2 |
+|:---------------------------|:----------------------------------------:|----------------------------:|
+| LED 0-69                   | "virtual LED" 70-110 (invisible segment) |                 LED 111-164 |
+| Sensor S0 left (index 0)   |                                          |  Sensor S2 left (index 111) |
+| Sensor S1 right (index 69) |                                          | Sensor S3 right (index 164) |
 
 ![Hallway](images/hallway.png)
 
