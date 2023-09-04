@@ -1,29 +1,83 @@
+# The description and configuration of the hardware
 Hardware:
+  # The frequenzy in Hz the SPI bus is run. You can't get dramatically
+  # higher in the Raspi as it seems 
   SPIFrequency: 2097152
+  # Here we describe aspects of how exactly the display is being set up
   Display:
+    # This number gives how often die LED stripes are forcefully set
+    # new even when no changes happen from any producer. The reason is
+    # that sometimes electrical noise or interference may randomly
+    # change around the status of some LEDs (lit/unlit, color). So we
+    # make sure to set the whole stripes back to the desired values
+    # every short time
     ForceUpdateDelay: 1000ms
+    # How many "internal LEDs"" in total are there for the producers
+    # to work with. These are not necessarily the number of LEDs on
+    # the stripes (see below)
     LedsTotal: 165
+    # My LED stripes used are unfortunately very much on the bluish
+    # side of things when evenly lit. Internally, we simply calculate
+    # with RGB {255, 255, 255} being the desired full white. When
+    # translating to what the real LEDs should display, we apply these
+    # correction factors (you can see how extremely heaavy I need to
+    # dampen the blue and green component to arrive at a desired nice,
+    # warm white color). This is a very crude way to do so. The goal
+    # for me is to ensure that a white color setting for the sensorled
+    # (see below) is pleasant to my eyes.
     ColorCorrection: [1, 0.175, 0.05]
+    # Here comes the mapping of the internal repesentation of a single
+    # linea stripe of "LedsTotal" LEDs to real worl segmeents of LEDs
+    # and also to "virtual segments" which are not mapped to any real
+    # LED stripe. 
     LedSegments:
+      # The index of the LED from the internal stripe that is the
+      # first LED of the segment
       - FirstLed: 0
+        # and the same for the last one
         LastLed: 69
+        # true if it is a real LED stripe segment, false if it is just
+        # a virtual segment
         Visible: true
+        # which SPI multiplex configuration must be used to adress
+        # that stripe (see belwo). If "Visible" is false this is
+        # ignored
         SpiMultiplex: 0
       - FirstLed: 70
         LastLed: 110
+        # Actually a "virtual" segment
         Visible: false
       - FirstLed: 111
         LastLed: 164
         Visible: true
         SpiMultiplex: 1
+  # This section describes the placement and other properties of the
+  # IR sensors being attached to the system.
   Sensors:
+    # how many reading of the sensor should be combined into a mean
+    # value for further processing. Helps to reduce random spikes and
+    # false positive triggers
     SmoothingSize: 3
+    # hove often the sensors should be read. Small delay -> more
+    # freuent readout
     LoopDelay: 10ms
+    # Here comes the configuration of each single sensor
     SensorCfg:
+      # We give it a uid, that is also used to create an associated
+      # instance of a SensorLed producer
       S0:
+        # Where on the LED strip the sensor sits
         LedIndex: 0
+        # Like for the display - which SPI multiplex config to use to
+        # access the ADC that handls this sensor
         SpiMultiplex: 2
+        # The channel (0-7) on this ADC where the sensor is attached to
         AdcChannel: 0
+        # The sensor needs to read a value > TriggerValue for the
+        # program to register a trigger event. This is set via try and
+        # error to be low enough that people passing by are always
+        # registred, but noise and IR cross talk is not randomly
+        # triggering
         TriggerValue: 47
       S1:
         LedIndex: 69
@@ -40,9 +94,15 @@ Hardware:
         SpiMultiplex: 3
         AdcChannel: 5
         TriggerValue: 52
+  # Here we define which settings on what GPIO pin will result in the
+  # mutiplexer to select a certain device to be accessible via SPI
   SpiMultiplexGPIO:
+    # This is the "SpiMultiplex" being reffered to above in SensorCfg
+    # and LedSegment  
     0:
+      # All pins that must be set low 
       Low: [17]
+      # All pins that must be set high
       High: [22,23,24]
     1:
       Low: [22]
@@ -54,11 +114,23 @@ Hardware:
       Low: [17,22,24]
       High: [23]
 
+# Here come all the different producers configurations that are
+# currently available in the system
+
+# The central SensorLedProducer - for each sensor, one instance of
+# this will be set up. Here is the shared config, while the index of
+# the sensor determines where the zero point for the groe -> stay ->
+# shring effect on the stripe is
 SensorLED:
+  # well, you could potentiall just not enable the whole thing
   Enabled: true
+  # How fast it grows one LED at a time in both directions
   RunUpDelay: 5ms
+  # How fast it shrinks down again
   RunDownDelay: 20ms
+  # How long it remians in the fully lit state
   HoldTime: 10s
+  # the color and intensity of the lit LEDs
   LedRGB: [70, 70, 70]
 
 NightLED:

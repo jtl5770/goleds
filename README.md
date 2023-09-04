@@ -53,11 +53,11 @@ The hardware used to implement the setup described above is detailed
 
 A couple of "producers" are supplied with the software (see the
 directory named accordingly) - these control different ways to
-illuminate the stripes. All stripe segments (including invisible ones)
-are combined into one, full stripe as far as the software is
-concerned. In the example above, the producers see a LED stripe of 165
-LEDs that can be illuminated independently (and also independently
-colored)
+illuminate the stripes. As far as the producers are concerned, there is
+only one continuous stripe, regardless of how many LED segments (real
+or "virtual" ones) are configured for the system. In the example above,
+the producers see a LED stripe of 165 LEDs (index 0 - 164) that can be
+illuminated and colored independently.
 
 The most important producer is the `sensorledproducer` - each sensor
 is linked to one instance of those. It reacts to a sensor trigger by
@@ -132,10 +132,10 @@ section on what happens if you don't use the `-real` switch)
 ### Text based UI for simulating
 
 Go-LEDS comes with a little text user interface simulation program to
-aid during the development of new producers. Brightness is represented
-here by different sizes of graphical block symbols for each LED. Color
-reproduction is not really faithful to reality, but enough to be able
-to develop away from the real hardware.
+aid during the development (E.g. of new producers). Brightness is
+represented here by different sizes of unicode block symbols for
+each LED. Color reproduction is not really faithful to reality, but
+enough to be able to develop away from the real hardware.
 
 ![Go-LEDS TUI](images/goleds-tui.png)
 
