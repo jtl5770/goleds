@@ -27,30 +27,21 @@ Hardware:
     # color setting for the sensorled (see below) is pleasant to my
     # eyes.
     ColorCorrection: [1, 0.175, 0.05]
-    # Here comes the mapping of the internal repesentation of a single
-    # linea stripe of "LedsTotal" LEDs to real worl segmeents of LEDs
-    # and also to "virtual segments" which are not mapped to any real
-    # LED stripe. 
+    # Here comes the mapping of the internal repesentation of the
+    # "LedsTotal" LEDs to real worl segments of LED stripes. Note:
+    # LEDs not covered by a segment become "virtual" segments
     LedSegments:
       # The index of the LED from the internal stripe that is the
       # first LED of the segment
       - FirstLed: 0
         # and the same for the last one
         LastLed: 69
-        # true if it is a real LED stripe segment, false if it is just
-        # a virtual segment
-        Visible: true
         # which SPI multiplex configuration must be used to adress
         # that stripe (see belwo). If "Visible" is false this is
         # ignored
         SpiMultiplex: 0
-      - FirstLed: 70
-        LastLed: 110
-        # Actually a "virtual" segment
-        Visible: false
       - FirstLed: 111
         LastLed: 164
-        Visible: true
         SpiMultiplex: 1
   # This section describes the placement and other properties of the
   # IR sensors being attached to the system.
