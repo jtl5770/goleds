@@ -1,8 +1,10 @@
 package hardware
 
 import (
+	"fmt"
 	"log"
 	"math"
+	"sort"
 
 	c "lautenbacher.net/goleds/config"
 	p "lautenbacher.net/goleds/producer"
@@ -66,8 +68,33 @@ func (s *ledsegment) setSegmentLeds(sumleds []p.Led) {
 func InitDisplay() {
 	SEGMENTS = make([]*ledsegment, 0, len(c.CONFIG.Hardware.Display.LedSegments))
 	for _, seg := range c.CONFIG.Hardware.Display.LedSegments {
-		SEGMENTS = append(SEGMENTS, NewLedSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Visible))
+		SEGMENTS = append(SEGMENTS, NewLedSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, true))
 	}
+
+	all := make([]bool, c.CONFIG.Hardware.Display.LedsTotal)
+	for _, seg := range SEGMENTS {
+		for i := seg.firstled; i <= seg.lastled; i++ {
+			if all[i] {
+				panic(fmt.Sprintf("Overlapping display segments at index %d", i))
+			}
+			all[i] = true
+		}
+	}
+
+	start := -1
+	for index, elem := range all {
+		if start == -1 && !elem {
+			start = index
+		} else if start != -1 && elem {
+			SEGMENTS = append(SEGMENTS, NewLedSegment(start, index-1, -1, false))
+			start = -1
+		}
+	}
+	if start != -1 {
+		SEGMENTS = append(SEGMENTS, NewLedSegment(start, len(all)-1, -1, false))
+	}
+
+	sort.Slice(SEGMENTS, func(i, j int) bool { return SEGMENTS[i].firstled < SEGMENTS[j].firstled })
 }
 
 func DisplayDriver(display chan ([]p.Led), sig chan bool) {
