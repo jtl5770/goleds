@@ -162,3 +162,29 @@ enough to be able to develop if away from the real hardware.
 Go-LEDS starts automatically in TUI simulation mode whenever called
 without the `-real` command line parameter.
 
+There is another use case for the TUI. When configuring the
+installation, one of the things that requires quite some tweaking is
+to get the TriggerValues for the sensors just right: high enough, that
+no noise from cross talk or background IR is triggering the LEDs, but
+low enough that the system is sensitive enough to reliably detect all
+people passing by. This highly depends on the Room and length and
+object distance that needs to be dealt with.
+
+For this, the switch `-show-sensors` together with `-real` opens up
+the TUI and displays (for a sliding window of 500 measurements) the
+minimum, mean and maximum value being recorded plus the standard
+deviation. The goal is to have it running first without having someone
+passing by (in other words: do a try run of the system to measure the
+noise floor) and to try to set up the sensors in a way that the standard
+deviation is small (no max values that are much bigger than the
+mean... min values shouldn't be your problem here).
+
+This setup of the sensors may include restricting the path of sight
+where light falls onto the sensor to shield it from noise sources
+(like all the other sensors in the system) or playing with the place
+and orientation of the sensor fixture.
+
+The following picture shows the TUI in sensor mode (Note that the
+values there are random garbage, this is what is shown when the
+`-real` switch is omitted here - then the system will just use random
+data. This is only useful while developing the TUI itself)
