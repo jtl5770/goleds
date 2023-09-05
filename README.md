@@ -123,21 +123,22 @@ producers:
   * At the end of a trigger cycle of (maybe multiple)
   sensorledproducers (in other words: when the lights have gone off
   again) both multiblobproducer and cylonproducer are triggered to
-  start (if they are enabled in the ifrst place). They then run either
+  start (if they are enabled in the first place). They then run either
   their configured time or are being stopped again when another
   sensorledproducer cycle is being started.
   * If the multiblobproducer is started, it stops for the time of its
     activity a possibly running nightlightproducer.
-  * The cylonproducer does not stop the nightlightproducer
+  * This is not implemented for the cylonproducer.
     
-This is done so the different colors and LEDs don't mix with each
-other where we don't want that.
+This is done so the different colors and LEDs of the producers don't
+mix with each other where we don't want that.
 
 ### How to start the program on the Raspberry Pi
 
 The SPI library used really wants to have full priority for getting
 its timing right. My best experience comes from having it run in real
-time mode like this:
+time mode like this (Linux, don't know how the equivalent works on
+other OSs):
 
 `chrt 99 /path/to/goleds/goleds_pi -real`
 
@@ -154,7 +155,7 @@ Go-LEDS comes with a little text user interface simulation program to
 aid during the development (E.g. of new producers). Brightness is
 represented here by different sizes of unicode block symbols for
 each LED. Color reproduction is not really faithful to reality, but
-enough to be able to develop away from the real hardware.
+enough to be able to develop if away from the real hardware.
 
 ![Go-LEDS TUI](images/goleds-tui.png)
 
