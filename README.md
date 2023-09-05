@@ -53,11 +53,12 @@ The hardware used to implement the setup described above is detailed
 
 A couple of "producers" are supplied with the software (see the
 directory named accordingly) - these control different ways to
-illuminate the stripes. As far as the producers are concerned, there is
-only one continuous stripe, regardless of how many LED segments (real
-or "virtual" ones) are configured for the system. In the example above,
-the producers see a LED stripe of 165 LEDs (index 0 - 164) that can be
-illuminated and colored independently.
+illuminate the stripes. As far as the producers are concerned, there
+is only one continuous stripe, regardless of how many LED segments are
+configured for the system. In the example above, the producers see a
+LED stripe of 165 LEDs (index 0 - 164) that can be illuminated and
+colored independently (but only does mapped to a LED segment will be
+visible).
 
 The most important producer is the `sensorledproducer` - each sensor
 is linked to one instance of those. It reacts to a sensor trigger by
@@ -65,14 +66,14 @@ illuminating the stripe LED by LED starting from the position of the
 sensor to both ends of the stripe. After a while, the effect is
 reversed and the lighted area shrinks LED by LED until it vanishes at
 the point where the sensor is located.  Other producers are explained
-in more detail below.
+in more detail in the configuration file (link below).
 
 All producers hold their independent internal representation of the
-full stripe. For displaying on the real LEDs, all the
-data of all producers is combined and the result is displayed on the
-various LED stripe segments (or simply not displayed in the case of an
-invisible segment). That also means that multiple producers can be
-active (and often are) at the same time.
+full stripe. For displaying on the real LEDs, all data of all
+producers is combined and the result is displayed on the various LED
+stripe segments (or simply not displayed in the case of an invisible
+segment). That also means that multiple producers can be active (and
+often are) at the same time.
 
 The combination of the different dedicated LED values from all
 producers is very naive - for each LED, take the max of all the
@@ -113,7 +114,8 @@ but this can be overwritten on the command line with the switch
 `-config`)
 
 **See the example configuration [here](config.yml). Please look into
-this file for a description of all the config parameters.**
+this file for a description of all the config parameters, including a
+description of all the different producers that are available**
 
 Some more important aspects that need explanation that go beyond what
 can be learned from the configuration file and its comments:
