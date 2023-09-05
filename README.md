@@ -188,3 +188,5 @@ The following picture shows the TUI in sensor mode (Note that the
 values there are random garbage, this is what is shown when the
 `-real` switch is omitted here - then the system will just use random
 data. This is only useful while developing the TUI itself)
+
+![TUI sensor calibration](goleds-tui-sensors.png)
