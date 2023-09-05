@@ -28,8 +28,9 @@ Hardware:
     # eyes.
     ColorCorrection: [1, 0.175, 0.05]
     # Here comes the mapping of the internal repesentation of the
-    # "LedsTotal" LEDs to real worl segments of LED stripes. Note:
-    # LEDs not covered by a segment become "virtual" segments
+    # "LedsTotal" LEDs to real worl segments of LED stripes. Note: The
+    # segments must NOT overlap. LEDs not covered by a segment become
+    # "virtual" segments.
     LedSegments:
       # The index of the LED from the internal stripe that is the
       # first LED of the segment
