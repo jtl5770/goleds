@@ -1,6 +1,6 @@
 # The description and configuration of the hardware
 Hardware:
-  # The frequenzy in Hz the SPI bus is run. You can't get dramatically
+  # The frequency in Hz the SPI bus is run. You can't get dramatically
   # higher in the Raspi as it seems 
   SPIFrequency: 2097152
   # Here we describe aspects of how exactly the display is being set up
@@ -20,15 +20,15 @@ Hardware:
     # side of things when evenly lit. Internally, we simply calculate
     # with RGB {255, 255, 255} being the desired full white. When
     # translating to what the real LEDs should display, we apply these
-    # correction factors (you can see how extremely heaavy I need to
+    # correction factors (you can see how extremely heavy I need to
     # dampen the blue and green component to arrive at a desired nice,
     # warm white color). This is a very crude way to do so, but enough
     # for my needs for now. The goal for me is to ensure that a white
     # color setting for the sensorled (see below) is pleasant to my
     # eyes.
     ColorCorrection: [1, 0.175, 0.05]
-    # Here comes the mapping of the internal repesentation of the
-    # "LedsTotal" LEDs to real worl segments of LED stripes. Note: The
+    # Here comes the mapping of the internal representation of the
+    # "LedsTotal" LEDs to real world segments of LED stripes. Note: The
     # segments must NOT overlap. LEDs not covered by a segment become
     # "virtual" segments.
     LedSegments:
@@ -37,8 +37,8 @@ Hardware:
       - FirstLed: 0
         # and the same for the last one
         LastLed: 69
-        # which SPI multiplex configuration must be used to adress
-        # that stripe (see belwo). If "Visible" is false this is
+        # which SPI multiplex configuration should be used to address
+        # that stripe (see below). If "Visible" is false this is
         # ignored
         SpiMultiplex: 0
       - FirstLed: 111
@@ -52,7 +52,7 @@ Hardware:
     # false positive triggers
     SmoothingSize: 3
     # hove often the sensors should be read. Small delay -> more
-    # freuent readout
+    # frequent readout
     LoopDelay: 10ms
     # Here comes the configuration of each single sensor
     SensorCfg:
@@ -61,15 +61,15 @@ Hardware:
       S0:
         # Where on the LED strip the sensor sits
         LedIndex: 0
-        # Like for the display - which SPI multiplex config to use to
-        # access the ADC that handls this sensor
+        # Like for the display - which SPI multiplex configuration to
+        # use to access the ADC that handles this sensor
         SpiMultiplex: 2
         # The channel (0-7) on this ADC where the sensor is attached to
         AdcChannel: 0
         # The sensor needs to read a value > TriggerValue for the
         # program to register a trigger event. This is set via try and
         # error to be low enough that people passing by are always
-        # registred, but noise and IR cross talk is not randomly
+        # registered, but noise and IR cross talk is not randomly
         # triggering
         TriggerValue: 47
       S1:
@@ -88,9 +88,9 @@ Hardware:
         AdcChannel: 5
         TriggerValue: 52
   # Here we define which settings on what GPIO pin will result in the
-  # mutiplexer to select a certain device to be accessible via SPI
+  # multiplexer to select a certain device to be accessible via SPI
   SpiMultiplexGPIO:
-    # This is the "SpiMultiplex" being reffered to above in SensorCfg
+    # This is the "SpiMultiplex" being referred to above in SensorCfg
     # and LedSegment  
     0:
       # All pins that must be set low 
@@ -112,8 +112,8 @@ Hardware:
 
 # The central SensorLedProducer - for each sensor, one instance of
 # this will be set up. Here is the shared config, while the index of
-# the sensor determines where the zero point for the groe -> stay ->
-# shring effect on the stripe is
+# the sensor determines where the zero point on the stripe is for the
+# grow -> stay -> shrink effect
 SensorLED:
   # well, you could potentially just not enable the whole thing but
   # that would effectively turn off the core functionality of the
@@ -123,13 +123,13 @@ SensorLED:
   RunUpDelay: 5ms
   # How fast it shrinks down again
   RunDownDelay: 20ms
-  # How long it remains in the fully lit state
+  # How long it stays in the fully lit state
   HoldTime: 10s
   # the color and intensity of the lit LEDs. See also the description
-  # of the ColorCorrection paramter above
+  # of the ColorCorrection parameter above
   LedRGB: [70, 70, 70]
 
-# A producer that generates a continuous light during sunset and
+# A producer that generates a continuous light between sunset and
 # sunrise identical for all LEDs
 NightLED:
   Enabled: true
@@ -141,25 +141,25 @@ NightLED:
   # duration between sunset and sunrise is evenly divided between the
   # different definitions. Repeating the same color multiple times
   # essentially makes the time the color is shown proportionally
-  # longer (here: 2/3 of the night a low red glow, 1/3 a low blue glow)
+  # longer (here: 2/3 of the night a red glow, 1/3 a blue glow)
   LedRGB:
     - [1, 0, 0]
     - [1, 0, 0]
     # There is a 20 instead of a 1 here because of the ColorCorrection
-    # explained above, this would otherwise reduce the blue glow to
-    # not be visible at all. So 20 is already the lowest setting for
-    # blue (given the LED stripe in use).
+    # explained above. Setting the blue component to 1 would otherwise
+    # reduce the light to not be visible at all. So 20 * 0.05 = 1 is
+    # the lowest visible setting for blue.
     - [0, 0, 20]
 
 # A producer that reacts to getting continuous trigger events from one
-# sensor for minimum TriggerDelay and of Value of greater than
-# TriggerValue. This will light the full stripe for maximum HoldTime
-# with the color and intensity given in LedRGB. In other words: you
-# can hold your hand very close to one sensor for longer than
-# TriggerDelay, and the whole stripe will light up brighter for a
-# certain time. You can alternatively stop the producer when running
-# by holding your hand very close for the same time again (it
-# essentiall toggles between on and off)    
+# sensor for a minimum time of TriggerDelay and of a Value greater
+# than TriggerValue. This will light the full stripe for maximum
+# HoldTime with the color and intensity given in LedRGB. In other
+# words: you can hold your hand very close to one sensor for longer
+# than TriggerDelay, and the whole stripe will light up for a certain
+# time. You can alternatively stop the producer when running by
+# holding your hand very close for the same time again (toggling
+# between on and off)
 HoldLED:
   Enabled: true
   HoldTime: 5m
@@ -170,7 +170,7 @@ HoldLED:
 # A cute little effect of colored blobs moving around on the stripe,
 # bouncing and reflecting of each other, and having their color
 # components mixed. It will be triggered by the end of the sensorled
-# effect (that means: wehen all LEDs are dark again after a
+# effect (that means: when all LEDs are dark again after a
 # sensorledproducer has done its grow-stay-shrink cycle)  
 MultiBlobLED:
   Enabled: true
