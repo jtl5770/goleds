@@ -163,9 +163,6 @@ func reset() {
 
 	time.Sleep(500 * time.Millisecond)
 	hw.CloseGPIO()
-	// *FIXME* I should close the simulation TUI here to be able to
-	// re-init correctly... But then, a restart will hardly ever
-	// be needed when running in simulation mode...
 }
 
 func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan bool) {
