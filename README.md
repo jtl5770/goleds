@@ -185,7 +185,7 @@ where light falls onto the sensor to shield it from noise sources
 and orientation of the sensor fixture.
 
 The following picture shows the TUI in sensor mode (Note that the
-values there are random garbage, this is what is shown when the
+values shown are garbage, this is what is shown when the
 `-real` switch is omitted here - then the system will just use random
 data. This is only useful while developing the TUI itself)
 
