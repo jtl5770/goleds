@@ -165,7 +165,7 @@ HoldLED:
   Enabled: true
   HoldTime: 5m
   TriggerDelay: 3s
-  TriggerValue: 160
+  TriggerValue: 200
   LedRGB: [140, 140, 140]
 
 # A cute little effect of colored blobs moving around on the stripe,
