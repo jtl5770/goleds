@@ -100,7 +100,7 @@ func initialise(ossignal chan os.Signal) {
 	hw.InitSensors()
 	hw.InitDisplay()
 
-	if !c.CONFIG.RealHW {
+	if !c.CONFIG.RealHW || c.CONFIG.SensorShow {
 		hw.InitSimulationTUI(ossignal)
 	}
 
