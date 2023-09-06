@@ -71,22 +71,22 @@ Hardware:
         # error to be low enough that people passing by are always
         # registered, but noise and IR cross talk is not randomly
         # triggering
-        TriggerValue: 47
+        TriggerValue: 100
       S1:
         LedIndex: 69
         SpiMultiplex: 2
         AdcChannel: 7
-        TriggerValue: 50
+        TriggerValue: 120
       S2:
         LedIndex: 111
         SpiMultiplex: 3
         AdcChannel: 0
-        TriggerValue: 60
+        TriggerValue: 120
       S3:
         LedIndex: 164
         SpiMultiplex: 3
         AdcChannel: 5
-        TriggerValue: 52
+        TriggerValue: 120
   # Here we define which settings on what GPIO pin will result in the
   # multiplexer to select a certain device to be accessible via SPI
   SpiMultiplexGPIO:

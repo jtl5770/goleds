@@ -114,6 +114,7 @@ func SensorDriver(stop chan bool) {
 				for name, values := range sensorvalues {
 					val := values.Back()
 					if val > Sensors[name].triggerValue {
+						// fmt.Printf("%s: %d\n", name, val)
 						SensorReader <- NewTrigger(name, val, time.Now())
 					}
 				}
