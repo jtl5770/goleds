@@ -211,3 +211,7 @@ fire up the illumination, but the changes of the values from `S0`,
 measurements)
 
 ![TUI sensor calibration](images/goleds-tui-sensors-light.png)
+
+You can see, that the TriggerValue for `S2` should be increased
+slightly, as the noise level has at least once reached its
+`TriggerValue` of 120.
