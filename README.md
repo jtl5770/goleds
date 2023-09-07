@@ -182,7 +182,7 @@ the TUI and displays (for a sliding window of 500 measurements) the
 minimum, mean and maximum value being recorded plus the standard
 deviation. The goal is to have it running first without having someone
 passing by (in other words: do a try run of the system to measure the
-noise floor) and to try to orient the sensors in a way that the standard
+noise floor) and to try to set up the sensors in a way that the standard
 deviation is small (no max values that are much bigger than the
 mean... min values shouldn't be your problem here).
 
@@ -196,3 +196,18 @@ also omit the `-real` switch -- in this case the system will just use random
 data. This is only useful while developing the TUI itself)
 
 ![TUI sensor calibration](images/goleds-tui-sensors.png)
+
+
+To get the complete picture you need to also test the sensors after
+firing a sensor (and having the LED strip fully illuminated). This is
+because the light from the stripe will also feedback into the noise
+floor of the sensor, so you need to take this into account to base the
+TriggerValue on.
+
+The next picture shows the same setup after having `S3` fired (the
+values there are expected to be higher because you have used it to
+fire up the illumination, but the changes of the values from `S0`,
+`S1` and `S2` come from light increasing the noise on their
+measurements)
+
+![TUI sensor calibration](images/goleds-tui-sensors-light.png)
