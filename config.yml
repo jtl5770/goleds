@@ -5,13 +5,13 @@ Hardware:
   SPIFrequency: 2097152
   # Here we describe aspects of how exactly the display is being set up
   Display:
-    # This number gives how often die LED stripes are forcefully set
+    # This number gives how often the LED stripes are forcefully set
     # new even when no changes happen from any producer. The reason is
     # that sometimes electrical noise or interference may randomly
     # change around the status of some LEDs (lit/unlit, color). So we
     # make sure to set the whole stripes back to the desired values
-    # every short time
-    ForceUpdateDelay: 1000ms
+    # every short interval
+    ForceUpdateDelay: 500ms
     # How many "internal LEDs"" in total are there for the producers
     # to work with. These are not necessarily the number of LEDs on
     # the stripes (see below)
