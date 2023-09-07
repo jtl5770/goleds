@@ -71,7 +71,7 @@ Hardware:
         # error to be low enough that people passing by are always
         # registered, but noise and IR cross talk is not randomly
         # triggering
-        TriggerValue: 100
+        TriggerValue: 80
       S1:
         LedIndex: 69
         SpiMultiplex: 2
