@@ -107,7 +107,7 @@ Hardware:
       Low: [17,22,24]
       High: [23]
 
-# Here come all the different producers configurations that are
+# Here come all the different producer configurations that are
 # currently available in the system
 
 # The central SensorLedProducer - for each sensor, one instance of
