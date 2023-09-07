@@ -56,7 +56,7 @@ The hardware used to implement the setup described above is detailed
 
 ## Mode of operation 
 
-A couple of "producers" are supplied with the software (see the
+A couple of _producers_ are supplied with the software (see the
 directory named accordingly) - these control different ways to
 illuminate the stripes. As far as the producers are concerned, there
 is only one continuous stripe, regardless of how many LED segments are
@@ -171,7 +171,7 @@ without the `-real` command line parameter.
 
 There is another use case for the TUI. When configuring the
 installation, one of the things that requires quite some tweaking is
-to get the TriggerValues for the sensors just right: high enough, that
+to get the TriggerValues for the sensors right: high enough, that
 no noise from cross talk or background IR is triggering the LEDs, but
 low enough that the system is sensitive enough to reliably detect all
 people passing by. This highly depends on the Room and length and
@@ -182,7 +182,7 @@ the TUI and displays (for a sliding window of 500 measurements) the
 minimum, mean and maximum value being recorded plus the standard
 deviation. The goal is to have it running first without having someone
 passing by (in other words: do a try run of the system to measure the
-noise floor) and to try to set up the sensors in a way that the standard
+noise floor) and to try to orient the sensors in a way that the standard
 deviation is small (no max values that are much bigger than the
 mean... min values shouldn't be your problem here).
 
@@ -191,9 +191,8 @@ where light falls onto the sensor to shield it from noise sources
 (like all the other sensors in the system) or playing with the place
 and orientation of the sensor fixture.
 
-The following picture shows the TUI in sensor mode (Note that the
-values shown are garbage, this is what is shown when the
-`-real` switch is omitted - then the system will just use random
+The following picture shows the TUI in sensor mode (Note that you can
+also omit the `-real` switch -- in this case the system will just use random
 data. This is only useful while developing the TUI itself)
 
 ![TUI sensor calibration](images/goleds-tui-sensors.png)
