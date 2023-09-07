@@ -42,6 +42,7 @@ import (
 	"time"
 
 	c "lautenbacher.net/goleds/config"
+	d "lautenbacher.net/goleds/driver"
 	hw "lautenbacher.net/goleds/hardware"
 	p "lautenbacher.net/goleds/producer"
 )
@@ -97,11 +98,11 @@ func main() {
 func initialise(ossignal chan os.Signal) {
 	log.Println("Initialising...")
 	hw.InitHardware()
-	hw.InitSensors()
-	hw.InitDisplay()
+	d.InitSensors()
+	d.InitDisplay()
 
 	if !c.CONFIG.RealHW || c.CONFIG.SensorShow {
-		hw.InitSimulationTUI(ossignal)
+		d.InitSimulationTUI(ossignal)
 	}
 
 	ledproducers = make(map[string]p.LedProducer)
@@ -113,7 +114,7 @@ func initialise(ossignal chan os.Signal) {
 
 	// This is the main producer: reacting to a sensor trigger to light the stripes
 	if c.CONFIG.SensorLED.Enabled {
-		for uid, sen := range hw.Sensors {
+		for uid, sen := range d.Sensors {
 			ledproducers[uid] = p.NewSensorLedProducer(uid, sen.LedIndex, ledReader)
 		}
 	}
@@ -146,8 +147,8 @@ func initialise(ossignal chan os.Signal) {
 
 	go combineAndUpdateDisplay(ledReader, ledWriter, stopsignal)
 	go fireController(stopsignal)
-	go hw.DisplayDriver(ledWriter, stopsignal)
-	go hw.SensorDriver(stopsignal)
+	go d.DisplayDriver(ledWriter, stopsignal)
+	go d.SensorDriver(stopsignal)
 }
 
 func reset() {
@@ -175,7 +176,7 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 		case s := <-r:
 			if c.CONFIG.MultiBlobLED.Enabled || c.CONFIG.CylonLED.Enabled {
 				isrunning := false
-				for uid := range hw.Sensors {
+				for uid := range d.Sensors {
 					isrunning = (isrunning || ledproducers[uid].GetIsRunning())
 				}
 				if c.CONFIG.HoldLED.Enabled {
@@ -226,12 +227,12 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 }
 
 func fireController(sig chan bool) {
-	var firstSameTrigger *hw.Trigger = hw.NewTrigger("", 0, time.Now())
+	var firstSameTrigger *d.Trigger = d.NewTrigger("", 0, time.Now())
 	triggerDelay := c.CONFIG.HoldLED.TriggerDelay
 
 	for {
 		select {
-		case trigger := <-hw.SensorReader:
+		case trigger := <-d.SensorReader:
 			oldStamp := firstSameTrigger.Timestamp
 			newStamp := trigger.Timestamp
 
@@ -249,7 +250,7 @@ func fireController(sig chan bool) {
 					firstSameTrigger = trigger
 				}
 			} else {
-				firstSameTrigger = hw.NewTrigger("", 0, time.Now())
+				firstSameTrigger = d.NewTrigger("", 0, time.Now())
 				if producer, ok := ledproducers[trigger.ID]; ok {
 					producer.Start()
 				} else {

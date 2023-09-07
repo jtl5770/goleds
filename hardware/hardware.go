@@ -70,7 +70,7 @@ func SPIExchangeMultiplex(index int, write []byte) []byte {
 
 	cfg, found := spimultiplexcfg[index]
 	if !found {
-		panic("No SPI multiplexd device with index " + string(rune(index)) + " found. Valid values are 0,1,2,3")
+		panic("No SPI multiplexe device configuration with index " + string(rune(index)) + " found in config file")
 	} else {
 		for _, pin := range cfg.low {
 			pin.Low()

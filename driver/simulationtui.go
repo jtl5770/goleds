@@ -1,4 +1,4 @@
-package hardware
+package driver
 
 import (
 	"fmt"

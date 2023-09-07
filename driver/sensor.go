@@ -1,4 +1,4 @@
-package hardware
+package driver
 
 import (
 	"log"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/gammazero/deque"
 	c "lautenbacher.net/goleds/config"
+	h "lautenbacher.net/goleds/hardware"
 )
 
 const STATS_SIZE = 500
@@ -124,6 +125,6 @@ func SensorDriver(stop chan bool) {
 
 func readAdc(multiplex int, channel byte) int {
 	write := []byte{1, (8 + channel) << 4, 0}
-	read := SPIExchangeMultiplex(multiplex, write)
+	read := h.SPIExchangeMultiplex(multiplex, write)
 	return ((int(read[1]) & 3) << 8) + int(read[2])
 }
