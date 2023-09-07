@@ -53,7 +53,7 @@ Hardware:
     SmoothingSize: 3
     # hove often the sensors should be read. Small delay -> more
     # frequent readout
-    LoopDelay: 10ms
+    LoopDelay: 20ms
     # Here comes the configuration of each single sensor
     SensorCfg:
       # We give it a uid, that is also used to create an associated

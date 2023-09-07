@@ -159,7 +159,7 @@ section on what happens if you don't use the `-real` switch)
 ### Text based UI for simulating
 
 Go-LEDS comes with a little text user interface simulation program to
-aid during the development (E.g. of new producers). Brightness is
+aid during the development (e.g. of new producers). Brightness is
 represented here by different sizes of unicode block symbols for
 each LED. Color reproduction is not really faithful to reality, but
 enough to be able to develop if away from the real hardware.
@@ -196,7 +196,6 @@ also omit the `-real` switch -- in this case the system will just use random
 data. This is only useful while developing the TUI itself)
 
 ![TUI sensor calibration](images/goleds-tui-sensors.png)
-
 
 To get the complete picture you need to also test the sensors after
 firing a sensor (and having the LED strip fully illuminated). This is
