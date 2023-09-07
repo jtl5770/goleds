@@ -3,11 +3,10 @@ package driver
 import (
 	"fmt"
 	"log"
-	"math"
 	"sort"
 
 	c "lautenbacher.net/goleds/config"
-	h "lautenbacher.net/goleds/hardware"
+	hw "lautenbacher.net/goleds/hardware"
 	p "lautenbacher.net/goleds/producer"
 )
 
@@ -114,20 +113,10 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 			} else {
 				for _, seg := range SEGMENTS {
 					if seg.visible {
-						setLedSegment(seg.spimultiplex, seg.getSegmentLeds())
+						hw.SetLedSegment(seg.spimultiplex, seg.getSegmentLeds())
 					}
 				}
 			}
 		}
 	}
-}
-
-func setLedSegment(multiplex int, values []p.Led) {
-	display := make([]byte, 3*len(values))
-	for idx, led := range values {
-		display[3*idx] = byte(math.Min(led.Red*c.CONFIG.Hardware.Display.ColorCorrection[0], 255))
-		display[(3*idx)+1] = byte(math.Min(led.Green*c.CONFIG.Hardware.Display.ColorCorrection[1], 255))
-		display[(3*idx)+2] = byte(math.Min(led.Blue*c.CONFIG.Hardware.Display.ColorCorrection[2], 255))
-	}
-	h.SPIExchangeMultiplex(multiplex, display)
 }

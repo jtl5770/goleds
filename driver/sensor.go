@@ -7,7 +7,7 @@ import (
 
 	"github.com/gammazero/deque"
 	c "lautenbacher.net/goleds/config"
-	h "lautenbacher.net/goleds/hardware"
+	hw "lautenbacher.net/goleds/hardware"
 )
 
 const STATS_SIZE = 500
@@ -102,7 +102,7 @@ func SensorDriver(stop chan bool) {
 				if c.CONFIG.SensorShow && !c.CONFIG.RealHW {
 					value = 30 + rand.Intn(250)
 				} else {
-					value = sensor.smoothValue(readAdc(sensor.spimultiplex, sensor.adcChannel))
+					value = sensor.smoothValue(hw.ReadAdc(sensor.spimultiplex, sensor.adcChannel))
 				}
 				sensorvalues[name].PushBack(value)
 				if sensorvalues[name].Len() > STATS_SIZE {
@@ -121,10 +121,4 @@ func SensorDriver(stop chan bool) {
 			}
 		}
 	}
-}
-
-func readAdc(multiplex int, channel byte) int {
-	write := []byte{1, (8 + channel) << 4, 0}
-	read := h.SPIExchangeMultiplex(multiplex, write)
-	return ((int(read[1]) & 3) << 8) + int(read[2])
 }

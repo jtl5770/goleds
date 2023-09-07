@@ -2,10 +2,12 @@ package hardware
 
 import (
 	"log"
+	"math"
 	"sync"
 
 	"github.com/stianeikeland/go-rpio/v4"
 	c "lautenbacher.net/goleds/config"
+	p "lautenbacher.net/goleds/producer"
 )
 
 var (
@@ -82,4 +84,25 @@ func SPIExchangeMultiplex(index int, write []byte) []byte {
 
 	rpio.SpiExchange(write)
 	return write
+}
+
+// Access a MCP3008 ADC via SPI.  If you have another ADC attached via
+// the SPI multiplexer you only need to change this function here.
+func ReadAdc(multiplex int, channel byte) int {
+	write := []byte{1, (8 + channel) << 4, 0}
+	read := SPIExchangeMultiplex(multiplex, write)
+	return ((int(read[1]) & 3) << 8) + int(read[2])
+}
+
+// Access a WS2801 LED stripe via SPI. If you have another LED stripe
+// attached via the SPI multiplexer you only need to change this
+// function here.
+func SetLedSegment(multiplex int, values []p.Led) {
+	display := make([]byte, 3*len(values))
+	for idx, led := range values {
+		display[3*idx] = byte(math.Min(led.Red*c.CONFIG.Hardware.Display.ColorCorrection[0], 255))
+		display[(3*idx)+1] = byte(math.Min(led.Green*c.CONFIG.Hardware.Display.ColorCorrection[1], 255))
+		display[(3*idx)+2] = byte(math.Min(led.Blue*c.CONFIG.Hardware.Display.ColorCorrection[2], 255))
+	}
+	SPIExchangeMultiplex(multiplex, display)
 }
