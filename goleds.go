@@ -59,8 +59,8 @@ var (
 	stopsignal   chan bool
 )
 
-// main driver loop to setup hardware, go routines etc., listen for signals
-// to either exit or reload config or log sensor statistics
+// main driver loop to setup hardware, go routines etc., listen for
+// signals to either exit or reload config
 func main() {
 	ex, err := os.Executable()
 	if err != nil {
@@ -109,7 +109,6 @@ func initialise(ossignal chan os.Signal) {
 	stopsignal = make(chan bool)
 
 	ledReader := make(chan (p.LedProducer))
-	//	ledWriter := make(chan []p.Led, c.CONFIG.Hardware.Display.LedsTotal)
 	ledWriter := make(chan []p.Led)
 
 	// This is the main producer: reacting to a sensor trigger to light the stripes
