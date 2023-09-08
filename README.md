@@ -1,5 +1,7 @@
 # Go-LEDS
 
+https://github.com/jtl5770/goleds/assets/24967370/86307361-f55b-4acc-ab35-c408cbff6dd1
+
 This project implements a multi-part LED stripe (WS2801) that is
 controlled by multiple infrared sensors (Sharp GP2Y0A21YK0F or
 similar) attached to analog-digital converters (MCP3008) to turn on
