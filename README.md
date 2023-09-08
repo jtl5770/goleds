@@ -142,6 +142,14 @@ producers:
 This is done so the different colors and LEDs of the producers don't
 mix with each other where we don't want that.
 
+#### List of producers
+
+* SensorLightProducer: As described above and shown in the video at the top of the page: grow-stay-shring effect reacting on triggers from the IR sensors
+* MultiBlopProducer: Can be seen in the video on top _after_ the grow-stay-shrink cycle of the SensorLightProducers have ended - multiple, slowly moving blobs of color
+* CylonProducer: A simple red "eye" moving around the LED Stripes
+
+https://github.com/jtl5770/goleds/assets/24967370/865c70b6-cc20-4b60-899c-8e9182680e21
+
 ### How to start the program on the Raspberry Pi
 
 The SPI library used really wants to have full priority for getting
