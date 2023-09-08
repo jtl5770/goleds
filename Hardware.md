@@ -2,17 +2,23 @@
 
 ## Some pictures of the final installation
 
-The two shelfs in the hallway anf the interrupting door
+The two shelves in the hallway and the interrupting door
 
-![Shelfs in the hallway](images/shelfs.jpg)
+![Shelves in the hallway](images/shelves.jpg)
 
-A view from the underside. You can see the LED stripe and one sensor clearly. Note that the sensor is in fact not exactly positioned according to the config file (it should be exactly located at the outer edge of the stripe. This is for historic reasons and will at one point in time changed to move closer to the edge).
+A view from the underside. You can see the LED stripe and one sensor
+clearly. Note that the sensor is in fact not exactly positioned as
+described in the config file (it should be located exactly at the
+outer edge of the stripe. This bug is there for historic reasons and
+will at one point in time changed by moving the sensor closer to the
+edge).
 
-![Underside of a shelf](images/shelf-underside.jpg)
+![Underside of a shelf](images/shelf_underside.jpg)
 
-Closeup of a sensor attached to the wooden square rod that holds also the LED stripe
+Closeup of a sensor attached to a wooden square rod (covered in white
+tape) that holds also the LED stripe
 
-![Closeup of a sensor](images/sensor.jpg)
+![Closeup of a sensor](images/ir-sensor.jpg)
 
 
 ## Raspberry Pi
