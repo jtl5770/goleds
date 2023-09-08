@@ -165,7 +165,7 @@ func reset() {
 	hw.CloseGPIO()
 }
 
-func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan bool) {
+func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), stopsig chan bool) {
 	var oldSumLeds []p.Led
 	allLedRanges := make(map[string][]p.Led)
 	ticker := time.NewTicker(c.CONFIG.Hardware.Display.ForceUpdateDelay)
@@ -217,7 +217,7 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 			// electrical distortions or crosstalk so we make sure to
 			// regularily force an update of the Led stripe
 			w <- p.CombineLeds(allLedRanges)
-		case <-sig:
+		case <-stopsig:
 			log.Println("Ending combineAndupdateDisplay go-routine")
 			ticker.Stop()
 			return
@@ -225,7 +225,7 @@ func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), sig chan 
 	}
 }
 
-func fireController(sig chan bool) {
+func fireController(stopsig chan bool) {
 	var firstSameTrigger *d.Trigger = d.NewTrigger("", 0, time.Now())
 	triggerDelay := c.CONFIG.HoldLED.TriggerDelay
 
@@ -256,7 +256,7 @@ func fireController(sig chan bool) {
 					log.Printf("Unknown UID %s", trigger.ID)
 				}
 			}
-		case <-sig:
+		case <-stopsig:
 			log.Println("Ending fireController go-routine")
 			return
 		}
