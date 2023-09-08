@@ -144,9 +144,15 @@ mix with each other where we don't want that.
 
 #### List of producers
 
-* SensorLightProducer: As described above and shown in the video at the top of the page: grow-stay-shring effect reacting on triggers from the IR sensors
-* MultiBlopProducer: Can be seen in the video on top _after_ the grow-stay-shrink cycle of the SensorLightProducers have ended - multiple, slowly moving blobs of color
-* CylonProducer: A simple red "eye" moving around the LED Stripes
+* **SensorLedProducer**: As described above and shown in the video at
+  the top of the page: grow-stay-shring effect reacting on triggers
+  from the IR sensors
+* **MultiBlopProducer**: Can be seen in the video on top _after_ the
+  grow-stay-shrink cycle of the SensorLedProducers have ended -
+  multiple, slowly moving blobs of color
+* **CylonProducer**: A simple red "eye" moving around the LED
+  Stripes. Will also be started by the end of the SensorLedProducers
+  cycle
 
 https://github.com/jtl5770/goleds/assets/24967370/865c70b6-cc20-4b60-899c-8e9182680e21
 
