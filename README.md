@@ -122,7 +122,7 @@ but this can be overwritten on the command line with the switch
 
 **See the example configuration [here](config.yml). Please look into
 this file for a description of all the config parameters, including a
-description of all the different producers that are available**
+description of all the different producers and how to configure them.**
 
 Some more important aspects that need explanation that go beyond what
 can be learned from the configuration file and its comments:
@@ -149,12 +149,16 @@ mix with each other where we don't want that.
   from the IR sensors
 * **MultiBlopProducer**: Can be seen in the video on top _after_ the
   grow-stay-shrink cycle of the SensorLedProducers have ended -
-  multiple, slowly moving blobs of color
+  multiple, slowly moving blobs of color. Will be started after the
+  cycle automatically if enabled in the config file.
 * **CylonProducer**: A simple red "eye" moving around the LED
   Stripes. Will also be started by the end of the SensorLedProducers
-  cycle
+  cycle, if enabled in the config file.
 
 https://github.com/jtl5770/goleds/assets/24967370/865c70b6-cc20-4b60-899c-8e9182680e21
+
+* **NightLightProducer**: All LEDs getting the same color, depending
+  on time of the night. See config file for details
 
 ### How to start the program on the Raspberry Pi
 
