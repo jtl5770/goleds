@@ -31,20 +31,24 @@ setup). The reason 2 ADCs are used for 4 sensors is a left-over from
 an earlier prototype where 14 sensors were used spread out over the
 length of the two LED stripes. This turned out to be problematic
 because of heavy cross talk between the sensors, so reducing them to
-be placed only at the possible entry points for people passing by
-proofed to be enough.
+only the 4 at the entry points for people passing by (from left, from
+right and out of the middle door to both directions) proofed to be
+enough. Until I decide to rewire the whole setup, those 4 sensors
+remain split between the 2 ADCs.
 
 Other setups may have a need for more sensors, so the hardware can
-easily accomodate for 12 more input channels.
+easily accommodate for 12 more input channels. For the software it
+makes no difference at all to which ADC a sensor is connected, this is
+all configurable.
 
 All hardware related stuff is held in the hardware package (GPIO
 library and the SPI code to drive MCP3008 and WS2801). If you want to
 change to a different ADC or LED stripe that behaves differently via
-SPI you should be able to make changes only to `hardware/hardware.go`
-Much aspects of the hardware setup is configurable via the config file
-`config.yml` - you can easily change it to match your hardware (number
-and lenght of stripes, sensors, placement of sensors, GPIO pins used
-for multiplexing etc.)
+SPI you should be getting away with making changes only to
+`hardware/hardware.go` Much aspects of the hardware setup is
+configurable via the config file `config.yml` - you can easily change
+it to match your hardware (number and length of stripes, sensors,
+placement of sensors, GPIO pins used for multiplexing etc.)
 
 More drastic changes may require changes at the hardware level
 (attaching more than 4 devices e.g. more LED stripes) by changing the
@@ -129,13 +133,15 @@ can be learned from the configuration file and its comments:
 There is a currently hard coded dependency between the different
 producers: 
   * At the end of a trigger cycle of (maybe multiple)
-  sensorledproducers (in other words: when the lights have gone off
-  again) both multiblobproducer and cylonproducer are triggered to
-  start (if they are enabled in the first place). They then run either
-  their configured time or are being stopped again when another
-  sensorledproducer cycle is being started.
+    sensorledproducers (in other words: when the lights have gone off
+    again) both multiblobproducer and cylonproducer are triggered to
+    start (if they are enabled in the first place). They then run
+    either their configured time or are being stopped again when
+    another sensorledproducer cycle is being started.
   * If the multiblobproducer is started, it stops for the time of its
-    activity a possibly running nightlightproducer.
+    activity a currently running nightlightproducer to avoid color
+    mixing of the two. When it finishes, it starts the
+    nightlightproducer again.
   * This is not implemented for the cylonproducer.
     
 This is done so the different colors and LEDs of the producers don't
@@ -159,6 +165,24 @@ https://github.com/jtl5770/goleds/assets/24967370/865c70b6-cc20-4b60-899c-8e9182
 
 * **NightLightProducer**: All LEDs getting the same color, depending
   on time of the night. See config file for details of configuration.
+
+#### Future Ideas
+
+I want to add a producer that reacts to sound and displays effects
+matching the sound on the LED stripe. Most basic effect would be a VU
+meter. As I am running a Logitech Media Server (aka "Squeezebox
+Server") together with a couple of original or Pi-based squeezeboxes,
+I would simply install the software player `squeezelite` on the
+Pi. Go-LEDS would read from the monitor port of the default
+output (which is not connected to speakers) to get to the sound data.
+
+By adding the `squeezelite` player into my main players group with the
+remote control I can then start and stop the effect at will.
+
+Unfortunately I didn't yet find an easy and maintained go audio library
+to get to the samples. Seems I need either help or dig into the
+`portaudio` stuff myself.
+
 
 ### How to start the program on the Raspberry Pi
 
