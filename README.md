@@ -1,6 +1,6 @@
 # Go-LEDS
-
-https://github.com/jtl5770/goleds/assets/24967370/86307361-f55b-4acc-ab35-c408cbff6dd1
+ 
+![Overview](images/overview.png)
 
 This project implements a multi-part LED stripe (WS2801) that is
 controlled by multiple infrared sensors (Sharp GP2Y0A21YK0F or
@@ -10,13 +10,12 @@ stripes are connected to a Raspberry Pi via SPI and a small board of
 logic chips (AND and OR gates) to enable SPI multiplexing, selectable
 via GPIO pins.
 
-![Overview](images/overview.png)
-
+https://github.com/jtl5770/goleds/assets/24967370/ef6b0957-8eac-4857-a353-650161f509f3
 
 ## Example setup 
 
 The specific layout used in my hallway is shown below:
-
+   
 | Stripe 1                   | Door                                     |                    Stripe 2 |
 |:---------------------------|:----------------------------------------:|----------------------------:|
 | LED 0-69                   | "virtual LED" 70-110 (invisible segment) |                 LED 111-164 |
