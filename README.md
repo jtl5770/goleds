@@ -63,7 +63,7 @@ illuminate the stripes. As far as the producers are concerned, there
 is only one continuous stripe, regardless of how many LED segments are
 configured for the system. In the example above, the producers see a
 LED stripe of 165 LEDs (index 0 - 164) that can be illuminated and
-colored independently (but only does mapped to a LED segment will be
+colored independently (but only those mapped to a LED segment will be
 visible).
 
 The most important producer is the `sensorledproducer` - each sensor
