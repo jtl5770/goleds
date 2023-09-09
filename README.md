@@ -10,7 +10,7 @@ stripes are connected to a Raspberry Pi via SPI and a small board of
 logic chips (AND and OR gates) to enable SPI multiplexing, selectable
 via GPIO pins.
 
-https://github.com/jtl5770/goleds/assets/24967370/ef6b0957-8eac-4857-a353-650161f509f3
+https://github.com/jtl5770/goleds/assets/24967370/34057911-faef-4403-bd07-7b479bec8213
 
 ## Example setup 
 
