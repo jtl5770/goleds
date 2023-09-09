@@ -144,32 +144,35 @@ mix with each other where we don't want that.
 #### List of producers
 
 * **SensorLedProducer**: As described above and shown in the video at
-  the top of the page: grow-stay-shring effect reacting on triggers
-  from the IR sensors
+  the top of the page: grow-stay-shrink effect reacting on triggers
+  from the IR sensors.
 * **MultiBlopProducer**: Can be seen in the video on top _after_ the
   grow-stay-shrink cycle of the SensorLedProducers have ended -
   multiple, slowly moving blobs of color. Will be started after the
-  cycle automatically if enabled in the config file.
+  cycle automatically, if enabled in the config file.
 * **CylonProducer**: A simple red "eye" moving around the LED
   Stripes. Will also be started by the end of the SensorLedProducers
-  cycle, if enabled in the config file.
+  cycle, if enabled in the config file. This can be a good start to
+  hack up other effects.
 
 https://github.com/jtl5770/goleds/assets/24967370/865c70b6-cc20-4b60-899c-8e9182680e21
 
 * **NightLightProducer**: All LEDs getting the same color, depending
-  on time of the night. See config file for details
+  on time of the night. See config file for details of configuration.
 
 ### How to start the program on the Raspberry Pi
 
 The SPI library used really wants to have full priority for getting
 its timing right. My best experience comes from having it run in real
-time mode like this (Linux, don't know how the equivalent works on
+time priority like this (Linux, don't know how the equivalent works on
 other OSs):
 
 `chrt 99 /path/to/goleds/goleds_pi -real`
 
 The program is called `goleds_pi` here as it is cross compiled via
-`build.sh` for ARM on my development machine.
+`build.sh` for ARM on my development machine. And you probably need to
+run it as root to get access to the GPIO pins. I have this started in
+the `/etc/rc.local` script anyway, so permissions are not a problem.
 
 The command line switch `-real` is needed to tell the program to
 really try to interact with the GPIO and SPI on the Pi (see next
@@ -179,9 +182,9 @@ section on what happens if you don't use the `-real` switch)
 
 Go-LEDS comes with a little text user interface simulation program to
 aid during the development (e.g. of new producers). Brightness is
-represented here by different sizes of unicode block symbols for
-each LED. Color reproduction is not really faithful to reality, but
-enough to be able to develop if away from the real hardware.
+represented here by different sizes of unicode block symbols for each
+LED. Color reproduction is not really faithful to reality, but enough
+to be able to hack on the program if away from the real hardware.
 
 ![Go-LEDS TUI](images/goleds-tui.png)
 
@@ -192,8 +195,8 @@ There is another use case for the TUI. When configuring the
 installation, one of the things that requires quite some tweaking is
 to get the TriggerValues for the sensors right: high enough, that
 no noise from cross talk or background IR is triggering the LEDs, but
-low enough that the system is sensitive enough to reliably detect all
-people passing by. This highly depends on the Room and length and
+low enough that the system is sensitive enough to reliably detect
+people passing by. This highly depends on the room and length and
 object distance that needs to be dealt with.
 
 For this, the switch `-show-sensors` together with `-real` opens up
@@ -207,7 +210,7 @@ mean... min values shouldn't be your problem here).
 
 This setup of the sensors may include restricting the path of sight
 where light falls onto the sensor to shield it from noise sources
-(like all the other sensors in the system) or playing with the place
+(like IR from the other sensors in the system) or playing with the place
 and orientation of the sensor fixture.
 
 The following picture shows the TUI in sensor mode (Note that you can
@@ -218,7 +221,7 @@ data. This is only useful while developing the TUI itself)
 
 To get the complete picture you need to also test the sensors after
 firing a sensor (and having the LED strip fully illuminated). This is
-because the light from the stripe will also feedback into the noise
+because the light from the stripe will also increase the noise
 floor of the sensor, so you need to take this into account to base the
 TriggerValue on.
 
@@ -231,5 +234,5 @@ measurements)
 ![TUI sensor calibration](images/goleds-tui-sensors-light.png)
 
 You can see, that the TriggerValue for `S2` should be increased
-slightly, as the noise level has at least once reached its
-`TriggerValue` of 120.
+slightly, as the noise level has at least once reached its currently
+configured`TriggerValue` of 120.

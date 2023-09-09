@@ -25,9 +25,8 @@ tape) that holds also the LED stripe
 
 I am using a Raspberry Pi 3b in my installion. This has plenty enough
 horsepower to drive the project. In idle mode (no lights
-burning/effect running other than maybe the NightLightProducer, only
-the readout loop of the sensors is running) the CPU usage is around
-1.7%.
+burning/effect running, only the readout loop of the sensors is
+active) the CPU usage is around 1.7%.
 
 
 
