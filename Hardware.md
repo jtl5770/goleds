@@ -90,6 +90,8 @@ more info)
 ![Closeup of the logic board](images/goleds-box-logic.jpg)
 
 
+![The building blocks](images/goleds-box-logic-annotated.png)
+
 
 # **TODO**
 
