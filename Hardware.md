@@ -61,7 +61,7 @@ YMMV)
 **While I may (or may not) have a little clue about current and
 voltage myself, I am in no means in the position to give anybody
 reliable help on what or what not to do when it comes to dangerous
-voltage and amp levels **
+voltage and amp levels**
 
 The next picture shows the opened box. The big thing closest to the
 camera is the off the shelf power supply. It's 5V and enough amps to
