@@ -69,7 +69,8 @@ func main() {
 	exPath := filepath.Dir(ex)
 	cfile := flag.String("config", exPath+"/"+c.CONFILE, "Config file to use")
 	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
-	sensp := flag.Bool("show-sensors", false, "Set to true if program should only display sensor values (will be random values if -real is not given)")
+	sensp := flag.Bool("show-sensors", false, "Set to true if program should only display"+
+		"sensor values (will be random values if -real is not given)")
 	flag.Parse()
 
 	c.ReadConfig(*cfile, *realp, *sensp)
