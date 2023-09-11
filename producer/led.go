@@ -9,13 +9,13 @@ type Led struct {
 }
 
 // True if all components are zero, false otherwise
-func (s Led) IsEmpty() bool {
+func (s *Led) IsEmpty() bool {
 	return s.Red == 0 && s.Green == 0 && s.Blue == 0
 }
 
 // Return a Led with per component the max value of the caller and the
 // Led input parameter
-func (s Led) Max(in Led) Led {
+func (s *Led) Max(in Led) Led {
 	if s.Red > in.Red {
 		in.Red = s.Red
 	}
