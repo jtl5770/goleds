@@ -76,8 +76,9 @@ it is the custom multiplexer logic board.
 
 
 The next image show the connectors that are attached to the Pi (as far
-as it can be seen there. The one and lonely connection at the left can
-be ignored, this is the remains of an older experiment) 
+as it can be seen there. The one and lonely connection at the left has
+been added later when I realized I had to drive 2 LED stripes and
+needed to hack another device into the multiplexer) 
 
 ![Closeup of the Raspberry Pi](images/goleds-box-raspi.jpg)
 
