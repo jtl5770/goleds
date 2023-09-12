@@ -54,7 +54,7 @@ More drastic changes may require changes at the hardware level
 (attaching more than 4 devices e.g. more LED stripes) by changing the
 multiplexing circuit.
 
-### Building the hardware
+## Building the hardware
 
 The hardware used to implement the setup described above is detailed
 [here](Hardware.md)
