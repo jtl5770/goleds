@@ -88,7 +88,7 @@ more info)
 
 ### The custom logic board
 
-This is a crappy rat's nest of a wires here...
+This is a bloody rat's nest of wires here...
 
 ![Closeup of the logic board](images/goleds-box-logic.jpg)
 
