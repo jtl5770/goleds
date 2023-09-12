@@ -92,13 +92,14 @@ This is a crappy rat's nest of a wires here...
 
 ![Closeup of the logic board](images/goleds-box-logic.jpg)
 
-The block labeled ignore is from an old experiment to detect the input
-of __any_ sensor. The potentiometer and the small OpAmp where used as
-a trigger to set another GPIO pin high and - detecting this
-interrupt - the software would only start then to loop the sensors for
-data. The idea was to put less stress on the Pi in the mostly idle
-time. After porting the whole stuff to GO from python CPU utilisation
-is so low anyway, that I no longer implemented that.
+The block labeled "Ignore" is from an old experiment to detect the
+input of __any_ sensor. The potentiometer and the small OpAmp where
+used as a trigger to set another GPIO pin high and - detecting this
+interrupt - the software would only then start to loop the sensors for
+data (and stop again after some time of inactivity). The idea was to
+put less stress on the Pi in the mostly idle time. After rewriting the
+whole thing in GO (coming from phyton...), CPU utilisation is so low
+anyway that I no longer implemented that.
 
 ![The building blocks](images/goleds-box-logic-annotated.png)
 
@@ -107,12 +108,13 @@ or e.g. the capacitors at the power inputs of the chips silently
 ignored...)
 
 I assume this is for sure not the most elegant way to do the
-multiplexing. E.g. I see no good reason why I didn't do the `CS` select
-on the two ADCs directly via a GPIO pin that can be set to `LOW` and
-ignore the `CS` pin from the Pi completely (remember, `CS` needs to be
-pulled `LOW` to active the SPI device). I assume this is for historical
-reasons - the whole board is the result of me actually creating my first
-digital circuit some years ago.
+multiplexing. E.g. I see no good reason why I didn't do the `CS`
+select on the two ADCs directly via a GPIO pin (instead of via two
+`OR` gates) that can be set to `LOW` and ignore the `CS` pin from the
+Pi completely (remember, `CS` needs to be pulled `LOW` to active the
+SPI device). I assume this is for historical reasons - the whole board
+is the result of me actually creating my first digital circuit some
+years ago.
 
 Anyway - it seems to work. `CLK` is shared among all devices, `MISO`
 between both ADCs. MOSI is connected to both ADCs, but gated through
