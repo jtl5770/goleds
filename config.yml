@@ -41,9 +41,13 @@ Hardware:
         # that stripe (see below). If "Visible" is false this is
         # ignored
         SpiMultiplex: 0
+        # If the segments low index starts at the end where the
+        # connector is or the other way around
+        Reverse: false
       - FirstLed: 111
         LastLed: 164
         SpiMultiplex: 1
+        Reverse: false
   # This section describes the placement and other properties of the
   # IR sensors being attached to the system.
   Sensors:

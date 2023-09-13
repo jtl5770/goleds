@@ -16,6 +16,7 @@ type ledsegment struct {
 	firstled     int
 	lastled      int
 	visible      bool
+	reverse      bool
 	spimultiplex int
 	leds         []p.Led
 }
@@ -32,7 +33,7 @@ func clamp(led int) int {
 	}
 }
 
-func NewLedSegment(firstled, lastled, spimultiplex int, visible bool) *ledsegment {
+func NewLedSegment(firstled, lastled, spimultiplex int, reverse bool, visible bool) *ledsegment {
 	if firstled > lastled {
 		log.Printf("First led index %d is bigger than last led index %d - reversing", firstled, lastled)
 		tmp := firstled
@@ -46,6 +47,7 @@ func NewLedSegment(firstled, lastled, spimultiplex int, visible bool) *ledsegmen
 		firstled:     clamp(firstled),
 		lastled:      clamp(lastled),
 		visible:      visible,
+		reverse:      reverse,
 		spimultiplex: spimultiplex,
 	}
 	return &inst
@@ -62,13 +64,18 @@ func (s *ledsegment) getSegmentLeds() []p.Led {
 func (s *ledsegment) setSegmentLeds(sumleds []p.Led) {
 	if s.visible {
 		s.leds = sumleds[s.firstled : s.lastled+1]
+		if s.reverse {
+			for i, j := 0, len(s.leds)-1; i < j; i, j = i+1, j-1 {
+				s.leds[i], s.leds[j] = s.leds[j], s.leds[i]
+			}
+		}
 	}
 }
 
 func InitDisplay() {
 	SEGMENTS = make([]*ledsegment, 0, len(c.CONFIG.Hardware.Display.LedSegments))
 	for _, seg := range c.CONFIG.Hardware.Display.LedSegments {
-		SEGMENTS = append(SEGMENTS, NewLedSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, true))
+		SEGMENTS = append(SEGMENTS, NewLedSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Reverse, true))
 	}
 
 	all := make([]bool, c.CONFIG.Hardware.Display.LedsTotal)
@@ -86,12 +93,12 @@ func InitDisplay() {
 		if start == -1 && !elem {
 			start = index
 		} else if start != -1 && elem {
-			SEGMENTS = append(SEGMENTS, NewLedSegment(start, index-1, -1, false))
+			SEGMENTS = append(SEGMENTS, NewLedSegment(start, index-1, -1, false, false))
 			start = -1
 		}
 	}
 	if start != -1 {
-		SEGMENTS = append(SEGMENTS, NewLedSegment(start, len(all)-1, -1, false))
+		SEGMENTS = append(SEGMENTS, NewLedSegment(start, len(all)-1, -1, false, false))
 	}
 
 	sort.Slice(SEGMENTS, func(i, j int) bool { return SEGMENTS[i].firstled < SEGMENTS[j].firstled })

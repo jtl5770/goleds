@@ -62,9 +62,10 @@ type Config struct {
 			LedsTotal        int           `yaml:"LedsTotal"`
 			ColorCorrection  []float64     `yaml:"ColorCorrection"`
 			LedSegments      []struct {
-				FirstLed     int `yaml:"FirstLed"`
-				LastLed      int `yaml:"LastLed"`
-				SpiMultiplex int `yaml:"SpiMultiplex"`
+				FirstLed     int  `yaml:"FirstLed"`
+				LastLed      int  `yaml:"LastLed"`
+				SpiMultiplex int  `yaml:"SpiMultiplex"`
+				Reverse      bool `yaml:"Reverse"`
 			} `yaml:"LedSegments"`
 		} `yaml:"Display"`
 		Sensors struct {
