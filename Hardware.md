@@ -93,7 +93,7 @@ This is a bloody rat's nest of wires here...
 ![Closeup of the logic board](images/goleds-box-logic.jpg)
 
 The block labeled "Ignore" is from an old experiment to detect the
-input of __any_ sensor. The potentiometer and the small OpAmp where
+input of _any_ attached sensor. The potentiometer and the small OpAmp where
 used as a trigger to set another GPIO pin high and - detecting this
 interrupt - the software would only then start to loop the sensors for
 data (and stop again after some time of inactivity). The idea was to
