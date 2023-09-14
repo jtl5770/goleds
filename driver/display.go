@@ -10,7 +10,7 @@ import (
 	p "lautenbacher.net/goleds/producer"
 )
 
-var SEGMENTS []*ledsegment
+var SEGMENTS map[string][]*ledsegment
 
 type ledsegment struct {
 	firstled     int
@@ -73,35 +73,40 @@ func (s *ledsegment) setSegmentLeds(sumleds []p.Led) {
 }
 
 func InitDisplay() {
-	SEGMENTS = make([]*ledsegment, 0, len(c.CONFIG.Hardware.Display.LedSegments))
-	for _, seg := range c.CONFIG.Hardware.Display.LedSegments {
-		SEGMENTS = append(SEGMENTS, NewLedSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Reverse, true))
+	SEGMENTS = make(map[string][]*ledsegment)
+	for name, segarray := range c.CONFIG.Hardware.Display.LedSegments {
+		for _, seg := range segarray {
+			SEGMENTS[name] = append(SEGMENTS[name], NewLedSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Reverse, true))
+		}
 	}
 
-	all := make([]bool, c.CONFIG.Hardware.Display.LedsTotal)
-	for _, seg := range SEGMENTS {
-		for i := seg.firstled; i <= seg.lastled; i++ {
-			if all[i] {
-				panic(fmt.Sprintf("Overlapping display segments at index %d", i))
+	for name, segarray := range SEGMENTS {
+		all := make([]bool, c.CONFIG.Hardware.Display.LedsTotal)
+
+		for _, seg := range segarray {
+			for i := seg.firstled; i <= seg.lastled; i++ {
+				if all[i] {
+					panic(fmt.Sprintf("Overlapping display segments at index %d", i))
+				}
+				all[i] = true
 			}
-			all[i] = true
 		}
-	}
 
-	start := -1
-	for index, elem := range all {
-		if start == -1 && !elem {
-			start = index
-		} else if start != -1 && elem {
-			SEGMENTS = append(SEGMENTS, NewLedSegment(start, index-1, -1, false, false))
-			start = -1
+		start := -1
+		for index, elem := range all {
+			if start == -1 && !elem {
+				start = index
+			} else if start != -1 && elem {
+				SEGMENTS[name] = append(SEGMENTS[name], NewLedSegment(start, index-1, -1, false, false))
+				start = -1
+			}
 		}
-	}
-	if start != -1 {
-		SEGMENTS = append(SEGMENTS, NewLedSegment(start, len(all)-1, -1, false, false))
-	}
+		if start != -1 {
+			SEGMENTS[name] = append(SEGMENTS[name], NewLedSegment(start, len(all)-1, -1, false, false))
+		}
 
-	sort.Slice(SEGMENTS, func(i, j int) bool { return SEGMENTS[i].firstled < SEGMENTS[j].firstled })
+		sort.Slice(SEGMENTS[name], func(i, j int) bool { return SEGMENTS[name][i].firstled < SEGMENTS[name][j].firstled })
+	}
 }
 
 func DisplayDriver(display chan ([]p.Led), sig chan bool) {
@@ -111,16 +116,19 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool) {
 			log.Println("Ending DisplayDriver go-routine")
 			return
 		case sumLeds := <-display:
-			for _, seg := range SEGMENTS {
-				seg.setSegmentLeds(sumLeds)
+			for _, segarray := range SEGMENTS {
+				for _, seg := range segarray {
+					seg.setSegmentLeds(sumLeds)
+				}
 			}
-
 			if !c.CONFIG.RealHW {
 				simulateLedDisplay()
 			} else {
-				for _, seg := range SEGMENTS {
-					if seg.visible {
-						hw.SetLedSegment(seg.spimultiplex, seg.getSegmentLeds())
+				for _, segarray := range SEGMENTS {
+					for _, seg := range segarray {
+						if seg.visible {
+							hw.SetLedSegment(seg.spimultiplex, seg.getSegmentLeds())
+						}
 					}
 				}
 			}

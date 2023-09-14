@@ -14,6 +14,7 @@ import (
 	"github.com/montanaflynn/stats"
 	"github.com/rivo/tview"
 	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 	c "lautenbacher.net/goleds/config"
 	p "lautenbacher.net/goleds/producer"
 )
@@ -36,20 +37,26 @@ func scaledColor(led p.Led) string {
 func simulateLedDisplay() {
 	if !c.CONFIG.SensorShow {
 		var buf strings.Builder
-		tops := make([]string, len(SEGMENTS))
-		bots := make([]string, len(SEGMENTS))
-		for i, seg := range SEGMENTS {
-			tops[i], bots[i] = simulateLed(seg)
+		keys := maps.Keys(SEGMENTS)
+		slices.Sort(keys)
+		for _, name := range keys {
+			segarray := SEGMENTS[name]
+			tops := make([]string, len(segarray))
+			bots := make([]string, len(segarray))
+			for i, seg := range segarray {
+				tops[i], bots[i] = simulateLed(seg)
+			}
+			buf.WriteString(" ")
+			for i := range segarray {
+				buf.WriteString(tops[i])
+			}
+			buf.WriteString("\n ")
+			for i := range segarray {
+				buf.WriteString(bots[i])
+			}
+			buf.WriteString("\n\n")
 		}
-		buf.WriteString(" ")
-		for i := range SEGMENTS {
-			buf.WriteString(tops[i])
-		}
-		buf.WriteString("\n ")
-		for i := range SEGMENTS {
-			buf.WriteString(bots[i])
-		}
-		buf.WriteString("\n [blue]" + sensorline + "[:]")
+		buf.WriteString(" [blue]" + sensorline + "[:]")
 		content.SetText(buf.String())
 	}
 }
@@ -182,12 +189,14 @@ func InitSimulationTUI(ossignal chan os.Signal) {
 	intro.SetBackgroundColor(tcell.ColorBlack)
 
 	stripe := tview.NewTextView()
+	height := 3 * len(maps.Keys(c.CONFIG.Hardware.Display.LedSegments))
 	layout.AddItem(intro, 4, 1, false)
-	layout.AddItem(stripe, 5, 1, false)
+	layout.AddItem(stripe, 3+height, 1, false)
 	if c.CONFIG.SensorShow {
 		layout.SetRect(1, 1, int(math.Max(float64(len(c.CONFIG.Hardware.Sensors.SensorCfg)*15+24), 70)), 10)
 	} else {
-		layout.SetRect(1, 1, c.CONFIG.Hardware.Display.LedsTotal+4, 10)
+		height := 8 + (2 * len(maps.Keys(c.CONFIG.Hardware.Display.LedSegments)))
+		layout.SetRect(1, 1, c.CONFIG.Hardware.Display.LedsTotal+4, 8+height)
 	}
 	stripe.SetBorder(true)
 	stripe.SetTextAlign(0)
