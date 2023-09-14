@@ -63,13 +63,13 @@ Hardware:
       # mode it will still work. Every real segment on the real
       # hardware needs a valid mapping to a SPiMultiplex definition!
       
-      GroupB:
-        - FirstLed: 30
-          LastLed: 60
-          SpiMultiplex: 0
-        - FirstLed: 70
-          LastLed: 100
-          SpiMultiplex: 0
+      # GroupB:
+      #   - FirstLed: 30
+      #     LastLed: 60
+      #     SpiMultiplex: 0
+      #   - FirstLed: 70
+      #     LastLed: 100
+      #     SpiMultiplex: 0
   # This section describes the placement and other properties of the
   # IR sensors being attached to the system.
   Sensors:
