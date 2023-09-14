@@ -28,26 +28,47 @@ Hardware:
     # eyes.
     ColorCorrection: [1, 0.175, 0.05]
     # Here comes the mapping of the internal representation of the
-    # "LedsTotal" LEDs to real world segments of LED stripes. Note: The
-    # segments must NOT overlap. LEDs not covered by a segment become
-    # "virtual" segments.
+    # "LedsTotal" LEDs to groups of real world segments of LED
+    # stripes. Note: The segments in one group MUST NOT overlap. LEDs
+    # not covered by a segment in a group become "virtual" segments in
+    # that group. Using multiple groups becomes necessary when you
+    # e.g.  want to illuminate a hallway with stripes on the walls
+    # left and right of the hallway. Then you will need segments that
+    # overlap or in other words: The same internal LED will be part of
+    # multiple segments (one on the left wall of the hallway, one on
+    # the right). Using groups you can have that, as the non
+    # overlapping rule only applies to segments belonging to the same
+    # group.
     LedSegments:
       # The index of the LED from the internal stripe that is the
       # first LED of the segment
-      - FirstLed: 0
-        # and the same for the last one
-        LastLed: 69
-        # which SPI multiplex configuration should be used to address
-        # that stripe (see below). If "Visible" is false this is
-        # ignored
-        SpiMultiplex: 0
-        # If the segments low index starts at the end where the
-        # connector is or the other way around
-        Reverse: false
-      - FirstLed: 111
-        LastLed: 164
-        SpiMultiplex: 1
-        Reverse: false
+      GroupA:
+        - FirstLed: 0
+          # and the same for the last one
+          LastLed: 69
+          # which SPI multiplex configuration should be used to address
+          # that stripe (see below). If "Visible" is false this is
+          # ignored
+          SpiMultiplex: 0
+          # If the segments low index starts at the end where the
+          # connector is or the other way around
+          Reverse: false
+        - FirstLed: 111
+          LastLed: 164
+          SpiMultiplex: 1
+          Reverse: false
+      # NOTE: This example "GroupB" will NOT WORK on real hardware, as I
+      # am using "SPiMultiplex: 0" here, which is already used for the
+      # first stripe in GroupA. When running it in the simulation mode
+      # it will still work.
+      
+      GroupB:
+        - FirstLed: 30
+          LastLed: 60
+          SpiMultiplex: 0
+        - FirstLed: 70
+          LastLed: 100
+          SpiMultiplex: 0
   # This section describes the placement and other properties of the
   # IR sensors being attached to the system.
   Sensors:

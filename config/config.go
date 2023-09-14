@@ -61,7 +61,7 @@ type Config struct {
 			ForceUpdateDelay time.Duration `yaml:"ForceUpdateDelay"`
 			LedsTotal        int           `yaml:"LedsTotal"`
 			ColorCorrection  []float64     `yaml:"ColorCorrection"`
-			LedSegments      []struct {
+			LedSegments      map[string][]struct {
 				FirstLed     int  `yaml:"FirstLed"`
 				LastLed      int  `yaml:"LastLed"`
 				SpiMultiplex int  `yaml:"SpiMultiplex"`
