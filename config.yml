@@ -57,10 +57,11 @@ Hardware:
           LastLed: 164
           SpiMultiplex: 1
           Reverse: false
-      # NOTE: This example "GroupB" will NOT WORK on real hardware, as I
-      # am using "SPiMultiplex: 0" here, which is already used for the
-      # first stripe in GroupA. When running it in the simulation mode
-      # it will still work.
+      # NOTE: This example "GroupB" will NOT WORK on real hardware, as
+      # I am using "SPiMultiplex: 0" here, which is already used for
+      # the first stripe in GroupA. When running it in the simulation
+      # mode it will still work. Every real segment on the real
+      # hardware needs a valid mapping to a SPiMultiplex definition!
       
       GroupB:
         - FirstLed: 30
