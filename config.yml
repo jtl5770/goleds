@@ -49,13 +49,13 @@ Hardware:
           # which SPI multiplex configuration should be used to address
           # that stripe (see below). If "Visible" is false this is
           # ignored
-          SpiMultiplex: 0
+          SpiMultiplex: L1
           # If the segments low index starts at the end where the
           # connector is or the other way around
           Reverse: false
         - FirstLed: 111
           LastLed: 164
-          SpiMultiplex: 1
+          SpiMultiplex: L2
           Reverse: false
       # NOTE: This example "GroupB" will NOT WORK on real hardware, as
       # I am using "SPiMultiplex: 0" here, which is already used for
@@ -89,7 +89,7 @@ Hardware:
         LedIndex: 0
         # Like for the display - which SPI multiplex configuration to
         # use to access the ADC that handles this sensor
-        SpiMultiplex: 2
+        SpiMultiplex: ADC1
         # The channel (0-7) on this ADC where the sensor is attached to
         AdcChannel: 0
         # The sensor needs to read a value > TriggerValue for the
@@ -100,17 +100,17 @@ Hardware:
         TriggerValue: 130
       S1:
         LedIndex: 69
-        SpiMultiplex: 2
+        SpiMultiplex: ADC1
         AdcChannel: 7
         TriggerValue: 120
       S2:
         LedIndex: 111
-        SpiMultiplex: 3
+        SpiMultiplex: ADC2
         AdcChannel: 0
         TriggerValue: 130
       S3:
         LedIndex: 164
-        SpiMultiplex: 3
+        SpiMultiplex: ADC2
         AdcChannel: 5
         TriggerValue: 120
   # Here we define which settings on what GPIO pin will result in the
@@ -118,18 +118,18 @@ Hardware:
   SpiMultiplexGPIO:
     # This is the "SpiMultiplex" being referred to above in SensorCfg
     # and LedSegment  
-    0:
+    L1:
       # All pins that must be set low 
       Low: [17]
       # All pins that must be set high
       High: [22,23,24]
-    1:
+    L2:
       Low: [22]
       High: [17,23,24]
-    2:
+    ADC1:
       Low: [17,22,23]
       High: [24]
-    3:
+    ADC2:
       Low: [17,22,24]
       High: [23]
 

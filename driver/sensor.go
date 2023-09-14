@@ -20,13 +20,13 @@ var (
 type Sensor struct {
 	uid          string
 	LedIndex     int
-	spimultiplex int
+	spimultiplex string
 	adcChannel   byte
 	triggerValue int
 	values       []int
 }
 
-func NewSensor(uid string, ledIndex int, spimultiplex int, adcChannel byte, triggerValue int) *Sensor {
+func NewSensor(uid string, ledIndex int, spimultiplex string, adcChannel byte, triggerValue int) *Sensor {
 	smoothing := c.CONFIG.Hardware.Sensors.SmoothingSize
 	return &Sensor{
 		uid:          uid,

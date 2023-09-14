@@ -17,7 +17,7 @@ type ledsegment struct {
 	lastled      int
 	visible      bool
 	reverse      bool
-	spimultiplex int
+	spimultiplex string
 	leds         []p.Led
 }
 
@@ -33,7 +33,7 @@ func clamp(led int) int {
 	}
 }
 
-func NewLedSegment(firstled, lastled, spimultiplex int, reverse bool, visible bool) *ledsegment {
+func NewLedSegment(firstled, lastled int, spimultiplex string, reverse bool, visible bool) *ledsegment {
 	if firstled > lastled {
 		log.Printf("First led index %d is bigger than last led index %d - reversing", firstled, lastled)
 		tmp := firstled
@@ -41,7 +41,7 @@ func NewLedSegment(firstled, lastled, spimultiplex int, reverse bool, visible bo
 		lastled = tmp
 	}
 	if !visible {
-		spimultiplex = -1
+		spimultiplex = "__"
 	}
 	inst := ledsegment{
 		firstled:     clamp(firstled),
@@ -97,12 +97,12 @@ func InitDisplay() {
 			if start == -1 && !elem {
 				start = index
 			} else if start != -1 && elem {
-				SEGMENTS[name] = append(SEGMENTS[name], NewLedSegment(start, index-1, -1, false, false))
+				SEGMENTS[name] = append(SEGMENTS[name], NewLedSegment(start, index-1, "", false, false))
 				start = -1
 			}
 		}
 		if start != -1 {
-			SEGMENTS[name] = append(SEGMENTS[name], NewLedSegment(start, len(all)-1, -1, false, false))
+			SEGMENTS[name] = append(SEGMENTS[name], NewLedSegment(start, len(all)-1, "", false, false))
 		}
 
 		sort.Slice(SEGMENTS[name], func(i, j int) bool { return SEGMENTS[name][i].firstled < SEGMENTS[name][j].firstled })

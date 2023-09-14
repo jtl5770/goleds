@@ -12,7 +12,7 @@ import (
 
 var (
 	spiMutex        sync.Mutex
-	spimultiplexcfg map[int]gpiocfg
+	spimultiplexcfg map[string]gpiocfg
 )
 
 type gpiocfg struct {
@@ -32,7 +32,7 @@ func InitHardware() {
 
 		rpio.SpiSpeed(c.CONFIG.Hardware.SPIFrequency)
 
-		spimultiplexcfg = make(map[int]gpiocfg, len(c.CONFIG.Hardware.SpiMultiplexGPIO))
+		spimultiplexcfg = make(map[string]gpiocfg, len(c.CONFIG.Hardware.SpiMultiplexGPIO))
 
 		for key, cfg := range c.CONFIG.Hardware.SpiMultiplexGPIO {
 			low := make([]rpio.Pin, 0, len(cfg.Low))
@@ -66,13 +66,13 @@ func CloseGPIO() {
 	}
 }
 
-func SPIExchangeMultiplex(index int, write []byte) []byte {
+func SPIExchangeMultiplex(index string, write []byte) []byte {
 	spiMutex.Lock()
 	defer spiMutex.Unlock()
 
 	cfg, found := spimultiplexcfg[index]
 	if !found {
-		panic("No SPI multiplexe device configuration with index " + string(rune(index)) + " found in config file")
+		panic("No SPI multiplexe device configuration with index " + index + " found in config file")
 	} else {
 		for _, pin := range cfg.low {
 			pin.Low()
@@ -88,7 +88,7 @@ func SPIExchangeMultiplex(index int, write []byte) []byte {
 
 // Access a MCP3008 ADC via SPI.  If you have another ADC attached via
 // the SPI multiplexer you only need to change this function here.
-func ReadAdc(multiplex int, channel byte) int {
+func ReadAdc(multiplex string, channel byte) int {
 	write := []byte{1, (8 + channel) << 4, 0}
 	read := SPIExchangeMultiplex(multiplex, write)
 	return ((int(read[1]) & 3) << 8) + int(read[2])
@@ -97,7 +97,7 @@ func ReadAdc(multiplex int, channel byte) int {
 // Access a WS2801 LED stripe via SPI. If you have another LED stripe
 // attached via the SPI multiplexer you only need to change this
 // function here.
-func SetLedSegment(multiplex int, values []p.Led) {
+func SetLedSegment(multiplex string, values []p.Led) {
 	display := make([]byte, 3*len(values))
 	for idx, led := range values {
 		display[3*idx] = byte(math.Min(led.Red*c.CONFIG.Hardware.Display.ColorCorrection[0], 255))

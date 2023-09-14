@@ -62,23 +62,23 @@ type Config struct {
 			LedsTotal        int           `yaml:"LedsTotal"`
 			ColorCorrection  []float64     `yaml:"ColorCorrection"`
 			LedSegments      map[string][]struct {
-				FirstLed     int  `yaml:"FirstLed"`
-				LastLed      int  `yaml:"LastLed"`
-				SpiMultiplex int  `yaml:"SpiMultiplex"`
-				Reverse      bool `yaml:"Reverse"`
+				FirstLed     int    `yaml:"FirstLed"`
+				LastLed      int    `yaml:"LastLed"`
+				SpiMultiplex string `yaml:"SpiMultiplex"`
+				Reverse      bool   `yaml:"Reverse"`
 			} `yaml:"LedSegments"`
 		} `yaml:"Display"`
 		Sensors struct {
 			SmoothingSize int           `yaml:"SmoothingSize"`
 			LoopDelay     time.Duration `yaml:"LoopDelay"`
 			SensorCfg     map[string]struct {
-				LedIndex     int  `yaml:"LedIndex"`
-				SpiMultiplex int  `yaml:"SpiMultiplex"`
-				AdcChannel   byte `yaml:"AdcChannel"`
-				TriggerValue int  `yaml:"TriggerValue"`
+				LedIndex     int    `yaml:"LedIndex"`
+				SpiMultiplex string `yaml:"SpiMultiplex"`
+				AdcChannel   byte   `yaml:"AdcChannel"`
+				TriggerValue int    `yaml:"TriggerValue"`
 			} `yaml:"SensorCfg"`
 		} `yaml:"Sensors"`
-		SpiMultiplexGPIO map[int]struct {
+		SpiMultiplexGPIO map[string]struct {
 			Low  []int `yaml:"Low"`
 			High []int `yaml:"High"`
 		} `yaml:"SpiMultiplexGPIO"`
