@@ -217,11 +217,11 @@ without the `-real` command line parameter.
 
 There is another use case for the TUI. When configuring the
 installation, one of the things that requires quite some tweaking is
-to get the TriggerValues for the sensors right: high enough, that
-no noise from cross talk or background IR is triggering the LEDs, but
-low enough that the system is sensitive enough to reliably detect
-people passing by. This highly depends on the room and length and
-object distance that needs to be dealt with.
+to get the TriggerValues for the sensors right: high enough, that no
+noise from cross talk or background IR is triggering the LEDs, but low
+enough that the system is sensitive enough to reliably detect people
+passing by. This highly depends on the room and length and object
+distance that needs to be dealt with.
 
 For this, the switch `-show-sensors` together with `-real` opens up
 the TUI and displays (for a sliding window of 500 measurements) the
@@ -260,3 +260,8 @@ measurements)
 You can see, that the TriggerValue for `S2` should be increased
 slightly, as the noise level has at least once reached its currently
 configured`TriggerValue` of 120.
+
+<!-- Local Variables: -->
+<!-- eval: (auto-fill-mode t) -->
+<!-- End: -->
+
