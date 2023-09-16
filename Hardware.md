@@ -135,9 +135,9 @@ stripes, but maybe only use one MCP3008 for up to 8 sensors (which
 would allow for an entry and exit sensor per segment in the case all
 four stripes are attached)
 
-I would at best produce a board in the format of a Raspberry Pi HAT so
-it could just be put on top of Pi, connect via the expansion headers
-and actually power the Pi via the 5V & GND GPIO pins.
+At best would be a board in the format of a Raspberry Pi HAT so it
+could just be put on top of the Pi, connected via the expansion
+headers and actually power the Pi via the 5V & GND GPIO pins.
 
 
 <!-- Local Variables: --> 
