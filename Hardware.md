@@ -109,14 +109,15 @@ The next picture shows the simplified schematic (things like Vcc, GND
 or e.g. the capacitors at the power inputs of the chips silently
 ignored...)
 
-I assume this is for sure not the most elegant way to do the
+I know this is for sure not the most elegant way to do the
 multiplexing. E.g. I see no good reason why I didn't do the `CS`
 select on the two ADCs directly via a GPIO pin (instead of via two
 `OR` gates) that can be set to `LOW` and ignore the `CS` pin from the
 Pi completely (remember, `CS` needs to be pulled `LOW` to active the
-SPI device). I assume this is for historical reasons - the whole board
-is the result of me actually creating my first digital circuit some
-years ago.
+SPI device). I can only assume this is for historical reasons - the
+whole board is the result of me actually creating my first digital
+circuit some years ago - and I simply don't remember anymore the full
+process to arrive at the final stage.
 
 Anyway - it seems to work. `CLK` is shared among all devices, `MISO`
 between both ADCs. MOSI is connected to both ADCs, but gated through
