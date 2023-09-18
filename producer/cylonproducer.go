@@ -12,7 +12,7 @@ type CylonProducer struct {
 	*AbstractProducer
 	x         float64
 	step      float64
-	sidewidth int
+	radius    int
 	direction int
 	color     Led
 }
@@ -30,7 +30,7 @@ func NewCylonProducer(uid string, ledsChanged chan LedProducer) *CylonProducer {
 		direction: 1,
 	}
 	width := c.CONFIG.CylonLED.Width
-	inst.sidewidth = width / 2
+	inst.radius = width / 2
 
 	inst.runfunc = inst.runner
 	return &inst
@@ -60,8 +60,8 @@ func (s *CylonProducer) runner(startTime t.Time) {
 				s.direction = -s.direction
 			}
 			s.x += float64(s.direction) * s.step
-			left := s.x - float64(s.sidewidth)
-			right := s.x + float64(s.sidewidth)
+			left := s.x - float64(s.radius)
+			right := s.x + float64(s.radius)
 			// log.Printf("x: %f, left: %f, right: %f\n", s.x, left, right)
 			for i := range s.leds {
 				if i < int(left) || i > int(right+1) {
