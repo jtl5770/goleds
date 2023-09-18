@@ -58,7 +58,7 @@ Hardware:
           SpiMultiplex: L2
           Reverse: false
       # NOTE: This example "GroupB" will NOT WORK on real hardware, as
-      # I am using "XXX" and "YYY" for SpiMultiplex here, which are not
+      # I am using "XXX", "YYY" and "ZZZ" for SpiMultiplex here, which are not
       # a defined SpiMultiplex definition (see below). When running it
       # in the simulation mode it will still work. Every real segment
       # on the real hardware needs a valid mapping to a SPiMultiplex
@@ -68,9 +68,12 @@ Hardware:
       #   - FirstLed: 30
       #     LastLed: 60
       #     SpiMultiplex: XXX
-      #   - FirstLed: 70
+      #   - FirstLed: 75
       #     LastLed: 100
       #     SpiMultiplex: YYY
+      #   - FirstLed: 120
+      #     LastLed: 150
+      #     SpiMultiplex: ZZZ
   # This section describes the placement and other properties of the
   # IR sensors being attached to the system.
   Sensors:
