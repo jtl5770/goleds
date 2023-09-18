@@ -1,14 +1,14 @@
 // A package to read infrared sensor data via MCP3008 and drive
 // WS-2801 LED stripes.  This is configured according to a very
 // special hardware layout of two MCPs handling 2 sensors each and two
-// segments of LEDs. Multiplexing 2 MCPs for just 4 sensons is
+// segments of LEDs. Multiplexing 2 MCPs for just 4 sensors is
 // normally not needed, but the hardware was built to originally
 // having to drive around 14 sensors spaced very closely together
 // alongside the two LED stripes. This idea has later been abandoned
-// because of heavy crosstalk of the sensors. Now there is only a
+// because of heavy cross-talk of the sensors. Now there is only a
 // sensor at both sides of each stripe (4 in total). The LED stripe
 // layout is due to the special situation in my hallway with a door
-// seperating the two stripes.
+// separating the two stripes.
 //
 // The devices (stripes, MCPs) are talked to via SPI. The multiplexing
 // is done via AND and OR gates driven by GPIOs.  All hardware related
