@@ -173,9 +173,9 @@ func InitSimulationTUI(ossignal chan os.Signal) {
 		buf.WriteString("Hit [blue]1[-]...[blue]" +
 			fmt.Sprintf("%d", len(c.CONFIG.Hardware.Sensors.SensorCfg)) + "[-] to fire a sensor\n")
 	}
-	buf.WriteString("Hit [red]q[-] to exit, [red]r[-] to reload config file and restart")
+	buf.WriteString("Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload config file and restart")
 	if c.CONFIG.SensorShow && !c.CONFIG.RealHW {
-		buf.WriteString("\n[red] '-real' flag not given, using random numbers for testing![-]")
+		buf.WriteString("\n[#ff0000] '-real' flag not given, using random numbers for testing![-]")
 	}
 
 	layout := tview.NewFlex()
