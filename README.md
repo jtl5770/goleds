@@ -1,4 +1,16 @@
 # Go-LEDS
+
+<!--toc:start-->
+- [Go-LEDS](#go-leds)
+  - [Example setup](#example-setup)
+  - [Building the hardware](#building-the-hardware)
+  - [Mode of operation](#mode-of-operation)
+    - [Full configuration](#full-configuration)
+      - [List of producers](#list-of-producers)
+      - [Future Ideas](#future-ideas)
+    - [How to start the program on the Raspberry Pi](#how-to-start-the-program-on-the-raspberry-pi)
+    - [Text based UI for simulating](#text-based-ui-for-simulating)
+<!--toc:end-->
  
 ![Overview](images/overview.png)
 

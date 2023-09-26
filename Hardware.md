@@ -1,5 +1,14 @@
 # Hardware construction
 
+<!--toc:start-->
+- [Hardware construction](#hardware-construction)
+  - [Some pictures of the final installation](#some-pictures-of-the-final-installation)
+  - [Raspberry Pi](#raspberry-pi)
+  - [The more interesting inside of the box](#the-more-interesting-inside-of-the-box)
+    - [The custom logic board](#the-custom-logic-board)
+    - [FUTURE](#future)
+<!--toc:end-->
+
 ## Some pictures of the final installation
 
 The two shelves in the hallway and the interrupting door
