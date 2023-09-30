@@ -66,7 +66,6 @@ func NewTrigger(id string, value int, time time.Time) *Trigger {
 }
 
 func InitSensors() {
-	rand.Seed(time.Now().UnixNano())
 	Sensors = make(map[string]*Sensor, len(c.CONFIG.Hardware.Sensors.SensorCfg))
 	SensorReader = make(chan *Trigger)
 	for uid, cfg := range c.CONFIG.Hardware.Sensors.SensorCfg {
@@ -100,6 +99,8 @@ func SensorDriver(stop chan bool) {
 			for name, sensor := range Sensors {
 				var value int
 				if c.CONFIG.SensorShow && !c.CONFIG.RealHW {
+					// Sensor measuring TUI is shown but sensor values will be simulated
+					// this is only for testing the sensor measuring mode of the TUI
 					value = 30 + rand.Intn(250)
 				} else {
 					value = sensor.smoothValue(hw.ReadAdc(sensor.spimultiplex, sensor.adcChannel))
