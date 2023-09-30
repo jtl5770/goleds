@@ -31,7 +31,7 @@ type SensorLedProducer struct {
 	ledOn    Led
 }
 
-func NewSensorLedProducer(uid string, index int, ledsChanged chan (LedProducer)) *SensorLedProducer {
+func NewSensorLedProducer(uid string, index int, ledsChanged chan LedProducer) *SensorLedProducer {
 	inst := SensorLedProducer{
 		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
 		ledIndex:         index,

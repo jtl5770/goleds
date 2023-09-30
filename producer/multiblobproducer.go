@@ -63,11 +63,11 @@ func (s *Blob) switchDirection() {
 
 type MultiBlobProducer struct {
 	*AbstractProducer
-	allblobs  map[string]*Blob
-	nproducer *NightlightProducer
+	allblobs   map[string]*Blob
+	nlproducer *NightlightProducer
 }
 
-func NewMultiBlobProducer(uid string, ledsChanged chan LedProducer, nprod *NightlightProducer) *MultiBlobProducer {
+func NewMultiBlobProducer(uid string, ledsChanged chan LedProducer, nlprod *NightlightProducer) *MultiBlobProducer {
 	inst := MultiBlobProducer{
 		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
 	}
@@ -78,7 +78,7 @@ func NewMultiBlobProducer(uid string, ledsChanged chan LedProducer, nprod *Night
 		blob := NewBlob(uid)
 		inst.allblobs[uid] = blob
 	}
-	inst.nproducer = nprod
+	inst.nlproducer = nlprod
 	return &inst
 }
 
@@ -118,8 +118,8 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 		select {
 		case <-triggerduration.C:
 			// Doing the fadeout after the time is up
-			if s.nproducer != nil && !s.nproducer.GetIsRunning() {
-				s.nproducer.Start()
+			if s.nlproducer != nil && !s.nlproducer.GetIsRunning() {
+				s.nlproducer.Start()
 			}
 			s.fade_in_or_out(false)
 			return
@@ -155,8 +155,8 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 				s.fade_in_or_out(true)
 				countup_run = true
 				// if the NightlightProducer is running, stop it
-				if s.nproducer != nil && s.nproducer.GetIsRunning() {
-					s.nproducer.Stop()
+				if s.nlproducer != nil && s.nlproducer.GetIsRunning() {
+					s.nlproducer.Stop()
 				}
 			}
 			// update last_x value to current x

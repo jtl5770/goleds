@@ -20,7 +20,7 @@ type NightlightProducer struct {
 	ledNight  []Led
 }
 
-func NewNightlightProducer(uid string, ledsChanged chan (LedProducer)) *NightlightProducer {
+func NewNightlightProducer(uid string, ledsChanged chan LedProducer) *NightlightProducer {
 	inst := NightlightProducer{
 		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
 		latitude:         c.CONFIG.NightLED.Latitude,

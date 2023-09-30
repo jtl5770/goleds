@@ -166,7 +166,7 @@ func reset() {
 	hw.CloseGPIO()
 }
 
-func combineAndUpdateDisplay(r chan (p.LedProducer), w chan ([]p.Led), stopsig chan bool) {
+func combineAndUpdateDisplay(r chan p.LedProducer, w chan []p.Led, stopsig chan bool) {
 	var oldSumLeds []p.Led
 	allLedRanges := make(map[string][]p.Led)
 	ticker := time.NewTicker(c.CONFIG.Hardware.Display.ForceUpdateDelay)
