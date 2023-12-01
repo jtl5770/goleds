@@ -11,7 +11,7 @@
 // separating the two stripes.
 //
 // The devices (stripes, MCPs) are talked to via SPI. The multiplexing
-// is done via AND and OR gates driven by GPIOs.  All hardware related
+// is done via logical gates driven by GPIOs.  All hardware related
 // things are defined in the hardware/ directory (package hardware)
 // but the layout (number of stripe segments, MCPs, sensors) can be
 // changed dynamically via the config file.
