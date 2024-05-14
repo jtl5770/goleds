@@ -59,8 +59,11 @@ var (
 	stopsignal   chan bool
 )
 
-// main driver loop to setup hardware, go routines etc., listen for
-// signals to either exit or reload config
+// main driver loop to setup hardware, go routines etc.,
+// The main loop is designed to be able to reload the config file
+// dynamically and to react to signals to either exit or reload the
+// config file.
+
 func main() {
 	ex, err := os.Executable()
 	if err != nil {
