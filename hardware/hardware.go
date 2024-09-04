@@ -20,6 +20,10 @@ type gpiocfg struct {
 	high []rpio.Pin
 }
 
+// InitHardware initializes the hardware. This includes the SPI and the GPIO
+// multiplexer. If the configuration is set to use real hardware this function
+// will panic if the hardware cannot be initialized. If the configuration is
+// set to use fake hardware this function will print a log message.
 func InitHardware() {
 	if c.CONFIG.RealHW {
 		log.Println("Initialise GPI and Spi...")
@@ -57,6 +61,8 @@ func InitHardware() {
 	}
 }
 
+// CloseGPIO closes the GPIO and SPI. If the configuration is set to use real
+// hardware this function will panic if the hardware cannot be closed.
 func CloseGPIO() {
 	if c.CONFIG.RealHW {
 		rpio.SpiEnd(rpio.Spi0)
@@ -66,6 +72,7 @@ func CloseGPIO() {
 	}
 }
 
+// SPIExchangeMultiplex exchanges data via SPI.
 func SPIExchangeMultiplex(index string, write []byte) []byte {
 	spiMutex.Lock()
 	defer spiMutex.Unlock()

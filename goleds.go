@@ -47,6 +47,7 @@ import (
 	p "lautenbacher.net/goleds/producer"
 )
 
+// UIDs for the different types of producers
 const (
 	HOLD_LED_UID   = "__hold_producer"
 	NIGHT_LED_UID  = "__night_producer"
