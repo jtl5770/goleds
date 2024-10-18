@@ -76,7 +76,7 @@ func main() {
 
 	c.ReadConfig(*cfile, *realp, *sensp)
 
-	ossignal := make(chan os.Signal)
+	ossignal := make(chan os.Signal, 1)
 	signal.Notify(ossignal, os.Interrupt)
 	signal.Notify(ossignal, syscall.SIGHUP)
 
