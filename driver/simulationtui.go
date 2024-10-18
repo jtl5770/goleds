@@ -186,7 +186,7 @@ func InitSimulationTUI(ossignal chan os.Signal) {
 	intro.SetText(buf.String())
 	intro.SetTextAlign(1)
 	intro.SetDynamicColors(true)
-	intro.SetBackgroundColor(tcell.ColorBlack)
+	intro.SetBackgroundColor(tcell.ColorDarkSlateGray)
 
 	stripe := tview.NewTextView()
 	height := 3 * len(maps.Keys(c.CONFIG.Hardware.Display.LedSegments))
@@ -201,7 +201,7 @@ func InitSimulationTUI(ossignal chan os.Signal) {
 	stripe.SetBorder(true)
 	stripe.SetTextAlign(0)
 	stripe.SetDynamicColors(true)
-	stripe.SetBackgroundColor(tcell.ColorBlack)
+	stripe.SetBackgroundColor(tcell.ColorDarkSlateGray)
 
 	app := tview.NewApplication()
 	app.SetRoot(layout, false)
