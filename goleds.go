@@ -217,7 +217,7 @@ func combineAndUpdateDisplay(r chan p.LedProducer, w chan []p.Led, stopsig chan 
 			// We do this purely because there occasionally are
 			// artifacts on the led line from - maybe/somehow -
 			// electrical distortions or cross talk so we make sure to
-			// regularily force an update of the Led stripe
+			// regularly force an update of the Led stripe
 			w <- p.CombineLeds(allLedRanges)
 		case <-stopsig:
 			log.Println("Ending combineAndupdateDisplay go-routine")
