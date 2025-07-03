@@ -11,6 +11,7 @@ import (
 	c "lautenbacher.net/goleds/config"
 
 	"github.com/nathan-osman/go-sunrise"
+	"lautenbacher.net/goleds/util"
 )
 
 type NightlightProducer struct {
@@ -20,7 +21,7 @@ type NightlightProducer struct {
 	ledNight  []Led
 }
 
-func NewNightlightProducer(uid string, ledsChanged chan LedProducer) *NightlightProducer {
+func NewNightlightProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer]) *NightlightProducer {
 	inst := NightlightProducer{
 		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
 		latitude:         c.CONFIG.NightLED.Latitude,
@@ -49,7 +50,7 @@ func (s *NightlightProducer) setNightLed(on bool, index int) {
 func (s *NightlightProducer) runner(starttime t.Time) {
 	defer func() {
 		s.setNightLed(false, 0)
-		s.ledsChanged <- s
+		s.ledsChanged.Send(s)
 		s.setIsRunning(false)
 	}()
 
@@ -64,7 +65,7 @@ func (s *NightlightProducer) runner(starttime t.Time) {
 		if now.After(rise) && now.Before(set) {
 			// During the day - between sunrise and sunset
 			s.setNightLed(false, 0)
-			s.ledsChanged <- s
+			s.ledsChanged.Send(s)
 			wakeupAfter = set.Sub(now)
 		} else {
 			var waitIntervalDuration time.Duration
@@ -89,7 +90,7 @@ func (s *NightlightProducer) runner(starttime t.Time) {
 			}
 			// log.Printf("Current NightLED index %d : waitInterval %d : tillNextInterval %d", currInterval, waitIntervalDuration, tillNextInterval)
 			s.setNightLed(true, currInterval)
-			s.ledsChanged <- s
+			s.ledsChanged.Send(s)
 			// + 1s maybe not needed, but so we are sure to really be
 			// in the next interval
 			wakeupAfter = tillNextInterval + time.Second

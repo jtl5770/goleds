@@ -6,6 +6,7 @@ import (
 	t "time"
 
 	c "lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/util"
 )
 
 // Implementation of common and shared functionality between the
@@ -20,7 +21,7 @@ type AbstractProducer struct {
 	ledsMutex sync.RWMutex
 	// Guards changes to lastStart & isRunning & hasExited
 	updateMutex sync.RWMutex
-	ledsChanged chan LedProducer
+	ledsChanged *util.AtomicEvent[LedProducer]
 	// the method Start() should call. MUST be set by the concrete
 	// implementation upon constructing a new instance
 	runfunc func(start t.Time)
@@ -30,7 +31,7 @@ type AbstractProducer struct {
 }
 
 // Creates a new instance of AbstractProducer. The uid must be unique
-func NewAbstractProducer(uid string, ledsChanged chan LedProducer) *AbstractProducer {
+func NewAbstractProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer]) *AbstractProducer {
 	inst := AbstractProducer{
 		uid:         uid,
 		leds:        make([]Led, c.CONFIG.Hardware.Display.LedsTotal),
@@ -46,6 +47,7 @@ func (s *AbstractProducer) setLed(index int, value Led) {
 	s.ledsMutex.Lock()
 	defer s.ledsMutex.Unlock()
 	s.leds[index] = value
+	s.ledsChanged.Send(s)
 }
 
 // Returns a slice with the current values of all the LEDs.

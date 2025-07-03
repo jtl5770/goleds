@@ -13,6 +13,7 @@ import (
 	t "time"
 
 	c "lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/util"
 )
 
 type Blob struct {
@@ -67,7 +68,7 @@ type MultiBlobProducer struct {
 	nlproducer *NightlightProducer
 }
 
-func NewMultiBlobProducer(uid string, ledsChanged chan LedProducer, nlprod *NightlightProducer) *MultiBlobProducer {
+func NewMultiBlobProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer], nlprod *NightlightProducer) *MultiBlobProducer {
 	inst := MultiBlobProducer{
 		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
 	}
@@ -99,7 +100,7 @@ func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {
 		for i, led := range currentleds {
 			s.setLed(i, Led{led.Red * factor, led.Green * factor, led.Blue * factor})
 		}
-		s.ledsChanged <- s
+		s.ledsChanged.Send(s)
 		time.Sleep(delay)
 	}
 }
@@ -148,7 +149,7 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 			}
 
 			if countup_run {
-				s.ledsChanged <- s
+				s.ledsChanged.Send(s)
 			} else {
 				// The "countup" similar to the "countdown" fade out but fade in
 				// at the start of the blob period

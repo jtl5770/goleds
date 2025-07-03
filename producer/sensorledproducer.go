@@ -20,6 +20,7 @@ import (
 	t "time"
 
 	c "lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/util"
 )
 
 type SensorLedProducer struct {
@@ -31,7 +32,7 @@ type SensorLedProducer struct {
 	ledOn    Led
 }
 
-func NewSensorLedProducer(uid string, index int, ledsChanged chan LedProducer) *SensorLedProducer {
+func NewSensorLedProducer(uid string, index int, ledsChanged *util.AtomicEvent[LedProducer]) *SensorLedProducer {
 	inst := SensorLedProducer{
 		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
 		ledIndex:         index,
@@ -73,7 +74,7 @@ func (s *SensorLedProducer) runner(starttime t.Time) {
 			if right <= len(s.leds)-1 {
 				s.setLed(right, s.ledOn)
 			}
-			s.ledsChanged <- s
+			s.ledsChanged.Send(s)
 			if left <= 0 && right >= len(s.leds)-1 {
 				ticker.Stop()
 				break
@@ -135,7 +136,7 @@ func (s *SensorLedProducer) runner(starttime t.Time) {
 			if right >= s.ledIndex && right <= len(s.leds)-1 {
 				s.setLed(right, Led{})
 			}
-			s.ledsChanged <- s
+			s.ledsChanged.Send(s)
 			if left == s.ledIndex && right == s.ledIndex {
 				// that means: we have run down completely. Now we
 				// either simply end the go routine (allowing for a

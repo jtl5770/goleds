@@ -6,6 +6,7 @@ import (
 	t "time"
 
 	c "lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/util"
 )
 
 type CylonProducer struct {
@@ -17,7 +18,7 @@ type CylonProducer struct {
 	color     Led
 }
 
-func NewCylonProducer(uid string, ledsChanged chan LedProducer) *CylonProducer {
+func NewCylonProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer]) *CylonProducer {
 	inst := CylonProducer{
 		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
 		color: Led{
@@ -43,7 +44,7 @@ func (s *CylonProducer) runner(startTime t.Time) {
 		for i := range s.leds {
 			s.setLed(i, Led{})
 		}
-		s.ledsChanged <- s
+		s.ledsChanged.Send(s)
 		tick.Stop()
 		triggerduration.Stop()
 		s.setIsRunning(false)
@@ -78,7 +79,7 @@ func (s *CylonProducer) runner(startTime t.Time) {
 					}
 				}
 			}
-			s.ledsChanged <- s
+			s.ledsChanged.Send(s)
 		}
 	}
 }
