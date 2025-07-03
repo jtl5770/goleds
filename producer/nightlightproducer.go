@@ -22,17 +22,16 @@ type NightlightProducer struct {
 }
 
 func NewNightlightProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer]) *NightlightProducer {
-	inst := NightlightProducer{
-		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
-		latitude:         c.CONFIG.NightLED.Latitude,
-		longitude:        c.CONFIG.NightLED.Longitude,
-		ledNight:         make([]Led, len(c.CONFIG.NightLED.LedRGB)),
+	inst := &NightlightProducer{
+		latitude:  c.CONFIG.NightLED.Latitude,
+		longitude: c.CONFIG.NightLED.Longitude,
+		ledNight:  make([]Led, len(c.CONFIG.NightLED.LedRGB)),
 	}
+	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner)
 	for index, led := range c.CONFIG.NightLED.LedRGB {
 		inst.ledNight[index] = Led{led[0], led[1], led[2]}
 	}
-	inst.runfunc = inst.runner
-	return &inst
+	return inst
 }
 
 func (s *NightlightProducer) setNightLed(on bool, index int) {

@@ -33,20 +33,19 @@ type SensorLedProducer struct {
 }
 
 func NewSensorLedProducer(uid string, index int, ledsChanged *util.AtomicEvent[LedProducer]) *SensorLedProducer {
-	inst := SensorLedProducer{
-		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
-		ledIndex:         index,
-		holdT:            c.CONFIG.SensorLED.HoldTime,
-		runUpT:           c.CONFIG.SensorLED.RunUpDelay,
-		runDownT:         c.CONFIG.SensorLED.RunDownDelay,
+	inst := &SensorLedProducer{
+		ledIndex: index,
+		holdT:    c.CONFIG.SensorLED.HoldTime,
+		runUpT:   c.CONFIG.SensorLED.RunUpDelay,
+		runDownT: c.CONFIG.SensorLED.RunDownDelay,
 		ledOn: Led{
 			Red:   c.CONFIG.SensorLED.LedRGB[0],
 			Green: c.CONFIG.SensorLED.LedRGB[1],
 			Blue:  c.CONFIG.SensorLED.LedRGB[2],
 		},
 	}
-	inst.runfunc = inst.runner
-	return &inst
+	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner)
+	return inst
 }
 
 // The main worker, doing a run-up, hold, and run-down cycle (if

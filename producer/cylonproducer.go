@@ -19,8 +19,7 @@ type CylonProducer struct {
 }
 
 func NewCylonProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer]) *CylonProducer {
-	inst := CylonProducer{
-		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
+	inst := &CylonProducer{
 		color: Led{
 			Red:   c.CONFIG.CylonLED.LedRGB[0],
 			Green: c.CONFIG.CylonLED.LedRGB[1],
@@ -32,9 +31,9 @@ func NewCylonProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer]) *C
 	}
 	width := c.CONFIG.CylonLED.Width
 	inst.radius = width / 2
+	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner)
 
-	inst.runfunc = inst.runner
-	return &inst
+	return inst
 }
 
 func (s *CylonProducer) runner(startTime t.Time) {

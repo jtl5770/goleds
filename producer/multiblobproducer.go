@@ -69,10 +69,8 @@ type MultiBlobProducer struct {
 }
 
 func NewMultiBlobProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer], nlprod *NightlightProducer) *MultiBlobProducer {
-	inst := MultiBlobProducer{
-		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
-	}
-	inst.runfunc = inst.runner
+	inst := &MultiBlobProducer{}
+	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner)
 
 	inst.allblobs = make(map[string]*Blob)
 	for uid := range c.CONFIG.MultiBlobLED.BlobCfg {
@@ -80,7 +78,7 @@ func NewMultiBlobProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer]
 		inst.allblobs[uid] = blob
 	}
 	inst.nlproducer = nlprod
-	return &inst
+	return inst
 }
 
 func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {

@@ -22,13 +22,12 @@ type HoldProducer struct {
 }
 
 func NewHoldProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer]) *HoldProducer {
-	inst := HoldProducer{
-		AbstractProducer: NewAbstractProducer(uid, ledsChanged),
-		ledOnHold:        Led{Red: c.CONFIG.HoldLED.LedRGB[0], Green: c.CONFIG.HoldLED.LedRGB[1], Blue: c.CONFIG.HoldLED.LedRGB[2]},
-		holdT:            c.CONFIG.HoldLED.HoldTime,
+	inst := &HoldProducer{
+		ledOnHold: Led{Red: c.CONFIG.HoldLED.LedRGB[0], Green: c.CONFIG.HoldLED.LedRGB[1], Blue: c.CONFIG.HoldLED.LedRGB[2]},
+		holdT:     c.CONFIG.HoldLED.HoldTime,
 	}
-	inst.runfunc = inst.runner
-	return &inst
+	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner)
+	return inst
 }
 
 func (s *HoldProducer) runner(startime t.Time) {

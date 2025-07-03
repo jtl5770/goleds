@@ -22,8 +22,7 @@ type AbstractProducer struct {
 	// Guards changes to lastStart & isRunning & hasExited
 	updateMutex sync.RWMutex
 	ledsChanged *util.AtomicEvent[LedProducer]
-	// the method Start() should call. MUST be set by the concrete
-	// implementation upon constructing a new instance
+	// the method Start() should call. It is set via NewAbstractProducer.
 	runfunc func(start t.Time)
 	// this channel will be signaled via the Stop method. Your runfunc
 	// MUST listen to this channel and exit when it receives a signal
@@ -31,12 +30,13 @@ type AbstractProducer struct {
 }
 
 // Creates a new instance of AbstractProducer. The uid must be unique
-func NewAbstractProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer]) *AbstractProducer {
+func NewAbstractProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer], runfunc func(start t.Time)) *AbstractProducer {
 	inst := AbstractProducer{
 		uid:         uid,
 		leds:        make([]Led, c.CONFIG.Hardware.Display.LedsTotal),
 		ledsChanged: ledsChanged,
 		stop:        make(chan bool),
+		runfunc:     runfunc,
 	}
 	return &inst
 }
