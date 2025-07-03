@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 const CONFILE = "config.yml"
@@ -56,12 +56,14 @@ type Config struct {
 		} `yaml:"BlobCfg"`
 	} `yaml:"MultiBlobLED"`
 	Hardware struct {
-		SPIFrequency int `yaml:"SPIFrequency"`
+		LEDType      string `yaml:"LEDType"`
+		SPIFrequency int    `yaml:"SPIFrequency"`
 		Display      struct {
-			ForceUpdateDelay time.Duration `yaml:"ForceUpdateDelay"`
-			LedsTotal        int           `yaml:"LedsTotal"`
-			ColorCorrection  []float64     `yaml:"ColorCorrection"`
-			LedSegments      map[string][]struct {
+			ForceUpdateDelay  time.Duration `yaml:"ForceUpdateDelay"`
+			LedsTotal         int           `yaml:"LedsTotal"`
+			ColorCorrection   []float64     `yaml:"ColorCorrection"`
+			APA102_Brightness byte          `yaml:"APA102_Brightness"`
+			LedSegments       map[string][]struct {
 				FirstLed     int    `yaml:"FirstLed"`
 				LastLed      int    `yaml:"LastLed"`
 				SpiMultiplex string `yaml:"SpiMultiplex"`

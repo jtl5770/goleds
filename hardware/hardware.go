@@ -10,6 +10,10 @@ import (
 	p "lautenbacher.net/goleds/producer"
 )
 
+const (
+	LEDType = "ws2801"
+)
+
 var (
 	spiMutex        sync.Mutex
 	spimultiplexcfg map[string]gpiocfg
@@ -19,6 +23,8 @@ type gpiocfg struct {
 	low  []rpio.Pin
 	high []rpio.Pin
 }
+
+var spi SPI
 
 // InitHardware initializes the hardware. This includes the SPI and the GPIO
 // multiplexer. If the configuration is set to use real hardware this function
@@ -35,6 +41,7 @@ func InitHardware() {
 		}
 
 		rpio.SpiSpeed(c.CONFIG.Hardware.SPIFrequency)
+		spi = &rpioSPI{}
 
 		spimultiplexcfg = make(map[string]gpiocfg, len(c.CONFIG.Hardware.SpiMultiplexGPIO))
 
@@ -59,6 +66,13 @@ func InitHardware() {
 	} else {
 		log.Println("No GPI init done as we are not running on real hardware...")
 	}
+}
+
+type rpioSPI struct{}
+
+func (s *rpioSPI) Exchange(write []byte) []byte {
+	rpio.SpiExchange(write)
+	return write
 }
 
 // CloseGPIO closes the GPIO and SPI. If the configuration is set to use real
@@ -89,8 +103,7 @@ func SPIExchangeMultiplex(index string, write []byte) []byte {
 		}
 	}
 
-	rpio.SpiExchange(write)
-	return write
+	return spi.Exchange(write)
 }
 
 // Access a MCP3008 ADC via SPI.  If you have another ADC attached via
@@ -101,15 +114,49 @@ func ReadAdc(multiplex string, channel byte) int {
 	return ((int(read[1]) & 3) << 8) + int(read[2])
 }
 
-// Access a WS2801 LED stripe via SPI. If you have another LED stripe
+// Access a WS2801 or APA102 LED stripe via SPI. If you have a different LED stripe
 // attached via the SPI multiplexer you only need to change this
 // function here.
 func SetLedSegment(multiplex string, values []p.Led) {
-	display := make([]byte, 3*len(values))
-	for idx, led := range values {
-		display[3*idx] = byte(math.Min(led.Red*c.CONFIG.Hardware.Display.ColorCorrection[0], 255))
-		display[(3*idx)+1] = byte(math.Min(led.Green*c.CONFIG.Hardware.Display.ColorCorrection[1], 255))
-		display[(3*idx)+2] = byte(math.Min(led.Blue*c.CONFIG.Hardware.Display.ColorCorrection[2], 255))
+	var display []byte
+
+	if c.CONFIG.Hardware.LEDType == "ws2801" {
+		display = make([]byte, 3*len(values))
+		for idx, led := range values {
+			display[3*idx] = byte(math.Min(float64(led.Red)*float64(c.CONFIG.Hardware.Display.ColorCorrection[0]), 255))
+			display[(3*idx)+1] = byte(math.Min(float64(led.Green)*float64(c.CONFIG.Hardware.Display.ColorCorrection[1]), 255))
+			display[(3*idx)+2] = byte(math.Min(float64(led.Blue)*float64(c.CONFIG.Hardware.Display.ColorCorrection[2]), 255))
+		}
+	} else if c.CONFIG.Hardware.LEDType == "apa102" {
+		// frame start: 4 zero bytes
+		frameStart := []byte{0x00, 0x00, 0x00, 0x00}
+		display = append(display, frameStart...)
+
+		// Fixed general brightness
+		brightness := byte(c.CONFIG.Hardware.Display.APA102_Brightness) | 0xE0
+
+		// LED data
+		for _, led := range values {
+			red := byte(math.Min(float64(led.Red)*float64(c.CONFIG.Hardware.Display.ColorCorrection[0]), 255))
+			green := byte(math.Min(float64(led.Green)*float64(c.CONFIG.Hardware.Display.ColorCorrection[1]), 255))
+			blue := byte(math.Min(float64(led.Blue)*float64(c.CONFIG.Hardware.Display.ColorCorrection[2]), 255))
+
+			// protocol: brightness byte
+			display = append(display, brightness, blue, green, red)
+		}
+
+		// frame end: at least (len(values) / 2) + 1 bits of 0xFF
+		// using number of bytes here
+		frameEndLength := int(len(values)/16) + 1
+		frameEnd := make([]byte, frameEndLength)
+		for i := range frameEnd {
+			frameEnd[i] = 0xFF
+		}
+		display = append(display, frameEnd...)
+	} else {
+		log.Println("No LED stripe type defined. Please check the configuration.")
+		return
 	}
+
 	SPIExchangeMultiplex(multiplex, display)
 }

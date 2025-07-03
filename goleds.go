@@ -45,6 +45,7 @@ import (
 	d "lautenbacher.net/goleds/driver"
 	hw "lautenbacher.net/goleds/hardware"
 	p "lautenbacher.net/goleds/producer"
+	u "lautenbacher.net/goleds/util"
 )
 
 // UIDs for the different types of producers
@@ -110,7 +111,7 @@ func initialise(ossignal chan os.Signal) {
 	ledproducers = make(map[string]p.LedProducer)
 	stopsignal = make(chan bool)
 
-	ledReader := make(chan (p.LedProducer))
+	ledReader := u.NewAtomicEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led)
 
 	// This is the main producer: reacting to a sensor trigger to light the stripes
@@ -167,14 +168,15 @@ func reset() {
 	hw.CloseGPIO()
 }
 
-func combineAndUpdateDisplay(r chan p.LedProducer, w chan []p.Led, stopsig chan bool) {
+func combineAndUpdateDisplay(r *u.AtomicEvent[p.LedProducer], w chan []p.Led, stopsig chan bool) {
 	var oldSumLeds []p.Led
 	allLedRanges := make(map[string][]p.Led)
 	ticker := time.NewTicker(c.CONFIG.Hardware.Display.ForceUpdateDelay)
 	old_sensorledsrunning := false
 	for {
 		select {
-		case s := <-r:
+		case <-r.Channel():
+			s := r.Value()
 			if c.CONFIG.MultiBlobLED.Enabled || c.CONFIG.CylonLED.Enabled {
 				isrunning := false
 				for uid := range d.Sensors {
@@ -187,7 +189,8 @@ func combineAndUpdateDisplay(r chan p.LedProducer, w chan []p.Led, stopsig chan 
 				// is still running (aka: has any LED on) if NOT (aka:
 				// isrunning is false), we detected a change from ON
 				// to OFF exactly when old_sensorledsrunning is true;
-				// and we can now Start() the multiblobproducer
+				// and we can now Start() the multiblobproducer or the
+				// cylonproducer.
 				if old_sensorledsrunning && !isrunning {
 					if c.CONFIG.MultiBlobLED.Enabled {
 						ledproducers[MULTI_BLOB_UID].Start()

@@ -86,7 +86,7 @@ func SensorDriver(stop chan bool) {
 	}
 	sensorvalues := make(map[string]*deque.Deque[int])
 	for name := range Sensors {
-		sensorvalues[name] = deque.New[int]()
+		sensorvalues[name] = &deque.Deque[int]{}
 	}
 	ticker := time.NewTicker(c.CONFIG.Hardware.Sensors.LoopDelay)
 	for {
