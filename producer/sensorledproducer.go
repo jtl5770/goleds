@@ -1,22 +1,50 @@
-// This is the main producer: reacting to a sensor trigger to light
-// the stripes starting at the position of the sensor and moving
-// outwards in both directions. The producer is configured with a hold
-// time (how long the stripes should stay fully lit after the sensor
-// has triggered) and a run-up and run-down time (how long it takes to
-// light up the whole stripe and how long it takes to turn off the
-// whole stripe). The producer reacts to new sensor triggers while it
-// is running by extending the hold time and by switching back to
-// run-up if it is already in run-down. The producer is configured
-// with one color for the LEDs on the stripes. The producer is stopped
-// when the hold time has expired and there have been no new sensor
-// triggers in the meantime. The producer switches back to run-up mode
-// when a new sensor trigger is received while it is running in
-// run-down mode.
+// SensorLedProducer creates a light animation on an LED strip when a sensor is
+// triggered. The animation is a "pulse" of light originating from the sensor's
+// position, expanding to fill the entire strip, holding for a set duration,
+// and then contracting back to the center before turning off.
+//
+// It is designed to be responsive, meaning its behavior changes if new sensor
+// triggers arrive while an animation is already in progress.
+//
+// # Key Responsibilities & Behavior
+//
+// 1. Configuration:
+// When created, it's configured with parameters from c.CONFIG.SensorLED:
+//   - ledIndex: The starting position of the animation, corresponding to the
+//     sensor's physical location.
+//   - ledOn: The color of the illuminated LEDs.
+//   - runUpT: The delay between steps as the light expands outwards.
+//   - runDownT: The delay between steps as the light contracts inwards.
+//   - holdT: The minimum duration the entire strip remains lit after the last
+//     trigger.
+//
+// 2. Animation Cycle (State Machine):
+// The core logic is implemented as a state machine orchestrated by the runner
+// function. It cycles through three distinct states, each managed by a
+// dedicated helper function:
+//   - State 1: Run-Up (runUpPhase)
+//     The animation starts at ledIndex and turns on LEDs symmetrically outwards
+//     from the center (left--, right++) until the light covers both ends of
+//     the LED strip.
+//   - State 2: Hold (holdPhase)
+//     Once fully lit, the strip enters a "hold" state for the configured
+//     holdT duration. If a new trigger arrives, the hold timer is reset,
+//     extending the animation and making the system feel responsive.
+//   - State 3: Run-Down (runDownPhase)
+//     After the hold time expires, LEDs turn off from the outer edges inwards
+//     (left++, right--). If a new trigger arrives during this phase, the state
+//     machine transitions back to the "Run-Up" state from the current light
+//     position, ensuring the strip relights quickly.
+//
+// 3. Termination:
+// The runner goroutine, and thus the animation, terminates only when the
+// "Run-Down" phase completes fully without being interrupted by a new trigger.
+// Once it ends, the producer becomes idle, ready to be started again by a
+// future sensor event.
 
 package producer
 
 import (
-	"time"
 	t "time"
 
 	c "lautenbacher.net/goleds/config"
@@ -26,9 +54,9 @@ import (
 type SensorLedProducer struct {
 	*AbstractProducer
 	ledIndex int
-	holdT    time.Duration
-	runUpT   time.Duration
-	runDownT time.Duration
+	holdT    t.Duration
+	runUpT   t.Duration
+	runDownT t.Duration
 	ledOn    Led
 }
 
@@ -48,122 +76,134 @@ func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicEvent[LedP
 	return inst
 }
 
-// The main worker, doing a run-up, hold, and run-down cycle (if
-// undisturbed by intermediate Fire() events). It checks for these
-// intermediate Fire() events during hold time (to prolong the hold
-// time accordingly) and during run-down to switch back into the
-// run-up part if needed. At the end it checks one last time for an
-// intermediate Fire() before finally setting s.isRunning to false and
-// ending the go routine. All this is either guarded directly or
-// indirectly (by calls to s.getLastFire()) by s.updateMutex.
-func (s *SensorLedProducer) runner(starttime t.Time) {
-	defer func() {
-		s.setIsRunning(false)
-	}()
-
-	left := s.ledIndex
-	right := s.ledIndex
+// runUpPhase handles the "run-up" part of the animation, where LEDs
+// are turned on from the center outwards.
+func (s *SensorLedProducer) runUpPhase(left, right int) (nleft, nright int, stopped bool) {
+	ticker := t.NewTicker(s.runUpT)
+	defer ticker.Stop()
 
 	for {
-		ticker := time.NewTicker(s.runUpT)
-		for {
-			if left >= 0 {
-				s.setLed(left, s.ledOn)
-			}
-			if right <= len(s.leds)-1 {
-				s.setLed(right, s.ledOn)
-			}
-			s.ledsChanged.Send(s)
-			if left <= 0 && right >= len(s.leds)-1 {
-				ticker.Stop()
-				break
-			}
-			right++
-			left--
-			select {
-			case <-ticker.C:
-			// continue
-			case <-s.stop:
-				// log.Println("Stopped SensorLedProducer...")
-				ticker.Stop()
-				return
-			}
+		if left >= 0 {
+			s.setLed(left, s.ledOn)
 		}
-		// Now entering HOLD state - always, uconditionally after
-		// RUN_UP is complete. If there have been any Fire() events in
-		// the meantime or if there are more during hold, the hold
-		// period will be extended to be at least the last Fire()
-		// event time plus s.holdT
-		var old_last_start time.Time
-		for {
-			now := time.Now()
-			last_start := s.getLastStart()
-			hold_until := last_start.Add(s.holdT)
-			if hold_until.After(now) {
-				select {
-				case <-time.After(hold_until.Sub(now)):
-					// continue
-				case <-s.stop:
-					// log.Println("Stopped SensorLedProducer...")
-					ticker.Stop()
-					return
-				}
-			} else {
-				// make sure to store the last looked at Fire() event
-				// time so we don't accidentally loose events. If
-				// there have been new ones, we will see in the
-				// RUN_DOWN section and skip back to the beginning
-				old_last_start = last_start
-				break
-			}
+		if right < len(s.leds) {
+			s.setLed(right, s.ledOn)
 		}
-		// finally entering RUN DOWN state
-		ticker.Reset(s.runDownT)
-		for {
-			last_start := s.getLastStart()
-			if last_start.After(old_last_start) {
-				// breaking out of inner for loop, but not outer, so
-				// we are back at RUN UP while preserving the current
-				// value for left and right
-				ticker.Stop()
-				break
-			}
+		s.ledsChanged.Send(s)
 
-			if left <= s.ledIndex && left >= 0 {
-				s.setLed(left, Led{})
-			}
-			if right >= s.ledIndex && right <= len(s.leds)-1 {
-				s.setLed(right, Led{})
-			}
-			s.ledsChanged.Send(s)
-			if left == s.ledIndex && right == s.ledIndex {
-				// that means: we have run down completely. Now we
-				// either simply end the go routine (allowing for a
-				// fire event to trigger a new complete run up, hold,
-				// run down cycle in the future or - as a last check -
-				// we see if there has been a fire event in the little
-				// time while this last iteration of the inner for
-				// loop took place thereby closing a small race condition)
-				ticker.Stop()
-
-				if !s.getLastStart().After(last_start) {
-					// we are finally ready and can end the go routine
-					return
-				} else {
-					// back into running up again
-					break
-				}
-			}
-			left++
-			right--
-			select {
-			case <-ticker.C:
-				// continue
-			case <-s.stop:
-				ticker.Stop()
-				// log.Println("Stopped SensorLedProducer...")
-				return
-			}
+		if left <= 0 && right >= len(s.leds)-1 {
+			// run-up is complete
+			return left, right, false
 		}
+
+		left--
+		right++
+
+		select {
+		case <-ticker.C:
+		case <-s.stop:
+			return left, right, true
+		}
+	}
+}
+
+// holdPhase handles the "hold" part, keeping LEDs on. The hold time
+// is extended if new triggers arrive.
+func (s *SensorLedProducer) holdPhase() (lastStartSeen t.Time, stopped bool) {
+	for {
+		lastStart := s.getLastStart()
+		holdUntil := lastStart.Add(s.holdT)
+
+		if t.Now().After(holdUntil) {
+			// Hold time expired
+			return lastStart, false
+		}
+
+		select {
+		case <-t.After(t.Until(holdUntil)):
+			// Time expired, loop again to re-check for new triggers
+		case <-s.stop:
+			return t.Time{}, true
+		}
+	}
+}
+
+// runDownPhase handles the "run-down" part, turning LEDs off from the
+// edges inwards. It can be interrupted by a new trigger, which
+// signals that the animation should restart.
+func (s *SensorLedProducer) runDownPhase(left, right int, lastStartSeen t.Time) (nleft, nright int, shouldRestart, stopped bool) {
+	ticker := t.NewTicker(s.runDownT)
+	defer ticker.Stop()
+
+	for {
+		if s.getLastStart().After(lastStartSeen) {
+			// New trigger arrived, restart animation cycle
+			return left, right, true, false
+		}
+
+		if left <= s.ledIndex && left >= 0 {
+			s.setLed(left, Led{})
+		}
+		if right >= s.ledIndex && right < len(s.leds) {
+			s.setLed(right, Led{})
+		}
+		s.ledsChanged.Send(s)
+
+		if left == s.ledIndex && right == s.ledIndex {
+			// Run-down complete, final check for new trigger
+			if s.getLastStart().After(lastStartSeen) {
+				return left, right, true, false // restart
+			}
+			return left, right, false, false // normal exit
+		}
+
+		left++
+		right--
+
+		select {
+		case <-ticker.C:
+		case <-s.stop:
+			return left, right, false, true
+		}
+	}
+}
+
+// The main worker, doing a run-up, hold, and run-down cycle (if
+// undisturbed by intermediate Start() events). It checks for these
+// intermediate Start() events during hold time (to prolong the hold
+// time accordingly) and during run-down to switch back into the
+// run-up part if needed. At the end it checks one last time for an
+// intermediate Start() before finally setting s.isRunning to false and
+// ending the go routine. All this is either guarded directly or
+// indirectly (by calls to s.getLastStart()) by s.updateMutex.
+func (s *SensorLedProducer) runner(startTime t.Time) {
+	defer s.setIsRunning(false)
+
+	left, right := s.ledIndex, s.ledIndex
+
+	for {
+		var stopped, shouldRestart bool
+		var lastStartSeen t.Time
+
+		left, right, stopped = s.runUpPhase(left, right)
+		if stopped {
+			return
+		}
+
+		lastStartSeen, stopped = s.holdPhase()
+		if stopped {
+			return
+		}
+
+		left, right, shouldRestart, stopped = s.runDownPhase(left, right, lastStartSeen)
+		if stopped {
+			return
+		}
+
+		if !shouldRestart {
+			// Animation finished normally
+			return
+		}
+		// A new trigger arrived during run-down, so restart the cycle.
 	}
 }
