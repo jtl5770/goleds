@@ -1,16 +1,17 @@
 package main
 
 import (
+	"testing"
+	"time"
+
 	c "lautenbacher.net/goleds/config"
 	d "lautenbacher.net/goleds/driver"
 	p "lautenbacher.net/goleds/producer"
-	"lautenbacher.net/goleds/util"
-	"testing"
-	"time"
+	u "lautenbacher.net/goleds/util"
 )
 
 type MockLedProducer struct {
-	p.AbstractProducer
+	*p.AbstractProducer
 	uid       string
 	isRunning bool
 	leds      []p.Led
@@ -138,7 +139,7 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 		ledproducers = oldLedProducers
 	})
 
-	ledReader := util.NewAtomicEvent[p.LedProducer]()
+	ledReader := u.NewAtomicEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
 	stopsignal = make(chan bool)
 

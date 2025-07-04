@@ -122,10 +122,10 @@ func SetLedSegment(multiplex string, values []p.Led) {
 
 	if c.CONFIG.Hardware.LEDType == "ws2801" {
 		display = make([]byte, 3*len(values))
-		for idx, led := range values {
-			display[3*idx] = byte(math.Min(float64(led.Red)*float64(c.CONFIG.Hardware.Display.ColorCorrection[0]), 255))
-			display[(3*idx)+1] = byte(math.Min(float64(led.Green)*float64(c.CONFIG.Hardware.Display.ColorCorrection[1]), 255))
-			display[(3*idx)+2] = byte(math.Min(float64(led.Blue)*float64(c.CONFIG.Hardware.Display.ColorCorrection[2]), 255))
+		for idx := range values {
+			display[3*idx] = byte(math.Min(float64(values[idx].Red)*float64(c.CONFIG.Hardware.Display.ColorCorrection[0]), 255))
+			display[(3*idx)+1] = byte(math.Min(float64(values[idx].Green)*float64(c.CONFIG.Hardware.Display.ColorCorrection[1]), 255))
+			display[(3*idx)+2] = byte(math.Min(float64(values[idx].Blue)*float64(c.CONFIG.Hardware.Display.ColorCorrection[2]), 255))
 		}
 	} else if c.CONFIG.Hardware.LEDType == "apa102" {
 		// frame start: 4 zero bytes
@@ -136,10 +136,10 @@ func SetLedSegment(multiplex string, values []p.Led) {
 		brightness := byte(c.CONFIG.Hardware.Display.APA102_Brightness) | 0xE0
 
 		// LED data
-		for _, led := range values {
-			red := byte(math.Min(float64(led.Red)*float64(c.CONFIG.Hardware.Display.ColorCorrection[0]), 255))
-			green := byte(math.Min(float64(led.Green)*float64(c.CONFIG.Hardware.Display.ColorCorrection[1]), 255))
-			blue := byte(math.Min(float64(led.Blue)*float64(c.CONFIG.Hardware.Display.ColorCorrection[2]), 255))
+		for i := range values {
+			red := byte(math.Min(float64(values[i].Red)*float64(c.CONFIG.Hardware.Display.ColorCorrection[0]), 255))
+			green := byte(math.Min(float64(values[i].Green)*float64(c.CONFIG.Hardware.Display.ColorCorrection[1]), 255))
+			blue := byte(math.Min(float64(values[i].Blue)*float64(c.CONFIG.Hardware.Display.ColorCorrection[2]), 255))
 
 			// protocol: brightness byte
 			display = append(display, brightness, blue, green, red)

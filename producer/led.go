@@ -31,8 +31,8 @@ func (s *Led) Max(in Led) Led {
 func CombineLeds(allLedRanges map[string][]Led) []Led {
 	sumLeds := make([]Led, c.CONFIG.Hardware.Display.LedsTotal)
 	for _, currleds := range allLedRanges {
-		for j, v := range currleds {
-			sumLeds[j] = v.Max(sumLeds[j])
+		for j := range currleds {
+			sumLeds[j] = currleds[j].Max(sumLeds[j])
 		}
 	}
 	return sumLeds
