@@ -6,7 +6,7 @@ import (
 	t "time"
 
 	c "lautenbacher.net/goleds/config"
-	"lautenbacher.net/goleds/util"
+	u "lautenbacher.net/goleds/util"
 )
 
 type CylonProducer struct {
@@ -18,7 +18,7 @@ type CylonProducer struct {
 	color     Led
 }
 
-func NewCylonProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer]) *CylonProducer {
+func NewCylonProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer]) *CylonProducer {
 	inst := &CylonProducer{
 		color: Led{
 			Red:   c.CONFIG.CylonLED.LedRGB[0],

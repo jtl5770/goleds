@@ -20,7 +20,7 @@ import (
 	t "time"
 
 	c "lautenbacher.net/goleds/config"
-	"lautenbacher.net/goleds/util"
+	u "lautenbacher.net/goleds/util"
 )
 
 type SensorLedProducer struct {
@@ -32,7 +32,7 @@ type SensorLedProducer struct {
 	ledOn    Led
 }
 
-func NewSensorLedProducer(uid string, index int, ledsChanged *util.AtomicEvent[LedProducer]) *SensorLedProducer {
+func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicEvent[LedProducer]) *SensorLedProducer {
 	inst := &SensorLedProducer{
 		ledIndex: index,
 		holdT:    c.CONFIG.SensorLED.HoldTime,

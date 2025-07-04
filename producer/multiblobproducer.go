@@ -13,7 +13,7 @@ import (
 	t "time"
 
 	c "lautenbacher.net/goleds/config"
-	"lautenbacher.net/goleds/util"
+	u "lautenbacher.net/goleds/util"
 )
 
 type Blob struct {
@@ -68,7 +68,7 @@ type MultiBlobProducer struct {
 	nlproducer *NightlightProducer
 }
 
-func NewMultiBlobProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer], nlprod *NightlightProducer) *MultiBlobProducer {
+func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], nlprod *NightlightProducer) *MultiBlobProducer {
 	inst := &MultiBlobProducer{}
 	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner)
 

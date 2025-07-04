@@ -12,7 +12,7 @@ import (
 	t "time"
 
 	c "lautenbacher.net/goleds/config"
-	"lautenbacher.net/goleds/util"
+	u "lautenbacher.net/goleds/util"
 )
 
 type HoldProducer struct {
@@ -21,7 +21,7 @@ type HoldProducer struct {
 	holdT     time.Duration
 }
 
-func NewHoldProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer]) *HoldProducer {
+func NewHoldProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer]) *HoldProducer {
 	inst := &HoldProducer{
 		ledOnHold: Led{Red: c.CONFIG.HoldLED.LedRGB[0], Green: c.CONFIG.HoldLED.LedRGB[1], Blue: c.CONFIG.HoldLED.LedRGB[2]},
 		holdT:     c.CONFIG.HoldLED.HoldTime,

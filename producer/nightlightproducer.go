@@ -9,9 +9,9 @@ import (
 	t "time"
 
 	c "lautenbacher.net/goleds/config"
+	u "lautenbacher.net/goleds/util"
 
 	"github.com/nathan-osman/go-sunrise"
-	"lautenbacher.net/goleds/util"
 )
 
 type NightlightProducer struct {
@@ -21,7 +21,7 @@ type NightlightProducer struct {
 	ledNight  []Led
 }
 
-func NewNightlightProducer(uid string, ledsChanged *util.AtomicEvent[LedProducer]) *NightlightProducer {
+func NewNightlightProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer]) *NightlightProducer {
 	inst := &NightlightProducer{
 		latitude:  c.CONFIG.NightLED.Latitude,
 		longitude: c.CONFIG.NightLED.Longitude,
