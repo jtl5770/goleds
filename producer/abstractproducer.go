@@ -78,7 +78,7 @@ func (s *AbstractProducer) getLastStart() t.Time {
 // block.  When the worker go routine is already running, it does
 // nothing besides updating s.lastStart to the current time. If the
 // worker go routine is started and s.isRunning is set to true, no
-// intermediate call to Fire() will be able to start another worker
+// intermediate call to Start() will be able to start another worker
 // concurrently.  The method is guarded by s.updateMutex
 // IMPORTANT: After constructing your concrete instance you MUST set
 // AbstractProducer.runfunc to the concrete worker method to call.
