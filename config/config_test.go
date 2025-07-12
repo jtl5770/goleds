@@ -10,6 +10,9 @@ import (
 )
 
 func TestReadConfig(t *testing.T) {
+	oldConfig := CONFIG
+	t.Cleanup(func() { CONFIG = oldConfig })
+
 	// Create a temporary directory for the test
 	tempDir, err := os.MkdirTemp("", "goleds-test")
 	if err != nil {

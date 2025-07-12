@@ -9,6 +9,8 @@ import (
 )
 
 func TestNewLedSegment(t *testing.T) {
+	oldConfig := c.CONFIG
+	t.Cleanup(func() { c.CONFIG = oldConfig })
 	c.CONFIG.Hardware.Display.LedsTotal = 100
 
 	// Test normal creation
@@ -35,6 +37,8 @@ func TestNewLedSegment(t *testing.T) {
 }
 
 func TestLedSegmentGetAndSet(t *testing.T) {
+	oldConfig := c.CONFIG
+	t.Cleanup(func() { c.CONFIG = oldConfig })
 	c.CONFIG.Hardware.Display.LedsTotal = 10
 	seg := NewLedSegment(2, 5, "spi1", false, true)
 
@@ -61,6 +65,8 @@ func TestLedSegmentGetAndSet(t *testing.T) {
 }
 
 func TestInitDisplay(t *testing.T) {
+	oldConfig := c.CONFIG
+	t.Cleanup(func() { c.CONFIG = oldConfig })
 	c.CONFIG.Hardware.Display.LedsTotal = 10
 	c.CONFIG.Hardware.Display.LedSegments = map[string][]struct {
 		FirstLed     int    `yaml:"FirstLed"`

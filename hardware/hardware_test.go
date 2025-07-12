@@ -10,8 +10,6 @@ import (
 
 // Mocking the rpio library
 
-var spiExchange func(write []byte) []byte
-
 type mockSPI struct {
 	exchangeFunc func(write []byte) []byte
 }
@@ -21,6 +19,8 @@ func (m *mockSPI) Exchange(write []byte) []byte {
 }
 
 func TestReadAdc(t *testing.T) {
+	oldConfig := c.CONFIG
+	t.Cleanup(func() { c.CONFIG = oldConfig })
 	c.CONFIG.RealHW = false
 	c.CONFIG.Hardware.SpiMultiplexGPIO = map[string]struct {
 		Low  []int `yaml:"Low"`
@@ -43,6 +43,8 @@ func TestReadAdc(t *testing.T) {
 }
 
 func TestSetLedSegment_ws2801(t *testing.T) {
+	oldConfig := c.CONFIG
+	t.Cleanup(func() { c.CONFIG = oldConfig })
 	c.CONFIG.RealHW = false
 	c.CONFIG.Hardware.LEDType = "ws2801"
 	c.CONFIG.Hardware.Display.ColorCorrection = []float64{1, 1, 1}
@@ -75,6 +77,8 @@ func TestSetLedSegment_ws2801(t *testing.T) {
 }
 
 func TestSetLedSegment_apa102(t *testing.T) {
+	oldConfig := c.CONFIG
+	t.Cleanup(func() { c.CONFIG = oldConfig })
 	c.CONFIG.RealHW = false
 	c.CONFIG.Hardware.LEDType = "apa102"
 	c.CONFIG.Hardware.Display.ColorCorrection = []float64{1, 1, 1}

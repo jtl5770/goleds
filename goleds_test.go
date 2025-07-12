@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -76,9 +77,12 @@ func TestFireController(t *testing.T) {
 	})
 
 	stopsignal = make(chan bool)
-	go fireController(stopsignal)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go fireController(stopsignal, &wg)
 	t.Cleanup(func() {
 		close(stopsignal)
+		wg.Wait()
 	})
 
 	// test normal trigger
@@ -117,6 +121,7 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	// setup
 	oldConfig := c.CONFIG
 	c.CONFIG = c.Config{} // Reset config
+	c.CONFIG.Hardware.Display.LedsTotal = 10
 	c.CONFIG.Hardware.Display.ForceUpdateDelay = 1 * time.Second
 	c.CONFIG.MultiBlobLED.Enabled = true
 	t.Cleanup(func() {
@@ -143,9 +148,12 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	ledWriter := make(chan []p.Led, 1)
 	stopsignal = make(chan bool)
 
-	go combineAndUpdateDisplay(ledReader, ledWriter, stopsignal)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go combineAndUpdateDisplay(ledReader, ledWriter, stopsignal, &wg)
 	t.Cleanup(func() {
 		close(stopsignal)
+		wg.Wait()
 	})
 
 	// test initial state

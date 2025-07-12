@@ -27,6 +27,8 @@ func TestLed_Max(t *testing.T) {
 }
 
 func TestCombineLeds(t *testing.T) {
+	oldConfig := c.CONFIG
+	t.Cleanup(func() { c.CONFIG = oldConfig })
 	c.CONFIG.Hardware.Display.LedsTotal = 5
 
 	ledRanges := map[string][]Led{
