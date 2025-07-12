@@ -27,11 +27,20 @@ var (
 )
 
 func scaledColor(led p.Led) string {
-	factor := 255 / math.Max(led.Red, math.Max(led.Green, led.Blue))
+	maxColor := math.Max(led.Red, math.Max(led.Green, led.Blue))
+	if maxColor == 0 {
+		return "[#000000]"
+	}
+	factor := 255 / maxColor
 	red := math.Min(led.Red*factor, 255)
 	green := math.Min(led.Green*factor, 255)
 	blue := math.Min(led.Blue*factor, 255)
-	return fmt.Sprintf("[#%02x%02x%02x]", byte(red), byte(green), byte(blue))
+
+	// Add a small epsilon to counter floating-point inaccuracies before rounding.
+	// This helps cases like 127.5 being represented as 127.499... and rounding down.
+	const epsilon = 1e-9
+
+	return fmt.Sprintf("[#%02x%02x%02x]", byte(math.Round(red+epsilon)), byte(math.Round(green+epsilon)), byte(math.Round(blue+epsilon)))
 }
 
 func simulateLedDisplay() {
