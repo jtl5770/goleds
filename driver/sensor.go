@@ -3,6 +3,7 @@ package driver
 import (
 	"log"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/gammazero/deque"
@@ -73,7 +74,8 @@ func InitSensors() {
 	}
 }
 
-func SensorDriver(stop chan bool) {
+func SensorDriver(stop chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
 	if !c.CONFIG.RealHW && !c.CONFIG.SensorShow {
 		// SimulationTUI is shown: Sensor triggers will be simulated
 		// via key presses we just wait for the signal on the stop

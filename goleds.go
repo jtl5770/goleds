@@ -38,6 +38,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"reflect"
+	"sync"
 	"syscall"
 	"time"
 
@@ -59,6 +60,7 @@ const (
 var (
 	ledproducers map[string]p.LedProducer
 	stopsignal   chan bool
+	shutdownWg   sync.WaitGroup
 )
 
 // main driver loop to setup hardware, go routines etc.,
@@ -150,10 +152,11 @@ func initialise(ossignal chan os.Signal) {
 
 	// *FUTURE* init more types of ledproducers if needed/wanted
 
-	go combineAndUpdateDisplay(ledReader, ledWriter, stopsignal)
-	go fireController(stopsignal)
-	go d.DisplayDriver(ledWriter, stopsignal)
-	go d.SensorDriver(stopsignal)
+	shutdownWg.Add(4)
+	go combineAndUpdateDisplay(ledReader, ledWriter, stopsignal, &shutdownWg)
+	go fireController(stopsignal, &shutdownWg)
+	go d.DisplayDriver(ledWriter, stopsignal, &shutdownWg)
+	go d.SensorDriver(stopsignal, &shutdownWg)
 }
 
 func reset() {
@@ -163,18 +166,19 @@ func reset() {
 		prod.Exit()
 	}
 
-	time.Sleep(500 * time.Millisecond)
 	log.Println("Stopping running go-routines... ")
 	close(stopsignal)
 
-	time.Sleep(500 * time.Millisecond)
+	shutdownWg.Wait()
 	hw.CloseGPIO()
 }
 
-func combineAndUpdateDisplay(r *u.AtomicEvent[p.LedProducer], w chan []p.Led, stopsig chan bool) {
+func combineAndUpdateDisplay(r *u.AtomicEvent[p.LedProducer], w chan []p.Led, stopsig chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
 	var oldSumLeds []p.Led
 	allLedRanges := make(map[string][]p.Led)
 	ticker := time.NewTicker(c.CONFIG.Hardware.Display.ForceUpdateDelay)
+	defer ticker.Stop()
 	old_sensorledsrunning := false
 	for {
 		select {
@@ -216,7 +220,12 @@ func combineAndUpdateDisplay(r *u.AtomicEvent[p.LedProducer], w chan []p.Led, st
 			allLedRanges[s.GetUID()] = s.GetLeds()
 			sumLeds := p.CombineLeds(allLedRanges)
 			if !reflect.DeepEqual(sumLeds, oldSumLeds) {
-				w <- sumLeds
+				select {
+				case w <- sumLeds:
+				case <-stopsig:
+					log.Println("Ending combineAndupdateDisplay go-routine")
+					return
+				}
 			}
 			oldSumLeds = sumLeds
 		case <-ticker.C:
@@ -224,16 +233,21 @@ func combineAndUpdateDisplay(r *u.AtomicEvent[p.LedProducer], w chan []p.Led, st
 			// artifacts on the led line from - maybe/somehow -
 			// electrical distortions or cross talk so we make sure to
 			// regularly force an update of the Led stripe
-			w <- p.CombineLeds(allLedRanges)
+			select {
+			case w <- p.CombineLeds(allLedRanges):
+			case <-stopsig:
+				log.Println("Ending combineAndupdateDisplay go-routine")
+				return
+			}
 		case <-stopsig:
 			log.Println("Ending combineAndupdateDisplay go-routine")
-			ticker.Stop()
 			return
 		}
 	}
 }
 
-func fireController(stopsig chan bool) {
+func fireController(stopsig chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
 	var firstSameTrigger *d.Trigger = d.NewTrigger("", 0, time.Now())
 	triggerDelay := c.CONFIG.HoldLED.TriggerDelay
 

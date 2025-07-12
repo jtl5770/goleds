@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"sync"
 
 	c "lautenbacher.net/goleds/config"
 	hw "lautenbacher.net/goleds/hardware"
@@ -109,7 +110,8 @@ func InitDisplay() {
 	}
 }
 
-func DisplayDriver(display chan ([]p.Led), sig chan bool) {
+func DisplayDriver(display chan ([]p.Led), sig chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		select {
 		case <-sig:
