@@ -117,7 +117,7 @@ func initialise(ossignal chan os.Signal) {
 	stopsignal = make(chan bool)
 
 	ledReader := u.NewAtomicEvent[p.LedProducer]()
-	ledWriter := make(chan []p.Led)
+	ledWriter := make(chan []p.Led, 1)
 
 	// This is the main producer: reacting to a sensor trigger to light the stripes
 	if c.CONFIG.SensorLED.Enabled {
