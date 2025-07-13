@@ -90,9 +90,9 @@ func main() {
 	c.ReadConfig(*cfile, *realp, *sensp)
 
 	app := NewApp()
-	app.initialise()
-
 	ossignal := make(chan os.Signal, 1)
+	app.initialise(ossignal)
+
 	signal.Notify(ossignal, os.Interrupt, syscall.SIGHUP)
 
 	for {
@@ -106,13 +106,13 @@ func main() {
 				log.Println("Resetting...")
 				app.shutdown()
 				c.ReadConfig(*cfile, *realp, *sensp)
-				app.initialise()
+				app.initialise(ossignal)
 			}
 		}
 	}
 }
 
-func (a *App) initialise() {
+func (a *App) initialise(ossignal chan os.Signal) {
 	log.Println("Initializing...")
 	a.stopsignal = make(chan bool)
 	hw.InitHardware()
@@ -121,8 +121,6 @@ func (a *App) initialise() {
 
 	if !c.CONFIG.RealHW || c.CONFIG.SensorShow {
 		// we need to pass the os signal channel here to be able to exit the TUI
-		ossignal := make(chan os.Signal, 1)
-		signal.Notify(ossignal, os.Interrupt)
 		d.InitSimulationTUI(ossignal)
 	}
 
