@@ -158,7 +158,12 @@ func (a *App) initialise(ossignal chan os.Signal) {
 		cfg := c.CONFIG.MultiBlobLED
 		blobCfg := make(map[string]p.BlobConfig)
 		for k, v := range cfg.BlobCfg {
-			blobCfg[k] = p.BlobConfig(v)
+			blobCfg[k] = p.BlobConfig{
+				DeltaX: v.DeltaX,
+				X:      v.X,
+				Width:  v.Width,
+				LedRGB: v.LedRGB,
+			}
 		}
 		// multiblobproducer gets the - maybe nil - prodnight instance to control it
 		multiblob := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader, prodnight,
