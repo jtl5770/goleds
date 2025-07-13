@@ -1,7 +1,6 @@
 package main
 
 import (
-	"sync"
 	"testing"
 	"time"
 
@@ -52,6 +51,8 @@ func NewMockLedProducer(uid string) *MockLedProducer {
 
 func TestFireController(t *testing.T) {
 	// setup
+	app := NewApp()
+
 	oldConfig := c.CONFIG
 	c.CONFIG.HoldLED.Enabled = true
 	c.CONFIG.HoldLED.TriggerValue = 100
@@ -66,23 +67,17 @@ func TestFireController(t *testing.T) {
 		d.SensorReader = oldSensorReader
 	})
 
-	oldLedProducers := ledproducers
-	ledproducers = make(map[string]p.LedProducer)
 	mockProducer := NewMockLedProducer("test")
-	ledproducers["test"] = mockProducer
+	app.ledproducers["test"] = mockProducer
 	mockHoldProducer := NewMockLedProducer(HOLD_LED_UID)
-	ledproducers[HOLD_LED_UID] = mockHoldProducer
-	t.Cleanup(func() {
-		ledproducers = oldLedProducers
-	})
+	app.ledproducers[HOLD_LED_UID] = mockHoldProducer
 
-	stopsignal = make(chan bool)
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go fireController(stopsignal, &wg)
+	app.stopsignal = make(chan bool)
+	app.shutdownWg.Add(1)
+	go app.fireController()
 	t.Cleanup(func() {
-		close(stopsignal)
-		wg.Wait()
+		close(app.stopsignal)
+		app.shutdownWg.Wait()
 	})
 
 	// test normal trigger
@@ -119,6 +114,8 @@ func TestFireController(t *testing.T) {
 
 func TestCombineAndUpdateDisplay(t *testing.T) {
 	// setup
+	app := NewApp()
+
 	oldConfig := c.CONFIG
 	c.CONFIG = c.Config{} // Reset config
 	c.CONFIG.Hardware.Display.LedsTotal = 10
@@ -134,26 +131,20 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 		d.Sensors = oldSensors
 	})
 
-	oldLedProducers := ledproducers
-	ledproducers = make(map[string]p.LedProducer)
 	mockSensorProducer := NewMockLedProducer("sensor")
 	mockMultiBlobProducer := NewMockLedProducer(MULTI_BLOB_UID)
-	ledproducers["sensor"] = mockSensorProducer
-	ledproducers[MULTI_BLOB_UID] = mockMultiBlobProducer
-	t.Cleanup(func() {
-		ledproducers = oldLedProducers
-	})
+	app.ledproducers["sensor"] = mockSensorProducer
+	app.ledproducers[MULTI_BLOB_UID] = mockMultiBlobProducer
 
 	ledReader := u.NewAtomicEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
-	stopsignal = make(chan bool)
+	app.stopsignal = make(chan bool)
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go combineAndUpdateDisplay(ledReader, ledWriter, stopsignal, &wg)
+	app.shutdownWg.Add(1)
+	go app.combineAndUpdateDisplay(ledReader, ledWriter)
 	t.Cleanup(func() {
-		close(stopsignal)
-		wg.Wait()
+		close(app.stopsignal)
+		app.shutdownWg.Wait()
 	})
 
 	// test initial state
