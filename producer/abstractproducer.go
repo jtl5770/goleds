@@ -5,7 +5,6 @@ import (
 	"sync"
 	t "time"
 
-	c "lautenbacher.net/goleds/config"
 	u "lautenbacher.net/goleds/util"
 )
 
@@ -30,10 +29,10 @@ type AbstractProducer struct {
 }
 
 // Creates a new instance of AbstractProducer. The uid must be unique
-func NewAbstractProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], runfunc func(start t.Time)) *AbstractProducer {
+func NewAbstractProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], runfunc func(start t.Time), ledsTotal int) *AbstractProducer {
 	inst := AbstractProducer{
 		uid:         uid,
-		leds:        make([]Led, c.CONFIG.Hardware.Display.LedsTotal),
+		leds:        make([]Led, ledsTotal),
 		ledsChanged: ledsChanged,
 		stop:        make(chan bool),
 		runfunc:     runfunc,

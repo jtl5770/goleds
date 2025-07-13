@@ -47,7 +47,6 @@ package producer
 import (
 	t "time"
 
-	c "lautenbacher.net/goleds/config"
 	u "lautenbacher.net/goleds/util"
 )
 
@@ -60,19 +59,19 @@ type SensorLedProducer struct {
 	ledOn    Led
 }
 
-func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicEvent[LedProducer]) *SensorLedProducer {
+func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, holdT t.Duration, runUpT t.Duration, runDownT t.Duration, ledRGB []float64) *SensorLedProducer {
 	inst := &SensorLedProducer{
 		ledIndex: index,
-		holdT:    c.CONFIG.SensorLED.HoldTime,
-		runUpT:   c.CONFIG.SensorLED.RunUpDelay,
-		runDownT: c.CONFIG.SensorLED.RunDownDelay,
+		holdT:    holdT,
+		runUpT:   runUpT,
+		runDownT: runDownT,
 		ledOn: Led{
-			Red:   c.CONFIG.SensorLED.LedRGB[0],
-			Green: c.CONFIG.SensorLED.LedRGB[1],
-			Blue:  c.CONFIG.SensorLED.LedRGB[2],
+			Red:   ledRGB[0],
+			Green: ledRGB[1],
+			Blue:  ledRGB[2],
 		},
 	}
-	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner)
+	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
 	return inst
 }
 

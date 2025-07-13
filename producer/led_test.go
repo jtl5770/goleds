@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	c "lautenbacher.net/goleds/config"
 )
 
 func TestLed_IsEmpty(t *testing.T) {
@@ -27,9 +26,7 @@ func TestLed_Max(t *testing.T) {
 }
 
 func TestCombineLeds(t *testing.T) {
-	oldConfig := c.CONFIG
-	t.Cleanup(func() { c.CONFIG = oldConfig })
-	c.CONFIG.Hardware.Display.LedsTotal = 5
+	ledsTotal := 5
 
 	ledRanges := map[string][]Led{
 		"range1": {
@@ -42,7 +39,7 @@ func TestCombineLeds(t *testing.T) {
 		},
 	}
 
-	sumLeds := CombineLeds(ledRanges)
+	sumLeds := CombineLeds(ledRanges, ledsTotal)
 
 	assert.Len(t, sumLeds, 5)
 

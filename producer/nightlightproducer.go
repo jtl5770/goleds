@@ -8,7 +8,6 @@ import (
 	"time"
 	t "time"
 
-	c "lautenbacher.net/goleds/config"
 	u "lautenbacher.net/goleds/util"
 
 	"github.com/nathan-osman/go-sunrise"
@@ -21,14 +20,14 @@ type NightlightProducer struct {
 	ledNight  []Led
 }
 
-func NewNightlightProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer]) *NightlightProducer {
+func NewNightlightProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, latitude float64, longitude float64, ledRGB [][]float64) *NightlightProducer {
 	inst := &NightlightProducer{
-		latitude:  c.CONFIG.NightLED.Latitude,
-		longitude: c.CONFIG.NightLED.Longitude,
-		ledNight:  make([]Led, len(c.CONFIG.NightLED.LedRGB)),
+		latitude:  latitude,
+		longitude: longitude,
+		ledNight:  make([]Led, len(ledRGB)),
 	}
-	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner)
-	for index, led := range c.CONFIG.NightLED.LedRGB {
+	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
+	for index, led := range ledRGB {
 		inst.ledNight[index] = Led{led[0], led[1], led[2]}
 	}
 	return inst

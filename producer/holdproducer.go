@@ -1,17 +1,9 @@
-// this producer lights the whole strip with another (maybe brighter)
-// color, when ever a sensor is triggered with a configurable (usually
-// high) value for a configurable time.  It will hold this color for a
-// configurable time and then switch off again. Triggering the sensor
-// again for the configured duration while it is running will stop the
-// producer.
-
 package producer
 
 import (
 	"time"
 	t "time"
 
-	c "lautenbacher.net/goleds/config"
 	u "lautenbacher.net/goleds/util"
 )
 
@@ -21,12 +13,12 @@ type HoldProducer struct {
 	holdT     time.Duration
 }
 
-func NewHoldProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer]) *HoldProducer {
+func NewHoldProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, holdTime time.Duration, ledRGB []float64) *HoldProducer {
 	inst := &HoldProducer{
-		ledOnHold: Led{Red: c.CONFIG.HoldLED.LedRGB[0], Green: c.CONFIG.HoldLED.LedRGB[1], Blue: c.CONFIG.HoldLED.LedRGB[2]},
-		holdT:     c.CONFIG.HoldLED.HoldTime,
+		ledOnHold: Led{Red: ledRGB[0], Green: ledRGB[1], Blue: ledRGB[2]},
+		holdT:     holdTime,
 	}
-	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner)
+	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
 	return inst
 }
 

@@ -128,35 +128,48 @@ func (a *App) initialise(ossignal chan os.Signal) {
 
 	ledReader := u.NewAtomicEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
+	ledsTotal := c.CONFIG.Hardware.Display.LedsTotal
 
 	// This is the main producer: reacting to a sensor trigger to light the stripes
 	if c.CONFIG.SensorLED.Enabled {
+		cfg := c.CONFIG.SensorLED
 		for uid, sen := range d.Sensors {
-			a.ledproducers[uid] = p.NewSensorLedProducer(uid, sen.LedIndex, ledReader)
+			a.ledproducers[uid] = p.NewSensorLedProducer(uid, sen.LedIndex, ledReader, ledsTotal, cfg.HoldTime, cfg.RunUpDelay, cfg.RunDownDelay, cfg.LedRGB)
 		}
 	}
 
 	if c.CONFIG.HoldLED.Enabled {
-		prodhold := p.NewHoldProducer(HOLD_LED_UID, ledReader)
+		cfg := c.CONFIG.HoldLED
+		prodhold := p.NewHoldProducer(HOLD_LED_UID, ledReader, ledsTotal, cfg.HoldTime, cfg.LedRGB)
 		a.ledproducers[HOLD_LED_UID] = prodhold
 	}
 
 	var prodnight *p.NightlightProducer = nil
 	if c.CONFIG.NightLED.Enabled {
+		cfg := c.CONFIG.NightLED
 		// The Nightlight producer creates a permanent glow during night time
-		prodnight = p.NewNightlightProducer(NIGHT_LED_UID, ledReader)
+		prodnight = p.NewNightlightProducer(NIGHT_LED_UID, ledReader, ledsTotal,
+			cfg.Latitude, cfg.Longitude, cfg.LedRGB)
 		a.ledproducers[NIGHT_LED_UID] = prodnight
 		prodnight.Start()
 	}
 
 	if c.CONFIG.MultiBlobLED.Enabled {
+		cfg := c.CONFIG.MultiBlobLED
+		blobCfg := make(map[string]p.BlobConfig)
+		for k, v := range cfg.BlobCfg {
+			blobCfg[k] = p.BlobConfig(v)
+		}
 		// multiblobproducer gets the - maybe nil - prodnight instance to control it
-		multiblob := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader, prodnight)
+		multiblob := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader, prodnight,
+			ledsTotal, cfg.Duration, cfg.Delay, blobCfg)
 		a.ledproducers[MULTI_BLOB_UID] = multiblob
 	}
 
 	if c.CONFIG.CylonLED.Enabled {
-		cylon := p.NewCylonProducer(CYLON_LED_UID, ledReader)
+		cfg := c.CONFIG.CylonLED
+		cylon := p.NewCylonProducer(CYLON_LED_UID, ledReader, ledsTotal,
+			cfg.Duration, cfg.Delay, cfg.Step, cfg.Width, cfg.LedRGB)
 		a.ledproducers[CYLON_LED_UID] = cylon
 	}
 
@@ -182,8 +195,6 @@ func (a *App) shutdown() {
 	a.shutdownWg.Wait()
 	hw.CloseGPIO()
 }
-
-
 
 func (a *App) combineAndUpdateDisplay(r *u.AtomicEvent[p.LedProducer], w chan []p.Led) {
 	defer a.shutdownWg.Done()
@@ -230,7 +241,7 @@ func (a *App) combineAndUpdateDisplay(r *u.AtomicEvent[p.LedProducer], w chan []
 			}
 
 			allLedRanges[s.GetUID()] = s.GetLeds()
-			sumLeds := p.CombineLeds(allLedRanges)
+			sumLeds := p.CombineLeds(allLedRanges, c.CONFIG.Hardware.Display.LedsTotal)
 			if !reflect.DeepEqual(sumLeds, oldSumLeds) {
 				select {
 				case w <- sumLeds:
@@ -246,7 +257,7 @@ func (a *App) combineAndUpdateDisplay(r *u.AtomicEvent[p.LedProducer], w chan []
 			// electrical distortions or cross talk so we make sure to
 			// regularly force an update of the Led stripe
 			select {
-			case w <- p.CombineLeds(allLedRanges):
+			case w <- p.CombineLeds(allLedRanges, c.CONFIG.Hardware.Display.LedsTotal):
 			case <-a.stopsignal:
 				log.Println("Ending combineAndupdateDisplay go-routine")
 				return

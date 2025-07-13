@@ -1,8 +1,3 @@
-// This producer displays multiple colored blobs moving along the
-// stripes, with collision detection between the blobs and the stripe
-// boundaries and between the blobs themselves, resulting in the
-// colliding blobs to change direction.
-
 package producer
 
 import (
@@ -12,7 +7,6 @@ import (
 	"time"
 	t "time"
 
-	c "lautenbacher.net/goleds/config"
 	u "lautenbacher.net/goleds/util"
 )
 
@@ -26,18 +20,18 @@ type Blob struct {
 	dir    float64
 }
 
-func NewBlob(uid string) *Blob {
+func NewBlob(uid string, ledRGB []float64, x, width, deltaX float64) *Blob {
 	inst := Blob{
 		uid: uid,
 		led: Led{
-			Red:   c.CONFIG.MultiBlobLED.BlobCfg[uid].LedRGB[0],
-			Green: c.CONFIG.MultiBlobLED.BlobCfg[uid].LedRGB[1],
-			Blue:  c.CONFIG.MultiBlobLED.BlobCfg[uid].LedRGB[2],
+			Red:   ledRGB[0],
+			Green: ledRGB[1],
+			Blue:  ledRGB[2],
 		},
-		last_x: c.CONFIG.MultiBlobLED.BlobCfg[uid].X,
-		x:      c.CONFIG.MultiBlobLED.BlobCfg[uid].X,
-		width:  c.CONFIG.MultiBlobLED.BlobCfg[uid].Width,
-		delta:  c.CONFIG.MultiBlobLED.BlobCfg[uid].DeltaX,
+		last_x: x,
+		x:      x,
+		width:  width,
+		delta:  deltaX,
 	}
 	if inst.delta < 0 {
 		inst.dir = -1
@@ -48,10 +42,10 @@ func NewBlob(uid string) *Blob {
 	return &inst
 }
 
-func (s *Blob) getBlobLeds() []Led {
-	leds := make([]Led, c.CONFIG.Hardware.Display.LedsTotal)
+func (s *Blob) getBlobLeds(ledsTotal int) []Led {
+	leds := make([]Led, ledsTotal)
 
-	for i := 0; i < c.CONFIG.Hardware.Display.LedsTotal; i++ {
+	for i := 0; i < ledsTotal; i++ {
 		y := math.Exp(-1 * (math.Pow(float64(i)-s.x, 2) / s.width))
 		leds[i] = Led{s.led.Red * y, s.led.Green * y, s.led.Blue * y}
 	}
@@ -66,18 +60,30 @@ type MultiBlobProducer struct {
 	*AbstractProducer
 	allblobs   map[string]*Blob
 	nlproducer *NightlightProducer
+	duration   time.Duration
+	delay      time.Duration
 }
 
-func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], nlprod *NightlightProducer) *MultiBlobProducer {
-	inst := &MultiBlobProducer{}
-	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner)
+type BlobConfig struct {
+	DeltaX float64   `yaml:"DeltaX"`
+	X      float64   `yaml:"X"`
+	Width  float64   `yaml:"Width"`
+	LedRGB []float64 `yaml:"LedRGB"`
+}
+
+func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], nlprod *NightlightProducer, ledsTotal int, duration, delay time.Duration, blobCfg map[string]BlobConfig) *MultiBlobProducer {
+	inst := &MultiBlobProducer{
+		duration:   duration,
+		delay:      delay,
+		nlproducer: nlprod,
+	}
+	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
 
 	inst.allblobs = make(map[string]*Blob)
-	for uid := range c.CONFIG.MultiBlobLED.BlobCfg {
-		blob := NewBlob(uid)
+	for uid, cfg := range blobCfg {
+		blob := NewBlob(uid, cfg.LedRGB, cfg.X, cfg.Width, cfg.DeltaX)
 		inst.allblobs[uid] = blob
 	}
-	inst.nlproducer = nlprod
 	return inst
 }
 
@@ -104,8 +110,8 @@ func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {
 }
 
 func (s *MultiBlobProducer) runner(startTime t.Time) {
-	triggerduration := time.NewTicker(c.CONFIG.MultiBlobLED.Duration)
-	tick := time.NewTicker(c.CONFIG.MultiBlobLED.Delay)
+	triggerduration := time.NewTicker(s.duration)
+	tick := time.NewTicker(s.delay)
 	countup_run := false
 	defer func() {
 		s.setIsRunning(false)
@@ -134,15 +140,15 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 			}
 
 			// detect & handle collision
-			detectAndHandleCollisions(s.allblobs)
+			detectAndHandleCollisions(s.allblobs, len(s.leds))
 
 			// push update event for Leds
 			tmp := make(map[string][]Led)
 			for _, blob := range s.allblobs {
-				tmp[blob.uid] = blob.getBlobLeds()
+				tmp[blob.uid] = blob.getBlobLeds(len(s.leds))
 			}
-			combined := CombineLeds(tmp)
-			for i := 0; i < c.CONFIG.Hardware.Display.LedsTotal; i++ {
+			combined := CombineLeds(tmp, len(s.leds))
+			for i := 0; i < len(s.leds); i++ {
 				s.setLed(i, combined[i])
 			}
 
@@ -166,8 +172,8 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 	}
 }
 
-func detectAndHandleCollisions(blobs map[string]*Blob) {
-	max := float64(c.CONFIG.Hardware.Display.LedsTotal)
+func detectAndHandleCollisions(blobs map[string]*Blob, ledsTotal int) {
+	max := float64(ledsTotal)
 	var checkinter []*Blob
 	collblobs := make(map[string]*Blob)
 

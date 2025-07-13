@@ -5,7 +5,6 @@ import (
 	"time"
 	t "time"
 
-	c "lautenbacher.net/goleds/config"
 	u "lautenbacher.net/goleds/util"
 )
 
@@ -16,29 +15,32 @@ type CylonProducer struct {
 	radius    int
 	direction int
 	color     Led
+	duration  time.Duration
+	delay     time.Duration
 }
 
-func NewCylonProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer]) *CylonProducer {
+func NewCylonProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, duration time.Duration, delay time.Duration, step float64, width int, ledRGB []float64) *CylonProducer {
 	inst := &CylonProducer{
 		color: Led{
-			Red:   c.CONFIG.CylonLED.LedRGB[0],
-			Green: c.CONFIG.CylonLED.LedRGB[1],
-			Blue:  c.CONFIG.CylonLED.LedRGB[2],
+			Red:   ledRGB[0],
+			Green: ledRGB[1],
+			Blue:  ledRGB[2],
 		},
-		step:      c.CONFIG.CylonLED.Step,
+		step:      step,
 		x:         0,
 		direction: 1,
+		duration:  duration,
+		delay:     delay,
 	}
-	width := c.CONFIG.CylonLED.Width
 	inst.radius = width / 2
-	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner)
+	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
 
 	return inst
 }
 
 func (s *CylonProducer) runner(startTime t.Time) {
-	triggerduration := time.NewTicker(c.CONFIG.CylonLED.Duration)
-	tick := time.NewTicker(c.CONFIG.CylonLED.Delay)
+	triggerduration := time.NewTicker(s.duration)
+	tick := time.NewTicker(s.delay)
 	defer func() {
 		for i := range s.leds {
 			s.setLed(i, Led{})
@@ -56,7 +58,7 @@ func (s *CylonProducer) runner(startTime t.Time) {
 		case <-s.stop:
 			return
 		case <-tick.C:
-			if s.x < 0 || s.x > float64(c.CONFIG.Hardware.Display.LedsTotal-1) {
+			if s.x < 0 || s.x > float64(len(s.leds)-1) {
 				s.direction = -s.direction
 			}
 			s.x += float64(s.direction) * s.step
