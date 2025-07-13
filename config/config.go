@@ -105,7 +105,7 @@ type Config struct {
 	Hardware     HardwareConfig     `yaml:"Hardware"`
 }
 
-func ReadConfig(cfile string, realhw bool, sensorshow bool) {
+func ReadConfig(cfile string, realhw bool, sensorshow bool) *Config {
 	log.Printf("Reading config file %s...", cfile)
 	f, err := os.Open(cfile)
 	if err != nil {
@@ -123,4 +123,5 @@ func ReadConfig(cfile string, realhw bool, sensorshow bool) {
 	CONFIG.SensorShow = sensorshow
 	CONFIG.Configfile = cfile
 	log.Printf("%+v\n", CONFIG)
+	return &conf
 }
