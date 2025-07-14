@@ -206,7 +206,7 @@ func (a *App) shutdown() {
 	close(a.stopsignal)
 
 	a.shutdownWg.Wait()
-	hw.CloseGPIO()
+	hw.ShutdownHardware()
 }
 
 func (a *App) combineAndUpdateDisplay(

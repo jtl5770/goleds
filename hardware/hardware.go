@@ -75,9 +75,9 @@ func (s *rpioSPI) Exchange(write []byte) []byte {
 	return write
 }
 
-// CloseGPIO closes the GPIO and SPI. If the configuration is set to use real
+// ShutdownHardware closes the GPIO and SPI. If the configuration is set to use real
 // hardware this function will panic if the hardware cannot be closed.
-func CloseGPIO() {
+func ShutdownHardware() {
 	if c.CONFIG.RealHW {
 		rpio.SpiEnd(rpio.Spi0)
 		if err := rpio.Close(); err != nil {
