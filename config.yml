@@ -31,7 +31,7 @@ Hardware:
     ColorCorrection: [1, 0.175, 0.05]
     # For APA102, you can set a general brightness-level (5 bit)
     APA102_Brighrness: 31 
-# Here comes the mapping of the internal representation of the
+    # Here comes the mapping of the internal representation of the
     # "LedsTotal" LEDs to groups of real world segments of LED
     # stripes. Note: The segments in one group MUST NOT overlap. LEDs
     # not covered by a segment in a group become "virtual" segments in
