@@ -121,7 +121,7 @@ func simulateLed(segment *ledsegment) (string, string) {
 				if value <= 2 {
 					buf1.WriteString(" ")
 					buf2.WriteString("▁")
-				} else if value == 4 {
+				} else if value <= 4 {
 					buf1.WriteString(" ")
 					buf2.WriteString("▂")
 				} else if value <= 6 {
@@ -142,7 +142,7 @@ func simulateLed(segment *ledsegment) (string, string) {
 				} else if value <= 16 {
 					buf1.WriteString(" ")
 					buf2.WriteString("█")
-				} else if value == 18 {
+				} else if value <= 18 {
 					buf1.WriteString("▁")
 					buf2.WriteString("█")
 				} else if value <= 20 {
