@@ -63,34 +63,46 @@ type MultiBlobLEDConfig struct {
 
 // HardwareConfig defines the hardware configuration.
 type HardwareConfig struct {
-	LEDType      string `yaml:"LEDType"`
-	SPIFrequency int    `yaml:"SPIFrequency"`
-	Display      struct {
-		ForceUpdateDelay  time.Duration `yaml:"ForceUpdateDelay"`
-		LedsTotal         int           `yaml:"LedsTotal"`
-		ColorCorrection   []float64     `yaml:"ColorCorrection"`
-		APA102_Brightness byte          `yaml:"APA102_Brightness"`
-		LedSegments       map[string][]struct {
-			FirstLed     int    `yaml:"FirstLed"`
-			LastLed      int    `yaml:"LastLed"`
-			SpiMultiplex string `yaml:"SpiMultiplex"`
-			Reverse      bool   `yaml:"Reverse"`
-		} `yaml:"LedSegments"`
-	} `yaml:"Display"`
-	Sensors struct {
-		SmoothingSize int           `yaml:"SmoothingSize"`
-		LoopDelay     time.Duration `yaml:"LoopDelay"`
-		SensorCfg     map[string]struct {
-			LedIndex     int    `yaml:"LedIndex"`
-			SpiMultiplex string `yaml:"SpiMultiplex"`
-			AdcChannel   byte   `yaml:"AdcChannel"`
-			TriggerValue int    `yaml:"TriggerValue"`
-		} `yaml:"SensorCfg"`
-	} `yaml:"Sensors"`
+	LEDType          string           `yaml:"LEDType"`
+	SPIFrequency     int              `yaml:"SPIFrequency"`
+	Display          DisplayConfig    `yaml:"Display"`
+	Sensors          SensorsConfig    `yaml:"Sensors"`
 	SpiMultiplexGPIO map[string]struct {
 		Low  []int `yaml:"Low"`
 		High []int `yaml:"High"`
 	} `yaml:"SpiMultiplexGPIO"`
+}
+
+// DisplayConfig defines the display configuration.
+type DisplayConfig struct {
+	ForceUpdateDelay  time.Duration `yaml:"ForceUpdateDelay"`
+	LedsTotal         int           `yaml:"LedsTotal"`
+	ColorCorrection   []float64     `yaml:"ColorCorrection"`
+	APA102_Brightness byte          `yaml:"APA102_Brightness"`
+	LedSegments       map[string][]LedSegmentConfig `yaml:"LedSegments"`
+}
+
+// LedSegmentConfig defines the configuration for a single LED segment.
+type LedSegmentConfig struct {
+	FirstLed     int    `yaml:"FirstLed"`
+	LastLed      int    `yaml:"LastLed"`
+	SpiMultiplex string `yaml:"SpiMultiplex"`
+	Reverse      bool   `yaml:"Reverse"`
+}
+
+// SensorCfg defines the configuration for a single sensor.
+type SensorCfg struct {
+	LedIndex     int    `yaml:"LedIndex"`
+	SpiMultiplex string `yaml:"SpiMultiplex"`
+	AdcChannel   byte   `yaml:"AdcChannel"`
+	TriggerValue int    `yaml:"TriggerValue"`
+}
+
+// SensorsConfig defines the sensors configuration.
+type SensorsConfig struct {
+	SmoothingSize int           `yaml:"SmoothingSize"`
+	LoopDelay     time.Duration `yaml:"LoopDelay"`
+	SensorCfg     map[string]SensorCfg `yaml:"SensorCfg"`
 }
 
 type Config struct {
