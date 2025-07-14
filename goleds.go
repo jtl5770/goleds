@@ -17,11 +17,10 @@
 // changed dynamically via the config file.
 //
 // The software is designed to be configured via an config file
-// (default: config.yml) and to be able to react to signals to
-// reload the config file or to exit. The config file is read by the
-// config package (package config) and the config is stored in a
-// global variable CONFIG. The config file is read on startup and
-// whenever a SIGHUP signal is received.
+// (default: config.yml) and to be able to react to signals to reload
+// the config file or to exit. The config file is read by the config
+// package (config.ReadConfig()). The config file is read on startup
+// and whenever a SIGHUP signal is received.
 //
 // The main functionality is to read the sensors and to drive the LED
 // stripes accordingly. The sensor data is read by the hardware package
@@ -62,12 +61,19 @@ type App struct {
 	ledproducers map[string]p.LedProducer
 	stopsignal   chan bool
 	shutdownWg   sync.WaitGroup
+	cfile        string
+	realp        bool
+	sensp        bool
+	ossignal     chan os.Signal
 }
 
 // NewApp creates a new App instance
-func NewApp() *App {
+func NewApp(cfile *string, realp *bool, sensp *bool, ossignal chan os.Signal) *App {
 	return &App{
-		ledproducers: make(map[string]p.LedProducer),
+		cfile:    *cfile,
+		realp:    *realp,
+		sensp:    *sensp,
+		ossignal: ossignal,
 	}
 }
 
@@ -81,17 +87,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	ossignal := make(chan os.Signal, 1)
 	exPath := filepath.Dir(ex)
 	cfile := flag.String("config", exPath+"/"+c.CONFILE, "Config file to use")
 	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
 	sensp := flag.Bool("show-sensors", false, "Set to true if program should only display"+"sensor values (will be random values if -real is not given)")
 	flag.Parse()
 
-	c.ReadConfig(*cfile, *realp, *sensp)
-
-	app := NewApp()
-	ossignal := make(chan os.Signal, 1)
-	app.initialise(ossignal)
+	app := NewApp(cfile, realp, sensp, ossignal)
+	app.initialise()
 
 	signal.Notify(ossignal, os.Interrupt, syscall.SIGHUP)
 
@@ -105,48 +109,54 @@ func main() {
 			} else if sig == syscall.SIGHUP {
 				log.Println("Resetting...")
 				app.shutdown()
-				c.ReadConfig(*cfile, *realp, *sensp)
-				app.initialise(ossignal)
+				app.initialise()
 			}
 		}
 	}
 }
 
-func (a *App) initialise(ossignal chan os.Signal) {
+func (a *App) initialise() {
 	log.Println("Initializing...")
+
 	a.stopsignal = make(chan bool)
+	a.ledproducers = make(map[string]p.LedProducer)
+
+	conf := c.ReadConfig(a.cfile, a.realp, a.sensp)
 	hw.InitHardware()
 	d.InitSensors()
 	d.InitDisplay()
 
-	if !c.CONFIG.RealHW || c.CONFIG.SensorShow {
+	if !conf.RealHW || conf.SensorShow {
 		// we need to pass the os signal channel here to be able to exit the TUI
-		d.InitSimulationTUI(ossignal)
+		d.InitSimulationTUI(a.ossignal)
 	}
-
-	a.ledproducers = make(map[string]p.LedProducer)
 
 	ledReader := u.NewAtomicEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
-	ledsTotal := c.CONFIG.Hardware.Display.LedsTotal
+	ledsTotal := conf.Hardware.Display.LedsTotal
+	sensorledp := conf.SensorLED.Enabled
+	multiblobledp := conf.MultiBlobLED.Enabled
+	cylonledp := conf.CylonLED.Enabled
+	holdledp := conf.HoldLED.Enabled
+	nightledp := conf.NightLED.Enabled
 
 	// This is the main producer: reacting to a sensor trigger to light the stripes
-	if c.CONFIG.SensorLED.Enabled {
-		cfg := c.CONFIG.SensorLED
+	if sensorledp {
+		cfg := conf.SensorLED
 		for uid, sen := range d.Sensors {
 			a.ledproducers[uid] = p.NewSensorLedProducer(uid, sen.LedIndex, ledReader, ledsTotal, cfg.HoldTime, cfg.RunUpDelay, cfg.RunDownDelay, cfg.LedRGB)
 		}
 	}
 
-	if c.CONFIG.HoldLED.Enabled {
-		cfg := c.CONFIG.HoldLED
+	if holdledp {
+		cfg := conf.HoldLED
 		prodhold := p.NewHoldProducer(HOLD_LED_UID, ledReader, ledsTotal, cfg.HoldTime, cfg.LedRGB)
 		a.ledproducers[HOLD_LED_UID] = prodhold
 	}
 
 	var prodnight *p.NightlightProducer = nil
-	if c.CONFIG.NightLED.Enabled {
-		cfg := c.CONFIG.NightLED
+	if nightledp {
+		cfg := conf.NightLED
 		// The Nightlight producer creates a permanent glow during night time
 		prodnight = p.NewNightlightProducer(NIGHT_LED_UID, ledReader, ledsTotal,
 			cfg.Latitude, cfg.Longitude, cfg.LedRGB)
@@ -154,8 +164,8 @@ func (a *App) initialise(ossignal chan os.Signal) {
 		prodnight.Start()
 	}
 
-	if c.CONFIG.MultiBlobLED.Enabled {
-		cfg := c.CONFIG.MultiBlobLED
+	if multiblobledp {
+		cfg := conf.MultiBlobLED
 		blobCfg := make(map[string]p.BlobConfig)
 		for k, v := range cfg.BlobCfg {
 			blobCfg[k] = p.BlobConfig{
@@ -171,8 +181,8 @@ func (a *App) initialise(ossignal chan os.Signal) {
 		a.ledproducers[MULTI_BLOB_UID] = multiblob
 	}
 
-	if c.CONFIG.CylonLED.Enabled {
-		cfg := c.CONFIG.CylonLED
+	if cylonledp {
+		cfg := conf.CylonLED
 		cylon := p.NewCylonProducer(CYLON_LED_UID, ledReader, ledsTotal,
 			cfg.Duration, cfg.Delay, cfg.Step, cfg.Width, cfg.LedRGB)
 		a.ledproducers[CYLON_LED_UID] = cylon
@@ -181,8 +191,9 @@ func (a *App) initialise(ossignal chan os.Signal) {
 	// *FUTURE* init more types of ledproducers if needed/wanted
 
 	a.shutdownWg.Add(4)
-	go a.combineAndUpdateDisplay(ledReader, ledWriter)
-	go a.fireController()
+	go a.combineAndUpdateDisplay(sensorledp, holdledp, nightledp, multiblobledp, cylonledp,
+		ledReader, ledWriter, ledsTotal, conf.Hardware.Display.ForceUpdateDelay)
+	go a.fireController(holdledp, conf.HoldLED.TriggerDelay, conf.HoldLED.TriggerValue)
 	go d.DisplayDriver(ledWriter, a.stopsignal, &a.shutdownWg)
 	go d.SensorDriver(a.stopsignal, &a.shutdownWg)
 }
@@ -201,23 +212,23 @@ func (a *App) shutdown() {
 	hw.CloseGPIO()
 }
 
-func (a *App) combineAndUpdateDisplay(r *u.AtomicEvent[p.LedProducer], w chan []p.Led) {
+func (a *App) combineAndUpdateDisplay(sensorledp bool, holdledp bool, nightledp bool, multiblobledp bool, cylonledp bool, r *u.AtomicEvent[p.LedProducer], w chan []p.Led, ledsTotal int, forceupdatedelay time.Duration) {
 	defer a.shutdownWg.Done()
 	var oldSumLeds []p.Led
 	allLedRanges := make(map[string][]p.Led)
-	ticker := time.NewTicker(c.CONFIG.Hardware.Display.ForceUpdateDelay)
+	ticker := time.NewTicker(forceupdatedelay)
 	defer ticker.Stop()
 	old_sensorledsrunning := false
 	for {
 		select {
 		case <-r.Channel():
 			s := r.Value()
-			if c.CONFIG.MultiBlobLED.Enabled || c.CONFIG.CylonLED.Enabled {
+			if multiblobledp || cylonledp {
 				isrunning := false
 				for uid := range d.Sensors {
 					isrunning = (isrunning || a.ledproducers[uid].GetIsRunning())
 				}
-				if c.CONFIG.HoldLED.Enabled {
+				if holdledp {
 					isrunning = (isrunning || a.ledproducers[HOLD_LED_UID].GetIsRunning())
 				}
 				// Now we know if any of the sensor driven producers
@@ -227,18 +238,18 @@ func (a *App) combineAndUpdateDisplay(r *u.AtomicEvent[p.LedProducer], w chan []
 				// and we can now Start() the multiblobproducer or the
 				// cylonproducer.
 				if old_sensorledsrunning && !isrunning {
-					if c.CONFIG.MultiBlobLED.Enabled {
+					if multiblobledp {
 						a.ledproducers[MULTI_BLOB_UID].Start()
 					}
-					if c.CONFIG.CylonLED.Enabled {
+					if cylonledp {
 						a.ledproducers[CYLON_LED_UID].Start()
 					}
 				} else if !old_sensorledsrunning && isrunning {
 					// or the other way around: Stopping the multiblobproducer
-					if c.CONFIG.MultiBlobLED.Enabled {
+					if multiblobledp {
 						a.ledproducers[MULTI_BLOB_UID].Stop()
 					}
-					if c.CONFIG.CylonLED.Enabled {
+					if cylonledp {
 						a.ledproducers[CYLON_LED_UID].Stop()
 					}
 				}
@@ -246,7 +257,7 @@ func (a *App) combineAndUpdateDisplay(r *u.AtomicEvent[p.LedProducer], w chan []
 			}
 
 			allLedRanges[s.GetUID()] = s.GetLeds()
-			sumLeds := p.CombineLeds(allLedRanges, c.CONFIG.Hardware.Display.LedsTotal)
+			sumLeds := p.CombineLeds(allLedRanges, ledsTotal)
 			if !reflect.DeepEqual(sumLeds, oldSumLeds) {
 				select {
 				case w <- sumLeds:
@@ -262,7 +273,7 @@ func (a *App) combineAndUpdateDisplay(r *u.AtomicEvent[p.LedProducer], w chan []
 			// electrical distortions or cross talk so we make sure to
 			// regularly force an update of the Led stripe
 			select {
-			case w <- p.CombineLeds(allLedRanges, c.CONFIG.Hardware.Display.LedsTotal):
+			case w <- p.CombineLeds(allLedRanges, ledsTotal):
 			case <-a.stopsignal:
 				log.Println("Ending combineAndupdateDisplay go-routine")
 				return
@@ -274,18 +285,16 @@ func (a *App) combineAndUpdateDisplay(r *u.AtomicEvent[p.LedProducer], w chan []
 	}
 }
 
-func (a *App) fireController() {
+func (a *App) fireController(holdledp bool, triggerDelay time.Duration, triggerValue int) {
 	defer a.shutdownWg.Done()
 	var firstSameTrigger *d.Trigger = d.NewTrigger("", 0, time.Now())
-	triggerDelay := c.CONFIG.HoldLED.TriggerDelay
-
 	for {
 		select {
 		case trigger := <-d.SensorReader:
 			oldStamp := firstSameTrigger.Timestamp
 			newStamp := trigger.Timestamp
 
-			if c.CONFIG.HoldLED.Enabled && (trigger.Value >= c.CONFIG.HoldLED.TriggerValue) {
+			if holdledp && (trigger.Value >= triggerValue) {
 				if trigger.ID != firstSameTrigger.ID {
 					firstSameTrigger = trigger
 				} else if newStamp.Sub(oldStamp) > triggerDelay {

@@ -1,10 +1,10 @@
 package main
 
 import (
+	"os"
 	"testing"
 	"time"
 
-	c "lautenbacher.net/goleds/config"
 	d "lautenbacher.net/goleds/driver"
 	p "lautenbacher.net/goleds/producer"
 	u "lautenbacher.net/goleds/util"
@@ -51,15 +51,15 @@ func NewMockLedProducer(uid string) *MockLedProducer {
 
 func TestFireController(t *testing.T) {
 	// setup
-	app := NewApp()
+	cfile := ""
+	realp := false
+	sensp := false
+	ossignal := make(chan os.Signal, 1)
+	app := NewApp(&cfile, &realp, &sensp, ossignal)
+	app.ledproducers = make(map[string]p.LedProducer)
 
-	oldConfig := c.CONFIG
-	c.CONFIG.HoldLED.Enabled = true
-	c.CONFIG.HoldLED.TriggerValue = 100
-	c.CONFIG.HoldLED.TriggerDelay = 1 * time.Second
-	t.Cleanup(func() {
-		c.CONFIG = oldConfig
-	})
+	triggerValue := 100
+	triggerDelay := 1 * time.Second
 
 	oldSensorReader := d.SensorReader
 	d.SensorReader = make(chan *d.Trigger)
@@ -74,7 +74,7 @@ func TestFireController(t *testing.T) {
 
 	app.stopsignal = make(chan bool)
 	app.shutdownWg.Add(1)
-	go app.fireController()
+	go app.fireController(true, triggerDelay, triggerValue)
 	t.Cleanup(func() {
 		close(app.stopsignal)
 		app.shutdownWg.Wait()
@@ -91,21 +91,21 @@ func TestFireController(t *testing.T) {
 	// test hold trigger
 	now := time.Now()
 	// first trigger, should not start hold producer
-	d.SensorReader <- d.NewTrigger("holdtest", 110, now)
+	d.SensorReader <- d.NewTrigger(HOLD_LED_UID, 110, now)
 	time.Sleep(100 * time.Millisecond)
 	if mockHoldProducer.GetIsRunning() {
 		t.Fatal("Expected hold producer to not be running yet")
 	}
 
 	// second trigger in the time window, should start hold producer
-	d.SensorReader <- d.NewTrigger("holdtest", 110, now.Add(c.CONFIG.HoldLED.TriggerDelay+200*time.Millisecond))
+	d.SensorReader <- d.NewTrigger(HOLD_LED_UID, 110, now.Add(triggerDelay+200*time.Millisecond))
 	time.Sleep(100 * time.Millisecond)
 	if !mockHoldProducer.GetIsRunning() {
 		t.Fatal("Expected hold producer to be running")
 	}
 
 	// third trigger in the time window, should stop hold producer
-	d.SensorReader <- d.NewTrigger("holdtest", 110, now.Add(2*(c.CONFIG.HoldLED.TriggerDelay+200*time.Millisecond)))
+	d.SensorReader <- d.NewTrigger(HOLD_LED_UID, 110, now.Add(2*(triggerDelay+200*time.Millisecond)))
 	time.Sleep(100 * time.Millisecond)
 	if mockHoldProducer.GetIsRunning() {
 		t.Fatal("Expected hold producer to be stopped")
@@ -114,16 +114,15 @@ func TestFireController(t *testing.T) {
 
 func TestCombineAndUpdateDisplay(t *testing.T) {
 	// setup
-	app := NewApp()
+	cfile := ""
+	realp := false
+	sensp := false
+	ossignal := make(chan os.Signal, 1)
+	app := NewApp(&cfile, &realp, &sensp, ossignal)
+	app.ledproducers = make(map[string]p.LedProducer)
 
-	oldConfig := c.CONFIG
-	c.CONFIG = c.Config{} // Reset config
-	c.CONFIG.Hardware.Display.LedsTotal = 10
-	c.CONFIG.Hardware.Display.ForceUpdateDelay = 1 * time.Second
-	c.CONFIG.MultiBlobLED.Enabled = true
-	t.Cleanup(func() {
-		c.CONFIG = oldConfig
-	})
+	ledsTotal := 10
+	forceUpdateDelay := 1 * time.Second
 
 	oldSensors := d.Sensors
 	d.Sensors = map[string]*d.Sensor{"sensor": d.NewSensor("sensor", 0, "", 0, 0)}
@@ -141,7 +140,7 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	app.stopsignal = make(chan bool)
 
 	app.shutdownWg.Add(1)
-	go app.combineAndUpdateDisplay(ledReader, ledWriter)
+	go app.combineAndUpdateDisplay(true, false, false, true, false, ledReader, ledWriter, ledsTotal, forceUpdateDelay)
 	t.Cleanup(func() {
 		close(app.stopsignal)
 		app.shutdownWg.Wait()
