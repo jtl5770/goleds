@@ -9,7 +9,6 @@
 // # Key Responsibilities & Behavior
 //
 // 1. Configuration:
-// When created, it's configured with parameters from c.CONFIG.SensorLED:
 //   - ledIndex: The starting position of the animation, corresponding to the
 //     sensor's physical location.
 //   - ledOn: The color of the illuminated LEDs.
