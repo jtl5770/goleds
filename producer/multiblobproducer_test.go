@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	c "lautenbacher.net/goleds/config"
 	u "lautenbacher.net/goleds/util"
 )
 
@@ -15,7 +16,7 @@ func TestNewMultiBlobProducer(t *testing.T) {
 	ledsTotal := 10
 	duration := 5 * time.Second
 	delay := 50 * time.Millisecond
-	blobCfg := map[string]BlobConfig{
+	blobCfg := map[string]c.BlobCfg{
 		"blob1": {DeltaX: 0.1, X: 2.0, Width: 1.0, LedRGB: []float64{255, 0, 0}},
 		"blob2": {DeltaX: -0.2, X: 8.0, Width: 1.5, LedRGB: []float64{0, 255, 0}},
 	}

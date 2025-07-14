@@ -73,11 +73,11 @@ func (s *ledsegment) setSegmentLeds(sumleds []p.Led) {
 	}
 }
 
-func InitDisplay(displayConfig c.DisplayConfig) {
+func InitDisplay(displayConfig c.DisplayConfig, ledsTotal int) {
 	SEGMENTS = make(map[string][]*ledsegment)
 	for name, segarray := range displayConfig.LedSegments {
 		for _, seg := range segarray {
-			SEGMENTS[name] = append(SEGMENTS[name], NewLedSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Reverse, true, displayConfig.LedsTotal))
+			SEGMENTS[name] = append(SEGMENTS[name], NewLedSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Reverse, true, ))
 		}
 	}
 
@@ -124,7 +124,7 @@ func DisplayDriver(display chan ([]p.Led), sig chan bool, wg *sync.WaitGroup, re
 				}
 			}
 			if !realHW {
-				simulateLedDisplay(sensorShow)
+				simulateLedDisplay()
 			} else {
 				for _, segarray := range SEGMENTS {
 					for _, seg := range segarray {

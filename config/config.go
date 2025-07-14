@@ -50,23 +50,26 @@ type CylonLEDConfig struct {
 
 // MultiBlobLEDConfig defines the configuration for the MultiBlobLED producer.
 type MultiBlobLEDConfig struct {
-	Enabled  bool          `yaml:"Enabled"`
-	Duration time.Duration `yaml:"Duration"`
-	Delay    time.Duration `yaml:"Delay"`
-	BlobCfg  map[string]struct {
-		DeltaX float64   `yaml:"DeltaX"`
-		X      float64   `yaml:"X"`
-		Width  float64   `yaml:"Width"`
-		LedRGB []float64 `yaml:"LedRGB"`
-	} `yaml:"BlobCfg"`
+	Enabled  bool               `yaml:"Enabled"`
+	Duration time.Duration      `yaml:"Duration"`
+	Delay    time.Duration      `yaml:"Delay"`
+	BlobCfg  map[string]BlobCfg `yaml:"BlobCfg"`
+}
+
+// BlobCfg defines the configuration for a single blob in the MultiBlobLED producer.
+type BlobCfg struct {
+	DeltaX float64   `yaml:"DeltaX"`
+	X      float64   `yaml:"X"`
+	Width  float64   `yaml:"Width"`
+	LedRGB []float64 `yaml:"LedRGB"`
 }
 
 // HardwareConfig defines the hardware configuration.
 type HardwareConfig struct {
-	LEDType          string           `yaml:"LEDType"`
-	SPIFrequency     int              `yaml:"SPIFrequency"`
-	Display          DisplayConfig    `yaml:"Display"`
-	Sensors          SensorsConfig    `yaml:"Sensors"`
+	LEDType          string        `yaml:"LEDType"`
+	SPIFrequency     int           `yaml:"SPIFrequency"`
+	Display          DisplayConfig `yaml:"Display"`
+	Sensors          SensorsConfig `yaml:"Sensors"`
 	SpiMultiplexGPIO map[string]struct {
 		Low  []int `yaml:"Low"`
 		High []int `yaml:"High"`
@@ -75,10 +78,10 @@ type HardwareConfig struct {
 
 // DisplayConfig defines the display configuration.
 type DisplayConfig struct {
-	ForceUpdateDelay  time.Duration `yaml:"ForceUpdateDelay"`
-	LedsTotal         int           `yaml:"LedsTotal"`
-	ColorCorrection   []float64     `yaml:"ColorCorrection"`
-	APA102_Brightness byte          `yaml:"APA102_Brightness"`
+	ForceUpdateDelay  time.Duration                 `yaml:"ForceUpdateDelay"`
+	LedsTotal         int                           `yaml:"LedsTotal"`
+	ColorCorrection   []float64                     `yaml:"ColorCorrection"`
+	APA102_Brightness byte                          `yaml:"APA102_Brightness"`
 	LedSegments       map[string][]LedSegmentConfig `yaml:"LedSegments"`
 }
 
@@ -100,8 +103,8 @@ type SensorCfg struct {
 
 // SensorsConfig defines the sensors configuration.
 type SensorsConfig struct {
-	SmoothingSize int           `yaml:"SmoothingSize"`
-	LoopDelay     time.Duration `yaml:"LoopDelay"`
+	SmoothingSize int                  `yaml:"SmoothingSize"`
+	LoopDelay     time.Duration        `yaml:"LoopDelay"`
 	SensorCfg     map[string]SensorCfg `yaml:"SensorCfg"`
 }
 
@@ -130,10 +133,12 @@ func ReadConfig(cfile string, realhw bool, sensorshow bool) *Config {
 	if err != nil {
 		panic(err)
 	}
+	conf.RealHW = realhw
+	conf.SensorShow = sensorshow
+	conf.Configfile = cfile
+	log.Printf("%+v\n", conf)
+
 	CONFIG = conf
-	CONFIG.RealHW = realhw
-	CONFIG.SensorShow = sensorshow
-	CONFIG.Configfile = cfile
-	log.Printf("%+v\n", CONFIG)
+
 	return &conf
 }

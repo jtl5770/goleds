@@ -122,14 +122,6 @@ func (a *App) initialise() {
 	a.ledproducers = make(map[string]p.LedProducer)
 
 	conf := c.ReadConfig(a.cfile, a.realp, a.sensp)
-	hw.InitHardware()
-	d.InitSensors()
-	d.InitDisplay()
-
-	if !conf.RealHW || conf.SensorShow {
-		// we need to pass the os signal channel here to be able to exit the TUI
-		d.InitSimulationTUI(a.ossignal)
-	}
 
 	ledReader := u.NewAtomicEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
@@ -140,17 +132,31 @@ func (a *App) initialise() {
 	holdledp := conf.HoldLED.Enabled
 	nightledp := conf.NightLED.Enabled
 
+	hw.InitHardware()
+	d.InitSensors(conf.Hardware.Sensors)
+	d.InitDisplay(conf.Hardware.Display)
+
+	if !conf.RealHW || conf.SensorShow {
+		numsensors := len(conf.Hardware.Sensors.SensorCfg)
+		numledsegments := len(conf.Hardware.Display.LedSegments)
+		// we need to pass the os signal channel here to be able to exit the TUI
+		d.InitSimulationTUI(a.ossignal, conf.SensorShow, conf.RealHW,
+			numsensors, numledsegments, ledsTotal)
+	}
+
 	// This is the main producer: reacting to a sensor trigger to light the stripes
 	if sensorledp {
 		cfg := conf.SensorLED
 		for uid, sen := range d.Sensors {
-			a.ledproducers[uid] = p.NewSensorLedProducer(uid, sen.LedIndex, ledReader, ledsTotal, cfg.HoldTime, cfg.RunUpDelay, cfg.RunDownDelay, cfg.LedRGB)
+			a.ledproducers[uid] = p.NewSensorLedProducer(uid, sen.LedIndex, ledReader,
+				ledsTotal, cfg.HoldTime, cfg.RunUpDelay, cfg.RunDownDelay, cfg.LedRGB)
 		}
 	}
 
 	if holdledp {
 		cfg := conf.HoldLED
-		prodhold := p.NewHoldProducer(HOLD_LED_UID, ledReader, ledsTotal, cfg.HoldTime, cfg.LedRGB)
+		prodhold := p.NewHoldProducer(HOLD_LED_UID, ledReader,
+			ledsTotal, cfg.HoldTime, cfg.LedRGB)
 		a.ledproducers[HOLD_LED_UID] = prodhold
 	}
 
@@ -158,26 +164,17 @@ func (a *App) initialise() {
 	if nightledp {
 		cfg := conf.NightLED
 		// The Nightlight producer creates a permanent glow during night time
-		prodnight = p.NewNightlightProducer(NIGHT_LED_UID, ledReader, ledsTotal,
-			cfg.Latitude, cfg.Longitude, cfg.LedRGB)
+		prodnight = p.NewNightlightProducer(NIGHT_LED_UID, ledReader,
+			ledsTotal, cfg.Latitude, cfg.Longitude, cfg.LedRGB)
 		a.ledproducers[NIGHT_LED_UID] = prodnight
 		prodnight.Start()
 	}
 
 	if multiblobledp {
 		cfg := conf.MultiBlobLED
-		blobCfg := make(map[string]p.BlobConfig)
-		for k, v := range cfg.BlobCfg {
-			blobCfg[k] = p.BlobConfig{
-				DeltaX: v.DeltaX,
-				X:      v.X,
-				Width:  v.Width,
-				LedRGB: v.LedRGB,
-			}
-		}
 		// multiblobproducer gets the - maybe nil - prodnight instance to control it
 		multiblob := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader, prodnight,
-			ledsTotal, cfg.Duration, cfg.Delay, blobCfg)
+			ledsTotal, cfg.Duration, cfg.Delay, cfg.BlobCfg)
 		a.ledproducers[MULTI_BLOB_UID] = multiblob
 	}
 
@@ -194,8 +191,8 @@ func (a *App) initialise() {
 	go a.combineAndUpdateDisplay(sensorledp, holdledp, nightledp, multiblobledp, cylonledp,
 		ledReader, ledWriter, ledsTotal, conf.Hardware.Display.ForceUpdateDelay)
 	go a.fireController(holdledp, conf.HoldLED.TriggerDelay, conf.HoldLED.TriggerValue)
-	go d.DisplayDriver(ledWriter, a.stopsignal, &a.shutdownWg)
-	go d.SensorDriver(a.stopsignal, &a.shutdownWg)
+	go d.DisplayDriver(ledWriter, a.stopsignal, &a.shutdownWg, conf.RealHW, conf.SensorShow)
+	go d.SensorDriver(a.stopsignal, &a.shutdownWg, conf.RealHW, conf.SensorShow, conf.Hardware.Sensors.LoopDelay)
 }
 
 func (a *App) shutdown() {
@@ -212,7 +209,10 @@ func (a *App) shutdown() {
 	hw.CloseGPIO()
 }
 
-func (a *App) combineAndUpdateDisplay(sensorledp bool, holdledp bool, nightledp bool, multiblobledp bool, cylonledp bool, r *u.AtomicEvent[p.LedProducer], w chan []p.Led, ledsTotal int, forceupdatedelay time.Duration) {
+func (a *App) combineAndUpdateDisplay(
+	sensorledp bool, holdledp bool, nightledp bool, multiblobledp bool, cylonledp bool,
+	r *u.AtomicEvent[p.LedProducer], w chan []p.Led, ledsTotal int, forceupdatedelay time.Duration,
+) {
 	defer a.shutdownWg.Done()
 	var oldSumLeds []p.Led
 	allLedRanges := make(map[string][]p.Led)

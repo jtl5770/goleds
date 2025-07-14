@@ -15,7 +15,6 @@ import (
 	"github.com/rivo/tview"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
-	c "lautenbacher.net/goleds/config"
 	p "lautenbacher.net/goleds/producer"
 )
 
@@ -43,8 +42,8 @@ func scaledColor(led p.Led) string {
 	return fmt.Sprintf("[#%02x%02x%02x]", byte(math.Round(red+epsilon)), byte(math.Round(green+epsilon)), byte(math.Round(blue+epsilon)))
 }
 
-func simulateLedDisplay() {
-	if !c.CONFIG.SensorShow {
+func simulateLedDisplay(sensorShow bool) {
+	if !sensorShow {
 		var buf strings.Builder
 		keys := maps.Keys(SEGMENTS)
 		slices.Sort(keys)
@@ -176,14 +175,14 @@ func simulateLed(segment *ledsegment) (string, string) {
 	}
 }
 
-func InitSimulationTUI(ossignal chan os.Signal) {
+func InitSimulationTUI(ossignal chan os.Signal, sensorShow bool, realHW bool, numSensors int, numSegments int, ledsTotal int) {
 	var buf strings.Builder
-	if !c.CONFIG.SensorShow {
+	if !sensorShow {
 		buf.WriteString("Hit [blue]1[-]...[blue]" +
-			fmt.Sprintf("%d", len(c.CONFIG.Hardware.Sensors.SensorCfg)) + "[-] to fire a sensor\n")
+			fmt.Sprintf("%d", numSensors) + "[-] to fire a sensor\n")
 	}
 	buf.WriteString("Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload config file and restart")
-	if c.CONFIG.SensorShow && !c.CONFIG.RealHW {
+	if sensorShow && !realHW {
 		buf.WriteString("\n[#ff0000] '-real' flag not given, using random numbers for testing![-]")
 	}
 
@@ -198,14 +197,14 @@ func InitSimulationTUI(ossignal chan os.Signal) {
 	intro.SetBackgroundColor(tcell.ColorDarkSlateGray)
 
 	stripe := tview.NewTextView()
-	height := 3 * len(maps.Keys(c.CONFIG.Hardware.Display.LedSegments))
+	height := 3 * numSegments
 	layout.AddItem(intro, 4, 1, false)
 	layout.AddItem(stripe, 3+height, 1, false)
-	if c.CONFIG.SensorShow {
-		layout.SetRect(1, 1, int(math.Max(float64(len(c.CONFIG.Hardware.Sensors.SensorCfg)*15+24), 70)), 10)
+	if sensorShow {
+		layout.SetRect(1, 1, int(math.Max(float64(numSensors*15+24), 70)), 10)
 	} else {
-		height := 8 + (2 * len(maps.Keys(c.CONFIG.Hardware.Display.LedSegments)))
-		layout.SetRect(1, 1, c.CONFIG.Hardware.Display.LedsTotal+4, 8+height)
+		height := 8 + (2 * numSegments)
+		layout.SetRect(1, 1, ledsTotal+4, 8+height)
 	}
 	stripe.SetBorder(true)
 	stripe.SetTextAlign(0)
@@ -218,7 +217,7 @@ func InitSimulationTUI(ossignal chan os.Signal) {
 		func(event *tcell.EventKey) *tcell.EventKey {
 			key := string(event.Rune())
 			senuid, exist := chartosensor[key]
-			if exist && !c.CONFIG.SensorShow {
+			if exist && !sensorShow {
 				SensorReader <- NewTrigger(senuid, 80, time.Now())
 			} else if key == "q" || key == "Q" {
 				app.Stop()
@@ -233,12 +232,12 @@ func InitSimulationTUI(ossignal chan os.Signal) {
 	content = stripe
 
 	chartosensor = make(map[string]string, len(Sensors))
-	sensorline = strings.Repeat(" ", c.CONFIG.Hardware.Display.LedsTotal)
+	sensorline = strings.Repeat(" ", ledsTotal)
 	sensorvals := maps.Values(Sensors)
 	sort.Slice(sensorvals, func(i, j int) bool { return sensorvals[i].LedIndex < sensorvals[j].LedIndex })
 	for i, sen := range sensorvals {
 		index := sen.LedIndex
-		sensorline = sensorline[0:index] + fmt.Sprintf("%d", i+1) + sensorline[index+1:c.CONFIG.Hardware.Display.LedsTotal]
+		sensorline = sensorline[0:index] + fmt.Sprintf("%d", i+1) + sensorline[index+1:ledsTotal]
 		chartosensor[fmt.Sprintf("%d", i+1)] = sen.uid
 	}
 

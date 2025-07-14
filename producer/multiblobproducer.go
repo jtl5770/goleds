@@ -7,6 +7,7 @@ import (
 	"time"
 	t "time"
 
+	c "lautenbacher.net/goleds/config"
 	u "lautenbacher.net/goleds/util"
 )
 
@@ -64,14 +65,7 @@ type MultiBlobProducer struct {
 	delay      time.Duration
 }
 
-type BlobConfig struct {
-	DeltaX float64   `yaml:"DeltaX"`
-	X      float64   `yaml:"X"`
-	Width  float64   `yaml:"Width"`
-	LedRGB []float64 `yaml:"LedRGB"`
-}
-
-func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], nlprod *NightlightProducer, ledsTotal int, duration, delay time.Duration, blobCfg map[string]BlobConfig) *MultiBlobProducer {
+func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], nlprod *NightlightProducer, ledsTotal int, duration, delay time.Duration, blobCfg map[string]c.BlobCfg) *MultiBlobProducer {
 	inst := &MultiBlobProducer{
 		duration:   duration,
 		delay:      delay,

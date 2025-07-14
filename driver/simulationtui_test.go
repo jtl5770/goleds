@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	c "lautenbacher.net/goleds/config"
 	p "lautenbacher.net/goleds/producer"
 )
 
@@ -41,19 +40,17 @@ func TestScaledColor(t *testing.T) {
 }
 
 func TestSimulateLed(t *testing.T) {
-	oldConfig := c.CONFIG
-	t.Cleanup(func() { c.CONFIG = oldConfig })
-	c.CONFIG.Hardware.Display.LedsTotal = 20
+	ledsTotal := 20
 
 	// Test case 1: Non-visible segment
-	segNonVisible := NewLedSegment(5, 10, "spi1", false, false)
+	segNonVisible := NewLedSegment(5, 10, "spi1", false, false, ledsTotal)
 	top, bot := simulateLed(segNonVisible)
 	// Length is 10 - 5 + 1 = 6
 	assert.Equal(t, "      ", top)
 	assert.Equal(t, "······", bot)
 
 	// Test case 2: Visible segment
-	segVisible := NewLedSegment(0, 3, "spi1", false, true) // 4 LEDs long
+	segVisible := NewLedSegment(0, 3, "spi1", false, true, ledsTotal) // 4 LEDs long
 	segVisible.leds = []p.Led{
 		{Red: 255, Green: 0, Blue: 0},
 		{Red: 0, Green: 255, Blue: 0},

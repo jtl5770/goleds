@@ -125,7 +125,7 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	forceUpdateDelay := 1 * time.Second
 
 	oldSensors := d.Sensors
-	d.Sensors = map[string]*d.Sensor{"sensor": d.NewSensor("sensor", 0, "", 0, 0)}
+	d.Sensors = map[string]*d.Sensor{"sensor": d.NewSensor("sensor", 0, "", 0, 0, 10)}
 	t.Cleanup(func() {
 		d.Sensors = oldSensors
 	})
