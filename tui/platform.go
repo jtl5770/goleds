@@ -125,11 +125,11 @@ func (p *TUIPlatform) GetSensorLedIndices() map[string]int {
 	return indices
 }
 
-func (p *TUIPlatform) LedsTotal() int {
+func (p *TUIPlatform) GetLedsTotal() int {
 	return p.config.Hardware.Display.LedsTotal
 }
 
-func (p *TUIPlatform) ForceUpdateDelay() time.Duration {
+func (p *TUIPlatform) GetForceUpdateDelay() time.Duration {
 	return p.config.Hardware.Display.ForceUpdateDelay
 }
 

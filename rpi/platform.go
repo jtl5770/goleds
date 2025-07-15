@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,7 +13,6 @@ import (
 	"lautenbacher.net/goleds/config"
 	"lautenbacher.net/goleds/platform"
 	"lautenbacher.net/goleds/producer"
-	"strings"
 )
 
 type RaspberryPiPlatform struct {
@@ -83,7 +83,6 @@ func (p *RaspberryPiPlatform) Start() error {
 	}
 
 	p.initSensors(p.config.Hardware.Sensors)
-	
 
 	return nil
 }
@@ -121,11 +120,11 @@ func (p *RaspberryPiPlatform) GetSensorLedIndices() map[string]int {
 	return indices
 }
 
-func (p *RaspberryPiPlatform) LedsTotal() int {
+func (p *RaspberryPiPlatform) GetLedsTotal() int {
 	return p.config.Hardware.Display.LedsTotal
 }
 
-func (p *RaspberryPiPlatform) ForceUpdateDelay() time.Duration {
+func (p *RaspberryPiPlatform) GetForceUpdateDelay() time.Duration {
 	return p.config.Hardware.Display.ForceUpdateDelay
 }
 

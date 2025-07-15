@@ -28,11 +28,11 @@ type Platform interface {
 	// GetSensorLedIndices returns a map of sensor UIDs to their LED indices.
 	GetSensorLedIndices() map[string]int
 
-	// LedsTotal returns the total number of configured LEDs.
-	LedsTotal() int
+	// GetLedsTotal returns the total number of configured LEDs.
+	GetLedsTotal() int
 
 	// ForceUpdateDelay returns the configured delay for forcing a display update.
-	ForceUpdateDelay() time.Duration
+	GetForceUpdateDelay() time.Duration
 
 	// DisplayDriver runs the display update loop for the platform.
 	DisplayDriver(display chan []p.Led, stopSignal chan bool, wg *sync.WaitGroup)

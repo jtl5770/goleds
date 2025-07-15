@@ -99,11 +99,12 @@ func main() {
 	for {
 		select {
 		case sig := <-ossignal:
-			if sig == os.Interrupt {
+			switch sig {
+			case os.Interrupt:
 				log.Println("Exiting...")
 				app.shutdown()
 				os.Exit(0)
-			} else if sig == syscall.SIGHUP {
+			case syscall.SIGHUP:
 				log.Println("Resetting...")
 				app.shutdown()
 				app.initialise(*cfile, *realp, *sensp)
@@ -132,7 +133,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 
 	ledReader := u.NewAtomicEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
-	ledsTotal := a.platform.LedsTotal()
+	ledsTotal := a.platform.GetLedsTotal()
 
 	sensorledp := conf.SensorLED.Enabled
 	multiblobledp := conf.MultiBlobLED.Enabled
@@ -189,7 +190,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	a.shutdownWg.Add(4)
 
 	go a.combineAndUpdateDisplay(a.sensorProducers, holdledp, multiblobledp, cylonledp,
-		ledReader, ledWriter, ledsTotal, a.platform.ForceUpdateDelay())
+		ledReader, ledWriter, ledsTotal, a.platform.GetForceUpdateDelay())
 	go a.fireController(holdledp, conf.HoldLED.TriggerDelay, conf.HoldLED.TriggerValue)
 	go a.platform.DisplayDriver(ledWriter, a.stopsignal, &a.shutdownWg)
 	go a.platform.SensorDriver(a.stopsignal, &a.shutdownWg)
