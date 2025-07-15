@@ -10,9 +10,6 @@ import (
 )
 
 func TestReadConfig(t *testing.T) {
-	oldConfig := CONFIG
-	t.Cleanup(func() { CONFIG = oldConfig })
-
 	// Create a temporary directory for the test
 	tempDir, err := os.MkdirTemp("", "goleds-test")
 	if err != nil {
@@ -36,16 +33,16 @@ SensorLED:
 	}
 
 	// Call the function to be tested
-	ReadConfig(configFile, true, false)
+	conf := ReadConfig(configFile, true, false)
 
 	// Assertions
-	assert.True(t, CONFIG.RealHW, "RealHW should be true")
-	assert.False(t, CONFIG.SensorShow, "SensorShow should be false")
-	assert.Equal(t, configFile, CONFIG.Configfile, "Configfile should be set correctly")
+	assert.True(t, conf.RealHW, "RealHW should be true")
+	assert.False(t, conf.SensorShow, "SensorShow should be false")
+	assert.Equal(t, configFile, conf.Configfile, "Configfile should be set correctly")
 
-	assert.True(t, CONFIG.SensorLED.Enabled, "SensorLED.Enabled should be true")
-	assert.Equal(t, 10*time.Millisecond, CONFIG.SensorLED.RunUpDelay, "SensorLED.RunUpDelay should be 10ms")
-	assert.Equal(t, 20*time.Millisecond, CONFIG.SensorLED.RunDownDelay, "SensorLED.RunDownDelay should be 20ms")
-	assert.Equal(t, 30*time.Second, CONFIG.SensorLED.HoldTime, "SensorLED.HoldTime should be 30s")
-	assert.Equal(t, []float64{255, 0, 0}, CONFIG.SensorLED.LedRGB, "SensorLED.LedRGB should be [255, 0, 0]")
+	assert.True(t, conf.SensorLED.Enabled, "SensorLED.Enabled should be true")
+	assert.Equal(t, 10*time.Millisecond, conf.SensorLED.RunUpDelay, "SensorLED.RunUpDelay should be 10ms")
+	assert.Equal(t, 20*time.Millisecond, conf.SensorLED.RunDownDelay, "SensorLED.RunDownDelay should be 20ms")
+	assert.Equal(t, 30*time.Second, conf.SensorLED.HoldTime, "SensorLED.HoldTime should be 30s")
+	assert.Equal(t, []float64{255, 0, 0}, conf.SensorLED.LedRGB, "SensorLED.LedRGB should be [255, 0, 0]")
 }

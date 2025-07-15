@@ -10,7 +10,7 @@ import (
 
 const CONFILE = "config.yml"
 
-var CONFIG Config
+var CONFIG *Config
 
 // SensorLEDConfig defines the configuration for the SensorLED producer.
 type SensorLEDConfig struct {
@@ -137,8 +137,6 @@ func ReadConfig(cfile string, realhw bool, sensorshow bool) *Config {
 	conf.SensorShow = sensorshow
 	conf.Configfile = cfile
 	log.Printf("%+v\n", conf)
-
-	CONFIG = conf
 
 	return &conf
 }

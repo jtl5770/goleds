@@ -8,8 +8,9 @@ import (
 	p "lautenbacher.net/goleds/producer"
 )
 
-// Platform defines the interface for abstracting away the real hardware
-// from the TUI simulation.
+// Platform defines the interface for abstracting away the real
+// hardware or the TUI simulation. The rest of the program should only
+// see this interface.
 type Platform interface {
 	// Start initializes the platform (e.g., opens GPIO/SPI, or starts the TUI).
 	Start() error
@@ -18,6 +19,7 @@ type Platform interface {
 	Stop()
 
 	// DisplayLeds sends the complete state of all LEDs to the output device.
+	// This will be either the LED stripes or the TUI simulation
 	DisplayLeds(leds []p.Led)
 
 	// GetSensorEvents returns a channel that the application can read from
