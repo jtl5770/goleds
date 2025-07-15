@@ -42,9 +42,10 @@ import (
 	"time"
 
 	c "lautenbacher.net/goleds/config"
-	d "lautenbacher.net/goleds/driver"
-	hw "lautenbacher.net/goleds/hardware"
+	pl "lautenbacher.net/goleds/platform"
 	p "lautenbacher.net/goleds/producer"
+	"lautenbacher.net/goleds/rpi"
+	"lautenbacher.net/goleds/tui"
 	u "lautenbacher.net/goleds/util"
 )
 
@@ -65,6 +66,7 @@ type App struct {
 	realp        bool
 	sensp        bool
 	ossignal     chan os.Signal
+	platform     pl.Platform
 }
 
 // NewApp creates a new App instance
@@ -123,31 +125,30 @@ func (a *App) initialise() {
 
 	conf := c.ReadConfig(a.cfile, a.realp, a.sensp)
 
+	if conf.RealHW {
+		a.platform = rpi.NewPlatform(conf)
+	} else {
+		a.platform = tui.NewPlatform(a.ossignal, conf)
+	}
+
+	if err := a.platform.Start(); err != nil {
+		log.Fatalf("Failed to start platform: %v", err)
+	}
+
 	ledReader := u.NewAtomicEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
 	ledsTotal := conf.Hardware.Display.LedsTotal
+
 	sensorledp := conf.SensorLED.Enabled
 	multiblobledp := conf.MultiBlobLED.Enabled
 	cylonledp := conf.CylonLED.Enabled
 	holdledp := conf.HoldLED.Enabled
 	nightledp := conf.NightLED.Enabled
 
-	hw.InitHardware()
-	d.InitSensors(conf.Hardware.Sensors)
-	d.InitDisplay(conf.Hardware.Display)
-
-	if !conf.RealHW || conf.SensorShow {
-		numsensors := len(conf.Hardware.Sensors.SensorCfg)
-		numledsegments := len(conf.Hardware.Display.LedSegments)
-		// we need to pass the os signal channel here to be able to exit the TUI
-		d.InitSimulationTUI(a.ossignal, conf.SensorShow, conf.RealHW,
-			numsensors, numledsegments, ledsTotal)
-	}
-
 	// This is the main producer: reacting to a sensor trigger to light the stripes
 	if sensorledp {
 		cfg := conf.SensorLED
-		for uid, sen := range d.Sensors {
+		for uid, sen := range a.platform.GetSensors() {
 			a.ledproducers[uid] = p.NewSensorLedProducer(uid, sen.LedIndex, ledReader,
 				ledsTotal, cfg.HoldTime, cfg.RunUpDelay, cfg.RunDownDelay, cfg.LedRGB)
 		}
@@ -188,11 +189,12 @@ func (a *App) initialise() {
 	// *FUTURE* init more types of ledproducers if needed/wanted
 
 	a.shutdownWg.Add(4)
+
 	go a.combineAndUpdateDisplay(sensorledp, holdledp, nightledp, multiblobledp, cylonledp,
 		ledReader, ledWriter, ledsTotal, conf.Hardware.Display.ForceUpdateDelay)
 	go a.fireController(holdledp, conf.HoldLED.TriggerDelay, conf.HoldLED.TriggerValue)
-	go d.DisplayDriver(ledWriter, a.stopsignal, &a.shutdownWg, conf.RealHW, conf.SensorShow)
-	go d.SensorDriver(a.stopsignal, &a.shutdownWg, conf.RealHW, conf.SensorShow, conf.Hardware.Sensors.LoopDelay)
+	go a.platform.DisplayDriver(ledWriter, a.stopsignal, &a.shutdownWg)
+	go a.platform.SensorDriver(a.stopsignal, &a.shutdownWg)
 }
 
 func (a *App) shutdown() {
@@ -206,7 +208,7 @@ func (a *App) shutdown() {
 	close(a.stopsignal)
 
 	a.shutdownWg.Wait()
-	hw.ShutdownHardware()
+	a.platform.Stop()
 }
 
 func (a *App) combineAndUpdateDisplay(
@@ -225,7 +227,7 @@ func (a *App) combineAndUpdateDisplay(
 			s := r.Value()
 			if multiblobledp || cylonledp {
 				isrunning := false
-				for uid := range d.Sensors {
+				for uid := range a.platform.GetSensors() {
 					isrunning = (isrunning || a.ledproducers[uid].GetIsRunning())
 				}
 				if holdledp {
@@ -287,10 +289,10 @@ func (a *App) combineAndUpdateDisplay(
 
 func (a *App) fireController(holdledp bool, triggerDelay time.Duration, triggerValue int) {
 	defer a.shutdownWg.Done()
-	var firstSameTrigger *d.Trigger = d.NewTrigger("", 0, time.Now())
+	var firstSameTrigger *pl.Trigger = pl.NewTrigger("", 0, time.Now())
 	for {
 		select {
-		case trigger := <-d.SensorReader:
+		case trigger := <-a.platform.GetSensorEvents():
 			oldStamp := firstSameTrigger.Timestamp
 			newStamp := trigger.Timestamp
 
@@ -308,7 +310,7 @@ func (a *App) fireController(holdledp bool, triggerDelay time.Duration, triggerV
 					firstSameTrigger = trigger
 				}
 			} else {
-				firstSameTrigger = d.NewTrigger("", 0, time.Now())
+				firstSameTrigger = pl.NewTrigger("", 0, time.Now())
 				if producer, ok := a.ledproducers[trigger.ID]; ok {
 					producer.Start()
 				} else {

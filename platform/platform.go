@@ -1,8 +1,10 @@
 package platform
 
 import (
+	"sync"
 	"time"
 
+	"lautenbacher.net/goleds/config"
 	p "lautenbacher.net/goleds/producer"
 )
 
@@ -21,6 +23,15 @@ type Platform interface {
 	// GetSensorEvents returns a channel that the application can read from
 	// to receive sensor trigger events.
 	GetSensorEvents() <-chan *Trigger
+
+	// GetSensors returns the sensor configuration for the platform.
+	GetSensors() map[string]config.SensorCfg
+
+	// DisplayDriver runs the display update loop for the platform.
+	DisplayDriver(display chan []p.Led, stopSignal chan bool, wg *sync.WaitGroup)
+
+	// SensorDriver runs the sensor reading loop for the platform.
+	SensorDriver(stopSignal chan bool, wg *sync.WaitGroup)
 }
 
 // Trigger represents a sensor event.

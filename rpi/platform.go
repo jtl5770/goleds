@@ -12,6 +12,7 @@ import (
 	"lautenbacher.net/goleds/config"
 	"lautenbacher.net/goleds/platform"
 	"lautenbacher.net/goleds/producer"
+	"strings"
 )
 
 type RaspberryPiPlatform struct {
@@ -72,7 +73,7 @@ func (p *RaspberryPiPlatform) Start() error {
 
 	p.displayManager = platform.NewDisplayManager(p.config.Hardware.Display)
 
-	switch p.config.Hardware.LEDType {
+	switch strings.ToUpper(p.config.Hardware.LEDType) {
 	case "APA102":
 		p.ledDriver = newAPA102Driver(p.config.Hardware.Display)
 	case "WS2801":
@@ -82,7 +83,7 @@ func (p *RaspberryPiPlatform) Start() error {
 	}
 
 	p.initSensors(p.config.Hardware.Sensors)
-	go p.sensorDriver()
+	
 
 	return nil
 }
@@ -112,6 +113,32 @@ func (p *RaspberryPiPlatform) GetSensorEvents() <-chan *platform.Trigger {
 	return p.sensorEvents
 }
 
+func (p *RaspberryPiPlatform) GetSensors() map[string]config.SensorCfg {
+	cfg := make(map[string]config.SensorCfg)
+	for uid, sensor := range p.sensors {
+		cfg[uid] = config.SensorCfg{
+			LedIndex:     sensor.LedIndex,
+			SpiMultiplex: sensor.spimultiplex,
+			AdcChannel:   sensor.adcChannel,
+			TriggerValue: sensor.triggerValue,
+		}
+	}
+	return cfg
+}
+
+func (p *RaspberryPiPlatform) DisplayDriver(display chan []producer.Led, stopSignal chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		select {
+		case <-stopSignal:
+			log.Println("Ending DisplayDriver go-routine (RPi)")
+			return
+		case sumLeds := <-display:
+			p.DisplayLeds(sumLeds)
+		}
+	}
+}
+
 func (p *RaspberryPiPlatform) spiExchangeMultiplex(index string, data []byte) []byte {
 	p.spiMutex.Lock()
 	defer p.spiMutex.Unlock()
@@ -131,10 +158,6 @@ func (p *RaspberryPiPlatform) spiExchangeMultiplex(index string, data []byte) []
 	rpio.SpiExchange(data)
 	return data
 }
-
-
-
-
 
 // LEDDriver interface and implementations
 type LEDDriver interface {
@@ -243,7 +266,8 @@ func (s *sensor) smoothValue(val int) int {
 	return ret / s.smoothing
 }
 
-func (p *RaspberryPiPlatform) sensorDriver() {
+func (p *RaspberryPiPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
 	sensorvalues := make(map[string]*deque.Deque[int])
 	for name := range p.sensors {
 		sensorvalues[name] = &deque.Deque[int]{}
@@ -251,8 +275,8 @@ func (p *RaspberryPiPlatform) sensorDriver() {
 	ticker := time.NewTicker(p.config.Hardware.Sensors.LoopDelay)
 	for {
 		select {
-		case <-p.stopChan:
-			log.Println("Ending SensorDriver go-routine")
+		case <-stopSignal:
+			log.Println("Ending SensorDriver go-routine (RPi)")
 			ticker.Stop()
 			return
 		case <-ticker.C:

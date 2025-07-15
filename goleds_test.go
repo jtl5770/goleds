@@ -2,13 +2,59 @@ package main
 
 import (
 	"os"
+	"sync"
 	"testing"
 	"time"
 
-	d "lautenbacher.net/goleds/driver"
+	c "lautenbacher.net/goleds/config"
+	pl "lautenbacher.net/goleds/platform"
 	p "lautenbacher.net/goleds/producer"
 	u "lautenbacher.net/goleds/util"
 )
+
+type MockPlatform struct {
+	pl.Platform
+	sensorEvents chan *pl.Trigger
+	sensors      map[string]c.SensorCfg
+}
+
+func (m *MockPlatform) GetSensorEvents() <-chan *pl.Trigger {
+	return m.sensorEvents
+}
+
+func (m *MockPlatform) GetSensors() map[string]c.SensorCfg {
+	return m.sensors
+}
+
+func (m *MockPlatform) Start() error {
+	return nil
+}
+
+func (m *MockPlatform) Stop() {
+}
+
+func (m *MockPlatform) DisplayDriver(display chan []p.Led, stopSignal chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		select {
+		case <-stopSignal:
+			return
+		case <-display:
+		}
+	}
+}
+
+func (m *MockPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
+	<-stopSignal
+}
+
+func NewMockPlatform() *MockPlatform {
+	return &MockPlatform{
+		sensorEvents: make(chan *pl.Trigger),
+		sensors:      make(map[string]c.SensorCfg),
+	}
+}
 
 type MockLedProducer struct {
 	*p.AbstractProducer
@@ -58,14 +104,11 @@ func TestFireController(t *testing.T) {
 	app := NewApp(&cfile, &realp, &sensp, ossignal)
 	app.ledproducers = make(map[string]p.LedProducer)
 
+	mockPlatform := NewMockPlatform()
+	app.platform = mockPlatform
+
 	triggerValue := 100
 	triggerDelay := 1 * time.Second
-
-	oldSensorReader := d.SensorReader
-	d.SensorReader = make(chan *d.Trigger)
-	t.Cleanup(func() {
-		d.SensorReader = oldSensorReader
-	})
 
 	mockProducer := NewMockLedProducer("test")
 	app.ledproducers["test"] = mockProducer
@@ -81,7 +124,7 @@ func TestFireController(t *testing.T) {
 	})
 
 	// test normal trigger
-	d.SensorReader <- d.NewTrigger("test", 10, time.Now())
+	mockPlatform.sensorEvents <- pl.NewTrigger("test", 10, time.Now())
 	time.Sleep(100 * time.Millisecond)
 	if !mockProducer.GetIsRunning() {
 		t.Error("Expected producer to be running")
@@ -91,21 +134,21 @@ func TestFireController(t *testing.T) {
 	// test hold trigger
 	now := time.Now()
 	// first trigger, should not start hold producer
-	d.SensorReader <- d.NewTrigger(HOLD_LED_UID, 110, now)
+	mockPlatform.sensorEvents <- pl.NewTrigger(HOLD_LED_UID, 110, now)
 	time.Sleep(100 * time.Millisecond)
 	if mockHoldProducer.GetIsRunning() {
 		t.Fatal("Expected hold producer to not be running yet")
 	}
 
 	// second trigger in the time window, should start hold producer
-	d.SensorReader <- d.NewTrigger(HOLD_LED_UID, 110, now.Add(triggerDelay+200*time.Millisecond))
+	mockPlatform.sensorEvents <- pl.NewTrigger(HOLD_LED_UID, 110, now.Add(triggerDelay+200*time.Millisecond))
 	time.Sleep(100 * time.Millisecond)
 	if !mockHoldProducer.GetIsRunning() {
 		t.Fatal("Expected hold producer to be running")
 	}
 
 	// third trigger in the time window, should stop hold producer
-	d.SensorReader <- d.NewTrigger(HOLD_LED_UID, 110, now.Add(2*(triggerDelay+200*time.Millisecond)))
+	mockPlatform.sensorEvents <- pl.NewTrigger(HOLD_LED_UID, 110, now.Add(2*(triggerDelay+200*time.Millisecond)))
 	time.Sleep(100 * time.Millisecond)
 	if mockHoldProducer.GetIsRunning() {
 		t.Fatal("Expected hold producer to be stopped")
@@ -124,11 +167,10 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	ledsTotal := 10
 	forceUpdateDelay := 1 * time.Second
 
-	oldSensors := d.Sensors
-	d.Sensors = map[string]*d.Sensor{"sensor": d.NewSensor("sensor", 0, "", 0, 0, 10)}
-	t.Cleanup(func() {
-		d.Sensors = oldSensors
-	})
+	mockPlatform := NewMockPlatform()
+	app.platform = mockPlatform
+
+	mockPlatform.sensors["sensor"] = c.SensorCfg{LedIndex: 0, SpiMultiplex: "", AdcChannel: 0, TriggerValue: 0}
 
 	mockSensorProducer := NewMockLedProducer("sensor")
 	mockMultiBlobProducer := NewMockLedProducer(MULTI_BLOB_UID)

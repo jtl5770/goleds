@@ -7,13 +7,14 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"golang.org/x/exp/maps"
-	
+
 	"lautenbacher.net/goleds/config"
 	"lautenbacher.net/goleds/platform"
 	"lautenbacher.net/goleds/producer"
@@ -28,8 +29,49 @@ type TUIPlatform struct {
 	displayManager *platform.DisplayManager
 	sensorline     string
 	chartosensor   map[string]string
-	sensors        map[string]*sensor
+	sensors        map[string]*sensor // Keep sensor map for internal use
 	stopChan       chan bool
+}
+
+// sensor struct and related functions (now internal to TUIPlatform)
+type sensor struct {
+	uid          string
+	LedIndex     int
+	spimultiplex string
+	adcChannel   byte
+	triggerValue int
+	values       []int
+	smoothing    int
+}
+
+func (p *TUIPlatform) initSensors(sensorConfig config.SensorsConfig) {
+	p.sensors = make(map[string]*sensor, len(sensorConfig.SensorCfg))
+	for uid, cfg := range sensorConfig.SensorCfg {
+		p.sensors[uid] = p.newSensor(uid, cfg.LedIndex, cfg.SpiMultiplex, cfg.AdcChannel, cfg.TriggerValue, sensorConfig.SmoothingSize)
+	}
+}
+
+func (p *TUIPlatform) newSensor(uid string, ledIndex int, spimultiplex string, adcChannel byte, triggerValue int, smoothing int) *sensor {
+	return &sensor{
+		uid:          uid,
+		LedIndex:     ledIndex,
+		spimultiplex: spimultiplex,
+		adcChannel:   adcChannel,
+		triggerValue: triggerValue,
+		values:       make([]int, smoothing, smoothing+1),
+		smoothing:    smoothing,
+	}
+}
+
+func (s *sensor) smoothValue(val int) int {
+	var ret int
+	newValues := make([]int, s.smoothing, s.smoothing+1)
+	for index, curr := range append(s.values, val)[1:] {
+		newValues[index] = curr
+		ret += curr
+	}
+	s.values = newValues
+	return ret / s.smoothing
 }
 
 func NewPlatform(osSignalChan chan os.Signal, conf *config.Config) *TUIPlatform {
@@ -75,39 +117,46 @@ func (p *TUIPlatform) GetSensorEvents() <-chan *platform.Trigger {
 	return p.sensorEvents
 }
 
-
-
-// sensor and related functions
-type sensor struct {
-	uid          string
-	LedIndex     int
-	spimultiplex string
-	adcChannel   byte
-	triggerValue int
-	values       []int
-	smoothing    int
+func (p *TUIPlatform) GetSensors() map[string]config.SensorCfg {
+	cfg := make(map[string]config.SensorCfg)
+	for uid, sensor := range p.sensors {
+		cfg[uid] = config.SensorCfg{
+			LedIndex:     sensor.LedIndex,
+			SpiMultiplex: sensor.spimultiplex,
+			AdcChannel:   sensor.adcChannel,
+			TriggerValue: sensor.triggerValue,
+		}
+	}
+	return cfg
 }
 
-func (p *TUIPlatform) initSensors(sensorConfig config.SensorsConfig) {
-	p.sensors = make(map[string]*sensor, len(sensorConfig.SensorCfg))
-	for uid, cfg := range sensorConfig.SensorCfg {
-		p.sensors[uid] = newSensor(uid, cfg.LedIndex, cfg.SpiMultiplex, cfg.AdcChannel, cfg.TriggerValue, sensorConfig.SmoothingSize)
+func (p *TUIPlatform) DisplayDriver(display chan []producer.Led, stopSignal chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		select {
+		case <-stopSignal:
+			log.Println("Ending DisplayDriver go-routine (TUI)")
+			return
+		case sumLeds := <-display:
+			p.DisplayLeds(sumLeds)
+		}
 	}
 }
 
-func newSensor(uid string, ledIndex int, spimultiplex string, adcChannel byte, triggerValue int, smoothing int) *sensor {
-	return &sensor{
-		uid:          uid,
-		LedIndex:     ledIndex,
-		spimultiplex: spimultiplex,
-		adcChannel:   adcChannel,
-		triggerValue: triggerValue,
-		values:       make([]int, smoothing, smoothing+1),
-		smoothing:    smoothing,
+func (p *TUIPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
+	// In the TUI platform, sensor events are triggered by key presses,
+	// not by a continuous reading loop. This function is here to satisfy the
+	// platform.Platform interface, but it doesn't need to do anything.
+	for {
+		select {
+		case <-stopSignal:
+			log.Println("Ending SensorDriver go-routine (TUI)")
+			return
+		}
 	}
 }
 
-// simulationtui and related functions
 func (p *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, sensorShow bool, realHW bool, numSensors int, numSegments int, ledsTotal int) {
 	var buf strings.Builder
 	if !sensorShow {
@@ -231,7 +280,7 @@ func (p *TUIPlatform) simulateLed(segment *platform.Segment) (string, string) {
 				buf2.WriteString(scaledColor(v))
 				if value <= 2 {
 					buf1.WriteString(" ")
-					buf2.WriteString(" ")
+					buf2.WriteString("▁")
 				} else if value <= 4 {
 					buf1.WriteString(" ")
 					buf2.WriteString("▂")
