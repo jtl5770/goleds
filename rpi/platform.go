@@ -113,17 +113,20 @@ func (p *RaspberryPiPlatform) GetSensorEvents() <-chan *platform.Trigger {
 	return p.sensorEvents
 }
 
-func (p *RaspberryPiPlatform) GetSensors() map[string]config.SensorCfg {
-	cfg := make(map[string]config.SensorCfg)
+func (p *RaspberryPiPlatform) GetSensorLedIndices() map[string]int {
+	indices := make(map[string]int)
 	for uid, sensor := range p.sensors {
-		cfg[uid] = config.SensorCfg{
-			LedIndex:     sensor.LedIndex,
-			SpiMultiplex: sensor.spimultiplex,
-			AdcChannel:   sensor.adcChannel,
-			TriggerValue: sensor.triggerValue,
-		}
+		indices[uid] = sensor.LedIndex
 	}
-	return cfg
+	return indices
+}
+
+func (p *RaspberryPiPlatform) LedsTotal() int {
+	return p.config.Hardware.Display.LedsTotal
+}
+
+func (p *RaspberryPiPlatform) ForceUpdateDelay() time.Duration {
+	return p.config.Hardware.Display.ForceUpdateDelay
 }
 
 func (p *RaspberryPiPlatform) DisplayDriver(display chan []producer.Led, stopSignal chan bool, wg *sync.WaitGroup) {

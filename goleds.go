@@ -59,22 +59,17 @@ const (
 
 // App holds the global state of the application
 type App struct {
-	ledproducers map[string]p.LedProducer
-	stopsignal   chan bool
-	shutdownWg   sync.WaitGroup
-	cfile        string
-	realp        bool
-	sensp        bool
-	ossignal     chan os.Signal
-	platform     pl.Platform
+	ledproducers    map[string]p.LedProducer
+	sensorProducers []p.LedProducer
+	stopsignal      chan bool
+	shutdownWg      sync.WaitGroup
+	ossignal        chan os.Signal
+	platform        pl.Platform
 }
 
 // NewApp creates a new App instance
-func NewApp(cfile *string, realp *bool, sensp *bool, ossignal chan os.Signal) *App {
+func NewApp(ossignal chan os.Signal) *App {
 	return &App{
-		cfile:    *cfile,
-		realp:    *realp,
-		sensp:    *sensp,
 		ossignal: ossignal,
 	}
 }
@@ -96,8 +91,8 @@ func main() {
 	sensp := flag.Bool("show-sensors", false, "Set to true if program should only display"+"sensor values (will be random values if -real is not given)")
 	flag.Parse()
 
-	app := NewApp(cfile, realp, sensp, ossignal)
-	app.initialise()
+	app := NewApp(ossignal)
+	app.initialise(*cfile, *realp, *sensp)
 
 	signal.Notify(ossignal, os.Interrupt, syscall.SIGHUP)
 
@@ -111,19 +106,19 @@ func main() {
 			} else if sig == syscall.SIGHUP {
 				log.Println("Resetting...")
 				app.shutdown()
-				app.initialise()
+				app.initialise(*cfile, *realp, *sensp)
 			}
 		}
 	}
 }
 
-func (a *App) initialise() {
+func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	log.Println("Initializing...")
 
 	a.stopsignal = make(chan bool)
 	a.ledproducers = make(map[string]p.LedProducer)
 
-	conf := c.ReadConfig(a.cfile, a.realp, a.sensp)
+	conf := c.ReadConfig(cfile, realp, sensp)
 
 	if conf.RealHW {
 		a.platform = rpi.NewPlatform(conf)
@@ -137,7 +132,7 @@ func (a *App) initialise() {
 
 	ledReader := u.NewAtomicEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
-	ledsTotal := conf.Hardware.Display.LedsTotal
+	ledsTotal := a.platform.LedsTotal()
 
 	sensorledp := conf.SensorLED.Enabled
 	multiblobledp := conf.MultiBlobLED.Enabled
@@ -148,9 +143,12 @@ func (a *App) initialise() {
 	// This is the main producer: reacting to a sensor trigger to light the stripes
 	if sensorledp {
 		cfg := conf.SensorLED
-		for uid, sen := range a.platform.GetSensors() {
-			a.ledproducers[uid] = p.NewSensorLedProducer(uid, sen.LedIndex, ledReader,
+		a.sensorProducers = make([]p.LedProducer, 0, len(a.platform.GetSensorLedIndices()))
+		for uid, ledIndex := range a.platform.GetSensorLedIndices() {
+			producer := p.NewSensorLedProducer(uid, ledIndex, ledReader,
 				ledsTotal, cfg.HoldTime, cfg.RunUpDelay, cfg.RunDownDelay, cfg.LedRGB)
+			a.ledproducers[uid] = producer
+			a.sensorProducers = append(a.sensorProducers, producer)
 		}
 	}
 
@@ -190,8 +188,8 @@ func (a *App) initialise() {
 
 	a.shutdownWg.Add(4)
 
-	go a.combineAndUpdateDisplay(sensorledp, holdledp, nightledp, multiblobledp, cylonledp,
-		ledReader, ledWriter, ledsTotal, conf.Hardware.Display.ForceUpdateDelay)
+	go a.combineAndUpdateDisplay(a.sensorProducers, holdledp, multiblobledp, cylonledp,
+		ledReader, ledWriter, ledsTotal, a.platform.ForceUpdateDelay())
 	go a.fireController(holdledp, conf.HoldLED.TriggerDelay, conf.HoldLED.TriggerValue)
 	go a.platform.DisplayDriver(ledWriter, a.stopsignal, &a.shutdownWg)
 	go a.platform.SensorDriver(a.stopsignal, &a.shutdownWg)
@@ -212,7 +210,7 @@ func (a *App) shutdown() {
 }
 
 func (a *App) combineAndUpdateDisplay(
-	sensorledp bool, holdledp bool, nightledp bool, multiblobledp bool, cylonledp bool,
+	sensorProducers []p.LedProducer, holdledp bool, multiblobledp bool, cylonledp bool,
 	r *u.AtomicEvent[p.LedProducer], w chan []p.Led, ledsTotal int, forceupdatedelay time.Duration,
 ) {
 	defer a.shutdownWg.Done()
@@ -227,8 +225,8 @@ func (a *App) combineAndUpdateDisplay(
 			s := r.Value()
 			if multiblobledp || cylonledp {
 				isrunning := false
-				for uid := range a.platform.GetSensors() {
-					isrunning = (isrunning || a.ledproducers[uid].GetIsRunning())
+				for _, producer := range sensorProducers {
+					isrunning = (isrunning || producer.GetIsRunning())
 				}
 				if holdledp {
 					isrunning = (isrunning || a.ledproducers[HOLD_LED_UID].GetIsRunning())

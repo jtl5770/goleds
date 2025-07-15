@@ -4,7 +4,6 @@ import (
 	"sync"
 	"time"
 
-	"lautenbacher.net/goleds/config"
 	p "lautenbacher.net/goleds/producer"
 )
 
@@ -26,8 +25,14 @@ type Platform interface {
 	// to receive sensor trigger events.
 	GetSensorEvents() <-chan *Trigger
 
-	// GetSensors returns the sensor configuration for the platform.
-	GetSensors() map[string]config.SensorCfg
+	// GetSensorLedIndices returns a map of sensor UIDs to their LED indices.
+	GetSensorLedIndices() map[string]int
+
+	// LedsTotal returns the total number of configured LEDs.
+	LedsTotal() int
+
+	// ForceUpdateDelay returns the configured delay for forcing a display update.
+	ForceUpdateDelay() time.Duration
 
 	// DisplayDriver runs the display update loop for the platform.
 	DisplayDriver(display chan []p.Led, stopSignal chan bool, wg *sync.WaitGroup)

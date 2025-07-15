@@ -22,8 +22,12 @@ func (m *MockPlatform) GetSensorEvents() <-chan *pl.Trigger {
 	return m.sensorEvents
 }
 
-func (m *MockPlatform) GetSensors() map[string]c.SensorCfg {
-	return m.sensors
+func (m *MockPlatform) GetSensorLedIndices() map[string]int {
+	indices := make(map[string]int)
+	for uid, cfg := range m.sensors {
+		indices[uid] = cfg.LedIndex
+	}
+	return indices
 }
 
 func (m *MockPlatform) Start() error {
@@ -96,12 +100,8 @@ func NewMockLedProducer(uid string) *MockLedProducer {
 }
 
 func TestFireController(t *testing.T) {
-	// setup
-	cfile := ""
-	realp := false
-	sensp := false
 	ossignal := make(chan os.Signal, 1)
-	app := NewApp(&cfile, &realp, &sensp, ossignal)
+	app := NewApp(ossignal)
 	app.ledproducers = make(map[string]p.LedProducer)
 
 	mockPlatform := NewMockPlatform()
@@ -156,12 +156,8 @@ func TestFireController(t *testing.T) {
 }
 
 func TestCombineAndUpdateDisplay(t *testing.T) {
-	// setup
-	cfile := ""
-	realp := false
-	sensp := false
 	ossignal := make(chan os.Signal, 1)
-	app := NewApp(&cfile, &realp, &sensp, ossignal)
+	app := NewApp(ossignal)
 	app.ledproducers = make(map[string]p.LedProducer)
 
 	ledsTotal := 10
@@ -176,13 +172,14 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	mockMultiBlobProducer := NewMockLedProducer(MULTI_BLOB_UID)
 	app.ledproducers["sensor"] = mockSensorProducer
 	app.ledproducers[MULTI_BLOB_UID] = mockMultiBlobProducer
+	app.sensorProducers = []p.LedProducer{mockSensorProducer}
 
 	ledReader := u.NewAtomicEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
 	app.stopsignal = make(chan bool)
 
 	app.shutdownWg.Add(1)
-	go app.combineAndUpdateDisplay(true, false, false, true, false, ledReader, ledWriter, ledsTotal, forceUpdateDelay)
+	go app.combineAndUpdateDisplay(app.sensorProducers, false, true, false, ledReader, ledWriter, ledsTotal, forceUpdateDelay)
 	t.Cleanup(func() {
 		close(app.stopsignal)
 		app.shutdownWg.Wait()

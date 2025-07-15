@@ -117,17 +117,20 @@ func (p *TUIPlatform) GetSensorEvents() <-chan *platform.Trigger {
 	return p.sensorEvents
 }
 
-func (p *TUIPlatform) GetSensors() map[string]config.SensorCfg {
-	cfg := make(map[string]config.SensorCfg)
+func (p *TUIPlatform) GetSensorLedIndices() map[string]int {
+	indices := make(map[string]int)
 	for uid, sensor := range p.sensors {
-		cfg[uid] = config.SensorCfg{
-			LedIndex:     sensor.LedIndex,
-			SpiMultiplex: sensor.spimultiplex,
-			AdcChannel:   sensor.adcChannel,
-			TriggerValue: sensor.triggerValue,
-		}
+		indices[uid] = sensor.LedIndex
 	}
-	return cfg
+	return indices
+}
+
+func (p *TUIPlatform) LedsTotal() int {
+	return p.config.Hardware.Display.LedsTotal
+}
+
+func (p *TUIPlatform) ForceUpdateDelay() time.Duration {
+	return p.config.Hardware.Display.ForceUpdateDelay
 }
 
 func (p *TUIPlatform) DisplayDriver(display chan []producer.Led, stopSignal chan bool, wg *sync.WaitGroup) {
