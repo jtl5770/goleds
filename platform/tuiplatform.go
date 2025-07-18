@@ -1,4 +1,4 @@
-package tui
+package platform
 
 import (
 	"fmt"
@@ -16,137 +16,58 @@ import (
 	"golang.org/x/exp/maps"
 
 	"lautenbacher.net/goleds/config"
-	"lautenbacher.net/goleds/platform"
 	"lautenbacher.net/goleds/producer"
 )
 
 type TUIPlatform struct {
-	app            *tview.Application
-	ledDisplay     *tview.TextView
-	sensorEvents   chan *platform.Trigger
-	osSignalChan   chan os.Signal
-	config         *config.Config
-	displayManager *platform.DisplayManager
-	sensorline     string
-	chartosensor   map[string]string
-	sensors        map[string]*sensor // Keep sensor map for internal use
-	stopChan       chan bool
+	*AbstractPlatform
+	app          *tview.Application
+	sensorline   string
+	ledDisplay   *tview.TextView
+	ossignalChan chan os.Signal
+	chartosensor map[string]string
+	stopChan     chan bool
 }
 
-// sensor struct and related functions (now internal to TUIPlatform)
-type sensor struct {
-	uid          string
-	LedIndex     int
-	spimultiplex string
-	adcChannel   byte
-	triggerValue int
-	values       []int
-	smoothing    int
-}
-
-func (p *TUIPlatform) initSensors(sensorConfig config.SensorsConfig) {
-	p.sensors = make(map[string]*sensor, len(sensorConfig.SensorCfg))
-	for uid, cfg := range sensorConfig.SensorCfg {
-		p.sensors[uid] = p.newSensor(uid, cfg.LedIndex, cfg.SpiMultiplex, cfg.AdcChannel, cfg.TriggerValue, sensorConfig.SmoothingSize)
+func NewTUIPlatform(conf *config.Config, ossignalchan chan os.Signal, stopchan chan bool) *TUIPlatform {
+	inst := &TUIPlatform{
+		ossignalChan: ossignalchan,
+		stopChan:     stopchan,
 	}
+	inst.AbstractPlatform = NewAbstractPlatform(conf, inst.DisplayLeds)
+	return inst
 }
 
-func (p *TUIPlatform) newSensor(uid string, ledIndex int, spimultiplex string, adcChannel byte, triggerValue int, smoothing int) *sensor {
-	return &sensor{
-		uid:          uid,
-		LedIndex:     ledIndex,
-		spimultiplex: spimultiplex,
-		adcChannel:   adcChannel,
-		triggerValue: triggerValue,
-		values:       make([]int, smoothing, smoothing+1),
-		smoothing:    smoothing,
-	}
-}
-
-func (s *sensor) smoothValue(val int) int {
-	var ret int
-	newValues := make([]int, s.smoothing, s.smoothing+1)
-	for index, curr := range append(s.values, val)[1:] {
-		newValues[index] = curr
-		ret += curr
-	}
-	s.values = newValues
-	return ret / s.smoothing
-}
-
-func NewPlatform(osSignalChan chan os.Signal, conf *config.Config) *TUIPlatform {
-	return &TUIPlatform{
-		osSignalChan: osSignalChan,
-		config:       conf,
-		sensorEvents: make(chan *platform.Trigger),
-		stopChan:     make(chan bool),
-	}
-}
-
-func (p *TUIPlatform) Start() error {
-	p.initSensors(p.config.Hardware.Sensors)
-	p.displayManager = platform.NewDisplayManager(p.config.Hardware.Display)
-	p.initSimulationTUI(
-		p.osSignalChan,
-		p.config.SensorShow,
-		p.config.RealHW,
-		len(p.config.Hardware.Sensors.SensorCfg),
-		len(p.config.Hardware.Display.LedSegments),
-		p.config.Hardware.Display.LedsTotal,
+func (s *TUIPlatform) Start() error {
+	s.initSensors(s.config.Hardware.Sensors)
+	s.displayManager = NewDisplayManager(s.config.Hardware.Display)
+	s.initSimulationTUI(
+		s.ossignalChan,
+		s.config.SensorShow,
+		s.config.RealHW,
+		len(s.config.Hardware.Sensors.SensorCfg),
+		len(s.config.Hardware.Display.LedSegments),
+		s.config.Hardware.Display.LedsTotal,
 	)
 	return nil
 }
 
-func (p *TUIPlatform) Stop() {
-	if p.app != nil {
-		p.app.Stop()
+func (s *TUIPlatform) Stop() {
+	if s.app != nil {
+		s.app.Stop()
 	}
-	close(p.stopChan)
 }
 
-func (p *TUIPlatform) DisplayLeds(leds []producer.Led) {
-	for _, segarray := range p.displayManager.Segments {
+func (s *TUIPlatform) DisplayLeds(leds []producer.Led) {
+	for _, segarray := range s.displayManager.Segments {
 		for _, seg := range segarray {
 			seg.SetLeds(leds)
 		}
 	}
-	p.simulateLedDisplay(p.config.SensorShow)
+	s.simulateLedDisplay(s.config.SensorShow)
 }
 
-func (p *TUIPlatform) GetSensorEvents() <-chan *platform.Trigger {
-	return p.sensorEvents
-}
-
-func (p *TUIPlatform) GetSensorLedIndices() map[string]int {
-	indices := make(map[string]int)
-	for uid, sensor := range p.sensors {
-		indices[uid] = sensor.LedIndex
-	}
-	return indices
-}
-
-func (p *TUIPlatform) GetLedsTotal() int {
-	return p.config.Hardware.Display.LedsTotal
-}
-
-func (p *TUIPlatform) GetForceUpdateDelay() time.Duration {
-	return p.config.Hardware.Display.ForceUpdateDelay
-}
-
-func (p *TUIPlatform) DisplayDriver(display chan []producer.Led, stopSignal chan bool, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for {
-		select {
-		case <-stopSignal:
-			log.Println("Ending DisplayDriver go-routine (TUI)")
-			return
-		case sumLeds := <-display:
-			p.DisplayLeds(sumLeds)
-		}
-	}
-}
-
-func (p *TUIPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
+func (s *TUIPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 	// In the TUI platform, sensor events are triggered by key presses,
 	// not by a continuous reading loop. This function is here to satisfy the
@@ -160,7 +81,7 @@ func (p *TUIPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
 	}
 }
 
-func (p *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, sensorShow bool, realHW bool, numSensors int, numSegments int, ledsTotal int) {
+func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, sensorShow bool, realHW bool, numSensors int, numSegments int, ledsTotal int) {
 	var buf strings.Builder
 	if !sensorShow {
 		buf.WriteString("Hit [blue]1[-]...[blue]" +
@@ -196,57 +117,57 @@ func (p *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, sensorShow bool
 	stripe.SetDynamicColors(true)
 	stripe.SetBackgroundColor(tcell.ColorDarkSlateGray)
 
-	p.app = tview.NewApplication()
-	p.app.SetRoot(layout, false)
-	p.app.SetInputCapture(
+	s.app = tview.NewApplication()
+	s.app.SetRoot(layout, false)
+	s.app.SetInputCapture(
 		func(event *tcell.EventKey) *tcell.EventKey {
 			key := string(event.Rune())
-			senuid, exist := p.chartosensor[key]
+			senuid, exist := s.chartosensor[key]
 			if exist && !sensorShow {
-				p.sensorEvents <- platform.NewTrigger(senuid, 80, time.Now())
+				s.sensorEvents <- NewTrigger(senuid, 80, time.Now())
 			} else if key == "q" || key == "Q" {
-				p.app.Stop()
+				s.app.Stop()
 				ossignal <- os.Interrupt
 			} else if key == "r" || key == "R" {
-				p.app.Stop()
+				s.app.Stop()
 				ossignal <- syscall.SIGHUP
 			}
 			return event
 		})
-	stripe.SetChangedFunc(func() { p.app.Draw() })
-	p.ledDisplay = stripe
+	stripe.SetChangedFunc(func() { s.app.Draw() })
+	s.ledDisplay = stripe
 
-	p.chartosensor = make(map[string]string, len(p.sensors))
-	p.sensorline = strings.Repeat(" ", ledsTotal)
-	sensorvals := maps.Values(p.sensors)
+	s.chartosensor = make(map[string]string, len(s.sensors))
+	s.sensorline = strings.Repeat(" ", ledsTotal)
+	sensorvals := maps.Values(s.sensors)
 	sort.Slice(sensorvals, func(i, j int) bool { return sensorvals[i].LedIndex < sensorvals[j].LedIndex })
 	for i, sen := range sensorvals {
 		index := sen.LedIndex
-		p.sensorline = p.sensorline[0:index] + fmt.Sprintf("%d", i+1) + p.sensorline[index+1:ledsTotal]
-		p.chartosensor[fmt.Sprintf("%d", i+1)] = sen.uid
+		s.sensorline = s.sensorline[0:index] + fmt.Sprintf("%d", i+1) + s.sensorline[index+1:ledsTotal]
+		s.chartosensor[fmt.Sprintf("%d", i+1)] = sen.uid
 	}
 
 	go func() {
-		if err := p.app.Run(); err != nil {
+		if err := s.app.Run(); err != nil {
 			log.Fatalf("Error running TUI: %v", err)
 		}
 	}()
 }
 
-func (p *TUIPlatform) simulateLedDisplay(sensorShow bool) {
-	if p.ledDisplay == nil {
+func (s *TUIPlatform) simulateLedDisplay(sensorShow bool) {
+	if s.ledDisplay == nil {
 		return
 	}
 	if !sensorShow {
 		var buf strings.Builder
-		keys := maps.Keys(p.displayManager.Segments)
+		keys := maps.Keys(s.displayManager.Segments)
 		sort.Strings(keys)
 		for _, name := range keys {
-			segarray := p.displayManager.Segments[name]
+			segarray := s.displayManager.Segments[name]
 			tops := make([]string, len(segarray))
 			bots := make([]string, len(segarray))
 			for i, seg := range segarray {
-				tops[i], bots[i] = p.simulateLed(seg)
+				tops[i], bots[i] = s.simulateLed(seg)
 			}
 			buf.WriteString(" ")
 			for i := range segarray {
@@ -258,12 +179,12 @@ func (p *TUIPlatform) simulateLedDisplay(sensorShow bool) {
 			}
 			buf.WriteString("\n\n")
 		}
-		buf.WriteString(" [blue]" + p.sensorline + "[:]")
-		p.ledDisplay.SetText(buf.String())
+		buf.WriteString(" [blue]" + s.sensorline + "[:]")
+		s.ledDisplay.SetText(buf.String())
 	}
 }
 
-func (p *TUIPlatform) simulateLed(segment *platform.Segment) (string, string) {
+func (s *TUIPlatform) simulateLed(segment *Segment) (string, string) {
 	if !segment.Visible {
 		return strings.Repeat(" ", segment.LastLed-segment.FirstLed+1),
 			strings.Repeat("·", segment.LastLed-segment.FirstLed+1)

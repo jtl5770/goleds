@@ -44,8 +44,6 @@ import (
 	c "lautenbacher.net/goleds/config"
 	pl "lautenbacher.net/goleds/platform"
 	p "lautenbacher.net/goleds/producer"
-	"lautenbacher.net/goleds/rpi"
-	"lautenbacher.net/goleds/tui"
 	u "lautenbacher.net/goleds/util"
 )
 
@@ -78,7 +76,6 @@ func NewApp(ossignal chan os.Signal) *App {
 // The main loop is designed to be able to reload the config file
 // dynamically and to react to signals to either exit or reload the
 // config file.
-
 func main() {
 	ex, err := os.Executable()
 	if err != nil {
@@ -122,9 +119,9 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	conf := c.ReadConfig(cfile, realp, sensp)
 
 	if conf.RealHW {
-		a.platform = rpi.NewPlatform(conf)
+		a.platform = pl.NewRaspberryPiPlatform(conf)
 	} else {
-		a.platform = tui.NewPlatform(a.ossignal, conf)
+		a.platform = pl.NewTUIPlatform(conf, a.ossignal, a.stopsignal)
 	}
 
 	if err := a.platform.Start(); err != nil {
@@ -217,8 +214,11 @@ func (a *App) combineAndUpdateDisplay(
 	defer a.shutdownWg.Done()
 	var oldSumLeds []p.Led
 	allLedRanges := make(map[string][]p.Led)
-	ticker := time.NewTicker(forceupdatedelay)
-	defer ticker.Stop()
+	var ticker *time.Ticker
+	if forceupdatedelay > 0 {
+		ticker = time.NewTicker(forceupdatedelay)
+		defer ticker.Stop()
+	}
 	old_sensorledsrunning := false
 	for {
 		select {
