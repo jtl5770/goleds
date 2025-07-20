@@ -33,6 +33,7 @@ package main
 import (
 	"flag"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -118,8 +119,33 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 
 	conf := c.ReadConfig(cfile, realp, sensp)
 
+	// Handle the special sensor-show development mode
+    if !conf.RealHW && conf.SensorShow {
+        log.Println("Starting in Sensor Viewer development mode...")
+        introText := "Displaying random sensor values for development.\n" +
+            "Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload config file and restart\n" +
+            "[#ff0000]'-real' flag not given, using random numbers for testing![-]"
+
+        viewer := pl.NewSensorViewer(conf.Hardware.Sensors.SensorCfg, a.ossignal, introText)
+        a.shutdownWg.Add(2) // For viewer + generator
+        go viewer.Start(a.stopsignal, &a.shutdownWg)
+        go a.runSensorDataGenerator(viewer, conf, a.stopsignal, &a.shutdownWg)
+        // In this mode, we don't need any platforms or producers, so we exit early.
+        return
+    }
+
+	// Standard platform setup
 	if conf.RealHW {
-		a.platform = pl.NewRaspberryPiPlatform(conf)
+		rpiPlatform := pl.NewRaspberryPiPlatform(conf)
+		if conf.SensorShow {
+			introText := "Displaying real sensor values.\n" +
+				"Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload config file and restart"
+			viewer := pl.NewSensorViewer(conf.Hardware.Sensors.SensorCfg, a.ossignal, introText)
+			rpiPlatform.SetSensorViewer(viewer)
+			a.shutdownWg.Add(1)
+			go viewer.Start(a.stopsignal, &a.shutdownWg)
+		}
+		a.platform = rpiPlatform
 	} else {
 		a.platform = pl.NewTUIPlatform(conf, a.ossignal, a.stopsignal)
 	}
@@ -193,18 +219,45 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	go a.platform.SensorDriver(a.stopsignal, &a.shutdownWg)
 }
 
+// runSensorDataGenerator is used for development mode to feed random data
+// to the SensorViewer without any real hardware.
+func (a *App) runSensorDataGenerator(viewer *pl.SensorViewer, conf *c.Config, stopSignal chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
+	ticker := time.NewTicker(conf.Hardware.Sensors.LoopDelay)
+	defer ticker.Stop()
+
+	latestValues := make(map[string]int)
+
+	for {
+		select {
+		case <-stopSignal:
+			log.Println("Ending sensor data generator...")
+			return
+		case <-ticker.C:
+			for name := range conf.Hardware.Sensors.SensorCfg {
+				latestValues[name] = rand.Intn(1024)
+			}
+			viewer.Update(latestValues)
+		}
+	}
+}
+
 func (a *App) shutdown() {
 	log.Println("Shutting down...")
-	for _, prod := range a.ledproducers {
-		log.Println("Exiting producer: ", prod.GetUID())
-		prod.Exit()
+	if len(a.ledproducers) > 0 {
+		for _, prod := range a.ledproducers {
+			log.Println("Exiting producer: ", prod.GetUID())
+			prod.Exit()
+		}
 	}
 
 	log.Println("Stopping running go-routines... ")
 	close(a.stopsignal)
 
 	a.shutdownWg.Wait()
-	a.platform.Stop()
+	if a.platform != nil {
+		a.platform.Stop()
+	}
 }
 
 func (a *App) combineAndUpdateDisplay(

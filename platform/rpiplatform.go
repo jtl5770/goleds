@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gammazero/deque"
 	"github.com/stianeikeland/go-rpio/v4"
 	"lautenbacher.net/goleds/config"
 	"lautenbacher.net/goleds/producer"
@@ -19,6 +18,7 @@ type RaspberryPiPlatform struct {
 	ledDriver       LEDDriver
 	spiMutex        sync.Mutex
 	spimultiplexcfg map[string]gpiocfg
+	sensorViewer    *SensorViewer
 }
 
 type gpiocfg struct {
@@ -30,6 +30,11 @@ func NewRaspberryPiPlatform(conf *config.Config) *RaspberryPiPlatform {
 	inst := &RaspberryPiPlatform{}
 	inst.AbstractPlatform = NewAbstractPlatform(conf, inst.DisplayLeds)
 	return inst
+}
+
+// SetSensorViewer attaches an optional TUI viewer for sensor data.
+func (s *RaspberryPiPlatform) SetSensorViewer(v *SensorViewer) {
+	s.sensorViewer = v
 }
 
 func (s *RaspberryPiPlatform) Start() error {
@@ -188,30 +193,27 @@ func (d *APA102Driver) Write(segment *Segment, exchangeFunc func(string, []byte)
 
 func (s *RaspberryPiPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
 	defer wg.Done()
-	sensorvalues := make(map[string]*deque.Deque[int])
-	for name := range s.sensors {
-		sensorvalues[name] = &deque.Deque[int]{}
-	}
 	ticker := time.NewTicker(s.config.Hardware.Sensors.LoopDelay)
+	defer ticker.Stop()
+
+	latestValues := make(map[string]int)
+
 	for {
 		select {
 		case <-stopSignal:
 			log.Println("Ending SensorDriver go-routine (RPi)")
-			ticker.Stop()
 			return
 		case <-ticker.C:
 			for name, sensor := range s.sensors {
 				value := sensor.smoothValue(s.readAdc(sensor.spimultiplex, sensor.adcChannel))
-				sensorvalues[name].PushBack(value)
-				if sensorvalues[name].Len() > 500 {
-					sensorvalues[name].PopFront()
+				latestValues[name] = value
+				if value > sensor.triggerValue {
+					s.sensorEvents <- NewTrigger(name, value, time.Now())
 				}
 			}
-			for name, values := range sensorvalues {
-				val := values.Back()
-				if val > s.sensors[name].triggerValue {
-					s.sensorEvents <- NewTrigger(name, val, time.Now())
-				}
+
+			if s.sensorViewer != nil {
+				s.sensorViewer.Update(latestValues)
 			}
 		}
 	}
