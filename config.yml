@@ -196,7 +196,7 @@ NightLED:
 # holding your hand very close for the same time again (toggling
 # between on and off)
 HoldLED:
-  Enabled: true
+  Enabled: false
   HoldTime: 5m
   TriggerDelay: 3s
   TriggerValue: 200
@@ -208,7 +208,7 @@ HoldLED:
 # effect (that means: when all LEDs are dark again after a
 # sensorledproducer has done its grow-stay-shrink cycle)  
 MultiBlobLED:
-  Enabled: true
+  Enabled: false
   # How long to stay active after starting
   Duration: 120s
   # How much delay between moving the blobs around one step. Smaller

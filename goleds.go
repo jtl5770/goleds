@@ -1,33 +1,21 @@
-// A package to read infrared sensor data via MCP3008 and drive
-// WS-2801 LED stripes.  This is configured according to a very
-// special hardware layout of two MCPs handling 2 sensors each and two
-// segments of LEDs. Multiplexing 2 MCPs for just 4 sensors is
-// normally not needed, but the hardware was built to originally
-// having to drive around 14 sensors spaced very closely together
-// alongside the two LED stripes. This idea has later been abandoned
-// because of heavy cross-talk of the sensors. Now there is only a
-// sensor at both sides of each stripe (4 in total). The LED stripe
-// layout is due to the special situation in my hallway with a door
-// separating the two stripes.
+// A package to read infrared sensor data and drive LED stripes.
+// The hardware interaction is abstracted through a platform interface,
+// allowing the application to run on real Raspberry Pi hardware or in a
+// terminal-based simulation.
 //
-// The devices (stripes, MCPs) are talked to via SPI. The multiplexing
-// is done via logical gates driven by GPIOs.  All hardware related
-// things are defined in the hardware/ directory (package hardware)
-// but the layout (number of stripe segments, MCPs, sensors) can be
-// changed dynamically via the config file.
+// The core logic is organized into several packages:
+// - platform: Defines the interface for hardware interaction and provides
+//   implementations for Raspberry Pi (rpi) and a terminal UI (tui).
+// - producer: Contains different animation producers that generate LED patterns.
+// - config: Handles loading and parsing of the application configuration from a YAML file.
 //
-// The software is designed to be configured via an config file
-// (default: config.yml) and to be able to react to signals to reload
-// the config file or to exit. The config file is read by the config
-// package (config.ReadConfig()). The config file is read on startup
-// and whenever a SIGHUP signal is received.
+// The application is configured via a file (default: config.yml) and supports
+// dynamic reloading of the configuration on SIGHUP signals. It can be gracefully
+// shut down with an Interrupt signal.
 //
-// The main functionality is to read the sensors and to drive the LED
-// stripes accordingly. The sensor data is read by the hardware package
-// and the LED stripes are driven by the producer package. The
-// producer package is designed to be able to handle different types
-// of producers, e.g.  the HoldProducer which is triggered by a sensor
-// and keeps the stripes lit for a configurable time.
+// The main functionality is to read sensor data from the chosen platform and
+// drive the LED stripes using various producers. Multiple producers can be active
+// simultaneously, and their outputs are combined to create complex lighting effects.
 package main
 
 import (
