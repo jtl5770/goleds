@@ -120,19 +120,19 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	conf := c.ReadConfig(cfile, realp, sensp)
 
 	// Handle the special sensor-show development mode
-    if !conf.RealHW && conf.SensorShow {
-        log.Println("Starting in Sensor Viewer development mode...")
-        introText := "Displaying random sensor values for development.\n" +
-            "Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload config file and restart\n" +
-            "[#ff0000]'-real' flag not given, using random numbers for testing![-]"
+	if !conf.RealHW && conf.SensorShow {
+		log.Println("Starting in Sensor Viewer development mode...")
+		introText := "Displaying random sensor values for development.\n" +
+			"Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload config file and restart\n" +
+			"[#ff0000]'-real' flag not given, using random numbers for testing![-]"
 
-        viewer := pl.NewSensorViewer(conf.Hardware.Sensors.SensorCfg, a.ossignal, introText)
-        a.shutdownWg.Add(2) // For viewer + generator
-        go viewer.Start(a.stopsignal, &a.shutdownWg)
-        go a.runSensorDataGenerator(viewer, conf, a.stopsignal, &a.shutdownWg)
-        // In this mode, we don't need any platforms or producers, so we exit early.
-        return
-    }
+		viewer := pl.NewSensorViewer(conf.Hardware.Sensors.SensorCfg, a.ossignal, introText)
+		a.shutdownWg.Add(2) // For viewer + generator
+		go viewer.Start(a.stopsignal, &a.shutdownWg)
+		go a.runSensorDataGenerator(viewer, conf, a.stopsignal, &a.shutdownWg)
+		// In this mode, we don't need any platforms or producers, so we exit early.
+		return
+	}
 
 	// Standard platform setup
 	if conf.RealHW {
@@ -190,7 +190,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 		prodnight = p.NewNightlightProducer(NIGHT_LED_UID, ledReader,
 			ledsTotal, cfg.Latitude, cfg.Longitude, cfg.LedRGB)
 		a.ledproducers[NIGHT_LED_UID] = prodnight
-		prodnight.Start()
+		prodnight.Start(u.NewTrigger(NIGHT_LED_UID, 0, time.Now()))
 	}
 
 	if multiblobledp {
@@ -293,10 +293,10 @@ func (a *App) combineAndUpdateDisplay(
 				// cylonproducer.
 				if old_sensorledsrunning && !isrunning {
 					if multiblobledp {
-						a.ledproducers[MULTI_BLOB_UID].Start()
+						a.ledproducers[MULTI_BLOB_UID].Start(u.NewTrigger(MULTI_BLOB_UID, 0, time.Now()))
 					}
 					if cylonledp {
-						a.ledproducers[CYLON_LED_UID].Start()
+						a.ledproducers[CYLON_LED_UID].Start(u.NewTrigger(CYLON_LED_UID, 0, time.Now()))
 					}
 				} else if !old_sensorledsrunning && isrunning {
 					// or the other way around: Stopping the multiblobproducer
@@ -341,7 +341,7 @@ func (a *App) combineAndUpdateDisplay(
 
 func (a *App) fireController(holdledp bool, triggerDelay time.Duration, triggerValue int) {
 	defer a.shutdownWg.Done()
-	var firstSameTrigger *pl.Trigger = pl.NewTrigger("", 0, time.Now())
+	var firstSameTrigger *u.Trigger = u.NewTrigger("", 0, time.Now())
 	for {
 		select {
 		case trigger := <-a.platform.GetSensorEvents():
@@ -356,15 +356,15 @@ func (a *App) fireController(holdledp bool, triggerDelay time.Duration, triggerV
 						if a.ledproducers[HOLD_LED_UID].GetIsRunning() {
 							a.ledproducers[HOLD_LED_UID].Stop()
 						} else {
-							a.ledproducers[HOLD_LED_UID].Start()
+							a.ledproducers[HOLD_LED_UID].Start(u.NewTrigger(HOLD_LED_UID, 0, time.Now()))
 						}
 					}
 					firstSameTrigger = trigger
 				}
 			} else {
-				firstSameTrigger = pl.NewTrigger("", 0, time.Now())
+				firstSameTrigger = u.NewTrigger(trigger.ID, 0, time.Now())
 				if producer, ok := a.ledproducers[trigger.ID]; ok {
-					producer.Start()
+					producer.Start(trigger)
 				} else {
 					log.Printf("Unknown UID %s", trigger.ID)
 				}

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	p "lautenbacher.net/goleds/producer"
+	u "lautenbacher.net/goleds/util"
 )
 
 // Platform defines the interface for abstracting away the real
@@ -23,7 +24,7 @@ type Platform interface {
 
 	// GetSensorEvents returns a channel that the application can read from
 	// to receive sensor trigger events.
-	GetSensorEvents() <-chan *Trigger
+	GetSensorEvents() <-chan *u.Trigger
 
 	// GetSensorLedIndices returns a map of sensor UIDs to their LED indices.
 	GetSensorLedIndices() map[string]int
@@ -39,21 +40,4 @@ type Platform interface {
 
 	// SensorDriver runs the sensor reading loop for the platform.
 	SensorDriver(stopSignal chan bool, wg *sync.WaitGroup)
-}
-
-// Trigger represents a sensor event.
-type Trigger struct {
-	ID        string
-	Value     int
-	Timestamp time.Time
-}
-
-// NewTrigger creates a new Trigger instance.
-func NewTrigger(id string, value int, time time.Time) *Trigger {
-	inst := Trigger{
-		ID:        id,
-		Value:     value,
-		Timestamp: time,
-	}
-	return &inst
 }

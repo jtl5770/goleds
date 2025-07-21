@@ -4,7 +4,6 @@ import (
 	"log"
 	"math"
 	"time"
-	t "time"
 
 	c "lautenbacher.net/goleds/config"
 	u "lautenbacher.net/goleds/util"
@@ -102,7 +101,7 @@ func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {
 	}
 }
 
-func (s *MultiBlobProducer) runner(startTime t.Time) {
+func (s *MultiBlobProducer) runner(trigger *u.Trigger) {
 	triggerduration := time.NewTicker(s.duration)
 	tick := time.NewTicker(s.delay)
 	countup_run := false
@@ -117,7 +116,7 @@ func (s *MultiBlobProducer) runner(startTime t.Time) {
 		case <-triggerduration.C:
 			// Doing the fadeout after the time is up
 			if s.nlproducer != nil && !s.nlproducer.GetIsRunning() {
-				s.nlproducer.Start()
+				s.nlproducer.Start(u.NewTrigger(s.nlproducer.GetUID(), 0, time.Now()))
 			}
 			s.fade_in_or_out(false)
 			return

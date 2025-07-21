@@ -17,6 +17,7 @@ import (
 
 	"lautenbacher.net/goleds/config"
 	"lautenbacher.net/goleds/producer"
+	"lautenbacher.net/goleds/util"
 )
 
 type TUIPlatform struct {
@@ -124,7 +125,7 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, sensorShow bool
 			key := string(event.Rune())
 			senuid, exist := s.chartosensor[key]
 			if exist && !sensorShow {
-				s.sensorEvents <- NewTrigger(senuid, 80, time.Now())
+				s.sensorEvents <- util.NewTrigger(senuid, 80, time.Now())
 			} else if key == "q" || key == "Q" {
 				s.app.Stop()
 				ossignal <- os.Interrupt

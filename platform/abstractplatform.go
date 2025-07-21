@@ -7,11 +7,12 @@ import (
 
 	c "lautenbacher.net/goleds/config"
 	p "lautenbacher.net/goleds/producer"
+	u "lautenbacher.net/goleds/util"
 )
 
 type AbstractPlatform struct {
 	config         *c.Config
-	sensorEvents   chan *Trigger
+	sensorEvents   chan *u.Trigger
 	sensors        map[string]*sensor
 	displayManager *DisplayManager
 	displayFunc    func([]p.Led)
@@ -20,14 +21,14 @@ type AbstractPlatform struct {
 func NewAbstractPlatform(conf *c.Config, displayFunc func([]p.Led)) *AbstractPlatform {
 	return &AbstractPlatform{
 		config:         conf,
-		sensorEvents:   make(chan *Trigger),
+		sensorEvents:   make(chan *u.Trigger),
 		sensors:        make(map[string]*sensor),
 		displayManager: NewDisplayManager(conf.Hardware.Display),
 		displayFunc:    displayFunc,
 	}
 }
 
-func (s *AbstractPlatform) GetSensorEvents() <-chan *Trigger {
+func (s *AbstractPlatform) GetSensorEvents() <-chan *u.Trigger {
 	return s.sensorEvents
 }
 

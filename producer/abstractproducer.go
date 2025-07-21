@@ -11,25 +11,25 @@ import (
 // Implementation of common and shared functionality between the
 // concrete Implementations of the ledproducer interface
 type AbstractProducer struct {
-	uid       string
-	leds      []Led
-	isRunning bool
-	hasExited bool
-	lastStart t.Time
+	uid         string
+	leds        []Led
+	isRunning   bool
+	hasExited   bool
+	lastTrigger *u.Trigger
 	// Guards getting and setting LED values
 	ledsMutex sync.RWMutex
 	// Guards changes to lastStart & isRunning & hasExited
 	updateMutex sync.RWMutex
 	ledsChanged *u.AtomicEvent[LedProducer]
 	// the method Start() should call. It is set via NewAbstractProducer.
-	runfunc func(start t.Time)
+	runfunc func(trigger *u.Trigger)
 	// this channel will be signaled via the Stop method. Your runfunc
 	// MUST listen to this channel and exit when it receives a signal
 	stop chan bool
 }
 
 // Creates a new instance of AbstractProducer. The uid must be unique
-func NewAbstractProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], runfunc func(start t.Time), ledsTotal int) *AbstractProducer {
+func NewAbstractProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], runfunc func(trigger *u.Trigger), ledsTotal int) *AbstractProducer {
 	inst := AbstractProducer{
 		uid:         uid,
 		leds:        make([]Led, ledsTotal),
@@ -66,11 +66,11 @@ func (s *AbstractProducer) GetUID() string {
 
 // Returns last time when s.Start() has been called. This is
 // guarded by s.updateMutex
-func (s *AbstractProducer) getLastStart() t.Time {
+func (s *AbstractProducer) getLastTrigger() *u.Trigger {
 	s.updateMutex.RLock()
 	defer s.updateMutex.RUnlock()
 
-	return s.lastStart
+	return s.lastTrigger
 }
 
 // Used to start the main worker process as a go routine. Does never
@@ -81,14 +81,14 @@ func (s *AbstractProducer) getLastStart() t.Time {
 // concurrently.  The method is guarded by s.updateMutex
 // IMPORTANT: After constructing your concrete instance you MUST set
 // AbstractProducer.runfunc to the concrete worker method to call.
-func (s *AbstractProducer) Start() {
+func (s *AbstractProducer) Start(trigger *u.Trigger) {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 
-	s.lastStart = t.Now()
+	s.lastTrigger = trigger
 	if !s.isRunning && !s.hasExited {
 		s.isRunning = true
-		go s.runfunc(s.lastStart)
+		go s.runfunc(trigger)
 	}
 }
 
@@ -97,13 +97,12 @@ func (s *AbstractProducer) Stop() {
 	s.updateMutex.RLock()
 	defer s.updateMutex.RUnlock()
 	if s.isRunning && !s.hasExited {
-		go func() {
-			select {
-			case s.stop <- true:
-			case <-t.After(1 * t.Second):
-				log.Println("Timeout in ", s.GetUID(), ": could NOT send stop signal")
-			}
-		}()
+		select {
+		case s.stop <- true:
+		case <-t.After(1 * t.Second):
+			log.Println("Timeout reached in ", s.GetUID(),
+				": blocked sending stop signal")
+		}
 	}
 }
 

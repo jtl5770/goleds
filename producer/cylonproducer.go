@@ -3,7 +3,6 @@ package producer
 import (
 	"math"
 	"time"
-	t "time"
 
 	u "lautenbacher.net/goleds/util"
 )
@@ -38,7 +37,7 @@ func NewCylonProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ledsT
 	return inst
 }
 
-func (s *CylonProducer) runner(startTime t.Time) {
+func (s *CylonProducer) runner(trigger *u.Trigger) {
 	triggerduration := time.NewTicker(s.duration)
 	tick := time.NewTicker(s.delay)
 	defer func() {

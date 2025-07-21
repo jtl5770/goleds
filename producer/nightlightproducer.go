@@ -6,7 +6,6 @@ package producer
 
 import (
 	"time"
-	t "time"
 
 	u "lautenbacher.net/goleds/util"
 
@@ -45,7 +44,7 @@ func (s *NightlightProducer) setNightLed(on bool, index int) {
 	}
 }
 
-func (s *NightlightProducer) runner(starttime t.Time) {
+func (s *NightlightProducer) runner(trigger *u.Trigger) {
 	defer func() {
 		s.setNightLed(false, 0)
 		s.ledsChanged.Send(s)

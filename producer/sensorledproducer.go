@@ -109,7 +109,7 @@ func (s *SensorLedProducer) runUpPhase(left, right int) (nleft, nright int, stop
 // is extended if new triggers arrive.
 func (s *SensorLedProducer) holdPhase() (lastStartSeen t.Time, stopped bool) {
 	for {
-		lastStart := s.getLastStart()
+		lastStart := s.getLastTrigger().Timestamp
 		holdUntil := lastStart.Add(s.holdT)
 
 		if t.Now().After(holdUntil) {
@@ -134,7 +134,7 @@ func (s *SensorLedProducer) runDownPhase(left, right int, lastStartSeen t.Time) 
 	defer ticker.Stop()
 
 	for {
-		if s.getLastStart().After(lastStartSeen) {
+		if s.getLastTrigger().Timestamp.After(lastStartSeen) {
 			// New trigger arrived, restart animation cycle
 			return left, right, true, false
 		}
@@ -149,7 +149,7 @@ func (s *SensorLedProducer) runDownPhase(left, right int, lastStartSeen t.Time) 
 
 		if left == s.ledIndex && right == s.ledIndex {
 			// Run-down complete, final check for new trigger
-			if s.getLastStart().After(lastStartSeen) {
+			if s.getLastTrigger().Timestamp.After(lastStartSeen) {
 				return left, right, true, false // restart
 			}
 			return left, right, false, false // normal exit
@@ -174,7 +174,7 @@ func (s *SensorLedProducer) runDownPhase(left, right int, lastStartSeen t.Time) 
 // intermediate Start() before finally setting s.isRunning to false and
 // ending the go routine. All this is either guarded directly or
 // indirectly (by calls to s.getLastStart()) by s.updateMutex.
-func (s *SensorLedProducer) runner(startTime t.Time) {
+func (s *SensorLedProducer) runner(trigger *u.Trigger) {
 	defer s.setIsRunning(false)
 
 	left, right := s.ledIndex, s.ledIndex

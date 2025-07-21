@@ -14,11 +14,11 @@ import (
 
 type MockPlatform struct {
 	pl.Platform
-	sensorEvents chan *pl.Trigger
+	sensorEvents chan *u.Trigger
 	sensors      map[string]c.SensorCfg
 }
 
-func (m *MockPlatform) GetSensorEvents() <-chan *pl.Trigger {
+func (m *MockPlatform) GetSensorEvents() <-chan *u.Trigger {
 	return m.sensorEvents
 }
 
@@ -55,7 +55,7 @@ func (m *MockPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
 
 func NewMockPlatform() *MockPlatform {
 	return &MockPlatform{
-		sensorEvents: make(chan *pl.Trigger),
+		sensorEvents: make(chan *u.Trigger),
 		sensors:      make(map[string]c.SensorCfg),
 	}
 }
@@ -67,7 +67,7 @@ type MockLedProducer struct {
 	leds      []p.Led
 }
 
-func (m *MockLedProducer) Start() {
+func (m *MockLedProducer) Start(trigger *u.Trigger) {
 	m.isRunning = true
 }
 
@@ -124,7 +124,7 @@ func TestFireController(t *testing.T) {
 	})
 
 	// test normal trigger
-	mockPlatform.sensorEvents <- pl.NewTrigger("test", 10, time.Now())
+	mockPlatform.sensorEvents <- u.NewTrigger("test", 10, time.Now())
 	time.Sleep(100 * time.Millisecond)
 	if !mockProducer.GetIsRunning() {
 		t.Error("Expected producer to be running")
@@ -134,21 +134,21 @@ func TestFireController(t *testing.T) {
 	// test hold trigger
 	now := time.Now()
 	// first trigger, should not start hold producer
-	mockPlatform.sensorEvents <- pl.NewTrigger(HOLD_LED_UID, 110, now)
+	mockPlatform.sensorEvents <- u.NewTrigger(HOLD_LED_UID, 110, now)
 	time.Sleep(100 * time.Millisecond)
 	if mockHoldProducer.GetIsRunning() {
 		t.Fatal("Expected hold producer to not be running yet")
 	}
 
 	// second trigger in the time window, should start hold producer
-	mockPlatform.sensorEvents <- pl.NewTrigger(HOLD_LED_UID, 110, now.Add(triggerDelay+200*time.Millisecond))
+	mockPlatform.sensorEvents <- u.NewTrigger(HOLD_LED_UID, 110, now.Add(triggerDelay+200*time.Millisecond))
 	time.Sleep(100 * time.Millisecond)
 	if !mockHoldProducer.GetIsRunning() {
 		t.Fatal("Expected hold producer to be running")
 	}
 
 	// third trigger in the time window, should stop hold producer
-	mockPlatform.sensorEvents <- pl.NewTrigger(HOLD_LED_UID, 110, now.Add(2*(triggerDelay+200*time.Millisecond)))
+	mockPlatform.sensorEvents <- u.NewTrigger(HOLD_LED_UID, 110, now.Add(2*(triggerDelay+200*time.Millisecond)))
 	time.Sleep(100 * time.Millisecond)
 	if mockHoldProducer.GetIsRunning() {
 		t.Fatal("Expected hold producer to be stopped")
@@ -193,7 +193,7 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	}
 
 	// test sensor trigger
-	mockSensorProducer.Start()
+	mockSensorProducer.Start(u.NewTrigger("test", 0, time.Now()))
 	ledReader.Send(mockSensorProducer)
 	time.Sleep(100 * time.Millisecond)
 	select {
@@ -212,7 +212,7 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	}
 
 	// test stop
-	mockSensorProducer.Start()
+	mockSensorProducer.Start(u.NewTrigger("test", 0, time.Now()))
 	ledReader.Send(mockSensorProducer)
 	time.Sleep(100 * time.Millisecond)
 	if mockMultiBlobProducer.GetIsRunning() {

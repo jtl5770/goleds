@@ -2,7 +2,6 @@ package producer
 
 import (
 	"time"
-	t "time"
 
 	u "lautenbacher.net/goleds/util"
 )
@@ -22,7 +21,7 @@ func NewHoldProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ledsTo
 	return inst
 }
 
-func (s *HoldProducer) runner(startime t.Time) {
+func (s *HoldProducer) runner(trigger *u.Trigger) {
 	defer func() {
 		for idx := range s.leds {
 			s.setLed(idx, Led{})

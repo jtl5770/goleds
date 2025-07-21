@@ -32,7 +32,7 @@ func TestHoldProducer_Runner(t *testing.T) {
 	p := NewHoldProducer("test", ledsChanged, ledsTotal, holdTime, ledRGB)
 
 	// Start the producer
-	p.Start()
+	p.Start(u.NewTrigger("test", 0, time.Now()))
 	time.Sleep(10 * time.Millisecond) // Give runner time to start and set LEDs
 
 	// Check that it's running and LEDs are on
@@ -61,7 +61,7 @@ func TestHoldProducer_Stop(t *testing.T) {
 
 	p := NewHoldProducer("test", ledsChanged, ledsTotal, holdTime, ledRGB)
 
-	p.Start()
+	p.Start(u.NewTrigger("test", 0, time.Now()))
 	time.Sleep(10 * time.Millisecond)
 	assert.True(t, p.GetIsRunning())
 

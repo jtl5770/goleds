@@ -11,6 +11,7 @@ import (
 	"github.com/stianeikeland/go-rpio/v4"
 	"lautenbacher.net/goleds/config"
 	"lautenbacher.net/goleds/producer"
+	"lautenbacher.net/goleds/util"
 )
 
 type RaspberryPiPlatform struct {
@@ -208,7 +209,7 @@ func (s *RaspberryPiPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGr
 				value := sensor.smoothValue(s.readAdc(sensor.spimultiplex, sensor.adcChannel))
 				latestValues[name] = value
 				if value > sensor.triggerValue {
-					s.sensorEvents <- NewTrigger(name, value, time.Now())
+					s.sensorEvents <- util.NewTrigger(name, value, time.Now())
 				}
 			}
 

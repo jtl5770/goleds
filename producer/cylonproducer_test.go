@@ -26,7 +26,7 @@ func TestCylonProducer_Runner(t *testing.T) {
 	ledsChanged := u.NewAtomicEvent[LedProducer]()
 	p := NewCylonProducer("test", ledsChanged, 20, 100*time.Millisecond, 10*time.Millisecond, 1, 4, []float64{255, 0, 0})
 
-	p.Start()
+	p.Start(u.NewTrigger("test", 0, time.Now()))
 	time.Sleep(15 * time.Millisecond) // Allow one step to run
 
 	assert.True(t, p.GetIsRunning())
@@ -53,7 +53,7 @@ func TestCylonProducer_Stop(t *testing.T) {
 	ledsChanged := u.NewAtomicEvent[LedProducer]()
 	p := NewCylonProducer("test", ledsChanged, 20, 200*time.Millisecond, 10*time.Millisecond, 1, 4, []float64{255, 0, 0})
 
-	p.Start()
+	p.Start(u.NewTrigger("test", 0, time.Now()))
 	time.Sleep(15 * time.Millisecond)
 	assert.True(t, p.GetIsRunning())
 
