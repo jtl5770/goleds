@@ -110,17 +110,17 @@ Hardware:
         LedIndex: 69
         SpiMultiplex: ADC1
         AdcChannel: 7
-        TriggerValue: 120
+        TriggerValue: 130
       S2:
         LedIndex: 111
         SpiMultiplex: ADC2
         AdcChannel: 0
-        TriggerValue: 130
+        TriggerValue: 180
       S3:
         LedIndex: 164
         SpiMultiplex: ADC2
         AdcChannel: 5
-        TriggerValue: 120
+        TriggerValue: 150
   # Here we define which settings on what GPIO pin will result in the
   # multiplexer to select a certain device to be accessible via SPI
   SpiMultiplexGPIO:
