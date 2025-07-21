@@ -262,7 +262,7 @@ func (a *App) shutdown() {
 
 func (a *App) combineAndUpdateDisplay(
 	sensorProducers []p.LedProducer, holdledp bool, multiblobledp bool, cylonledp bool,
-	r *u.AtomicEvent[p.LedProducer], w chan []p.Led, ledsTotal int, forceupdatedelay time.Duration,
+	ledreader *u.AtomicEvent[p.LedProducer], ledwriter chan []p.Led, ledsTotal int, forceupdatedelay time.Duration,
 ) {
 	defer a.shutdownWg.Done()
 	var oldSumLeds []p.Led
@@ -275,8 +275,8 @@ func (a *App) combineAndUpdateDisplay(
 	old_sensorledsrunning := false
 	for {
 		select {
-		case <-r.Channel():
-			s := r.Value()
+		case <-ledreader.Channel():
+			s := ledreader.Value()
 			if multiblobledp || cylonledp {
 				isrunning := false
 				for _, producer := range sensorProducers {
@@ -314,7 +314,7 @@ func (a *App) combineAndUpdateDisplay(
 			sumLeds := p.CombineLeds(allLedRanges, ledsTotal)
 			if !reflect.DeepEqual(sumLeds, oldSumLeds) {
 				select {
-				case w <- sumLeds:
+				case ledwriter <- sumLeds:
 				case <-a.stopsignal:
 					log.Println("Ending combineAndupdateDisplay go-routine")
 					return
@@ -327,7 +327,7 @@ func (a *App) combineAndUpdateDisplay(
 			// electrical distortions or cross talk so we make sure to
 			// regularly force an update of the Led stripe
 			select {
-			case w <- p.CombineLeds(allLedRanges, ledsTotal):
+			case ledwriter <- p.CombineLeds(allLedRanges, ledsTotal):
 			case <-a.stopsignal:
 				log.Println("Ending combineAndupdateDisplay go-routine")
 				return
