@@ -131,13 +131,13 @@ NightLED:
 # and with a higher value (typically: holding your hand directly in front of it)
 # Useful for temporarily lighting up an area on demand.
 HoldLED:
-  Enabled: false
+  Enabled: true
   # How long the strip stays lit if not turned off earlier.
   HoldTime: 5m
   # How long the sensor must be held to activate/deactivate the light.
   TriggerDelay: 3s
   # The sensor must read above this value for the entire TriggerDelay.
-  TriggerValue: 200
+  TriggerValue: 512
   # The color and intensity of the light.
   LedRGB: [140, 140, 140]
 
