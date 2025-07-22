@@ -294,8 +294,10 @@ func (s *TUIPlatform) simulateLedSegment(segment *Segment) (string, string) {
 				topChar, bottomChar = "▆", "█"
 			} else if value <= 30 {
 				topChar, bottomChar = "▇", "█"
-			} else {
+			} else if value <= 80 {
 				topChar, bottomChar = "█", "█"
+			} else {
+				topChar, bottomChar = "▒", "█"
 			}
 			buf1.WriteString(topChar)
 			buf2.WriteString(bottomChar)
