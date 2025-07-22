@@ -25,6 +25,7 @@ type TUIPlatform struct {
 	app          *tview.Application
 	sensorline   string
 	ledDisplay   *tview.TextView
+	logView      *tview.TextView
 	ossignalChan chan os.Signal
 	chartosensor map[string]string
 	stopChan     chan bool
@@ -53,17 +54,21 @@ func (s *TUIPlatform) Start() error {
 
 func (s *TUIPlatform) Stop() {
 	if s.app != nil {
+		// Restore logger to stdout before stopping
+		log.SetOutput(os.Stderr)
 		s.app.Stop()
 	}
 }
 
 func (s *TUIPlatform) DisplayLeds(leds []producer.Led) {
+	// Update the segments with the new LED data
 	for _, segarray := range s.displayManager.Segments {
 		for _, seg := range segarray {
 			seg.SetLeds(leds)
 		}
 	}
-	s.simulateLedDisplay()
+	// Now, schedule a redraw on the main TUI thread.
+	s.app.QueueUpdateDraw(s.simulateLedDisplay)
 }
 
 func (s *TUIPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
@@ -80,168 +85,198 @@ func (s *TUIPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
 	}
 }
 
-func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int, numSegments int, ledsTotal int) {
-	var buf strings.Builder
-	buf.WriteString("Hit [blue]1[-]...[blue]" +
-		fmt.Sprintf("%d", numSensors) + "[-] to fire a sensor\n")
-	buf.WriteString("Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload config file and restart")
+func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int, numSegmentGroups int, ledsTotal int) {
+	s.app = tview.NewApplication()
 
-	layout := tview.NewFlex()
-	layout.SetDirection(tview.FlexRow)
-
-	intro := tview.NewTextView()
+	// --- Intro Pane ---
+	var introText strings.Builder
+	introText.WriteString("Hit [blue]1[-]...[blue]" + fmt.Sprintf("%d", numSensors) + "[-] to fire a sensor\n")
+	introText.WriteString("Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload config, [#ff0000]Up/Down[-] to scroll logs")
+	intro := tview.NewTextView().
+		SetDynamicColors(true).
+		SetTextAlign(tview.AlignCenter).
+		SetText(introText.String())
 	intro.SetBorder(true).SetTitle(" GOLEDS Simulation ").SetTitleColor(tcell.ColorLightBlue)
-	intro.SetText(buf.String())
-	intro.SetTextAlign(1)
-	intro.SetDynamicColors(true)
 	intro.SetBackgroundColor(tcell.ColorDarkSlateGray)
 
-	stripe := tview.NewTextView()
-	height := 3 * numSegments
-	layout.AddItem(intro, 4, 1, false)
-	layout.AddItem(stripe, 3+height, 1, false)
-	height = 8 + (2 * numSegments)
-	layout.SetRect(1, 1, ledsTotal+4, 8+height)
-	stripe.SetBorder(true)
-	stripe.SetTextAlign(0)
-	stripe.SetDynamicColors(true)
-	stripe.SetBackgroundColor(tcell.ColorDarkSlateGray)
+	// --- LED Display Pane ---
+	s.ledDisplay = tview.NewTextView().
+		SetDynamicColors(true).
+		SetTextAlign(tview.AlignLeft)
+	s.ledDisplay.SetBorder(true)
+	s.ledDisplay.SetBackgroundColor(tcell.ColorDarkSlateGray)
 
-	s.app = tview.NewApplication()
-	s.app.SetRoot(layout, false)
-	s.app.SetInputCapture(
-		func(event *tcell.EventKey) *tcell.EventKey {
+	// --- Log Pane ---
+	s.logView = tview.NewTextView().
+		SetDynamicColors(true).
+		SetScrollable(true).
+		SetChangedFunc(func() {
+			s.logView.ScrollToEnd()
+			s.app.Draw()
+		})
+	s.logView.SetBorder(true).SetTitle(" Logs ").SetTitleColor(tcell.ColorLightBlue)
+	s.logView.SetBackgroundColor(tcell.ColorDarkSlateGray)
+
+	// Redirect Go's default logger to the logView text view.
+	logWriter := tview.ANSIWriter(s.logView)
+	log.SetOutput(logWriter)
+
+	// --- Layout ---
+	// Calculate height for the LED pane based on segment groups
+	stripeHeight := 1 + (3 * numSegmentGroups) + 2 // 1 for sensor line, 3 per group, 2 for border
+
+	layout := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(intro, 4, 0, false).
+		AddItem(s.ledDisplay, stripeHeight, 0, false).
+		AddItem(s.logView, 0, 1, false) // Flexible height
+
+	// --- Input Handling ---
+	s.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// Global key handlers that work regardless of focus.
+		switch event.Key() {
+		case tcell.KeyRune:
 			key := string(event.Rune())
-			senuid, exist := s.chartosensor[key]
-			if exist {
+			if senuid, exist := s.chartosensor[key]; exist {
 				s.sensorEvents <- util.NewTrigger(senuid, 80, time.Now())
-			} else if key == "q" || key == "Q" {
+				return nil // Event handled
+			}
+			switch key {
+			case "q", "Q":
 				s.app.Stop()
 				ossignal <- os.Interrupt
-			} else if key == "r" || key == "R" {
+				return nil
+			case "r", "R":
 				s.app.Stop()
 				ossignal <- syscall.SIGHUP
+				return nil
 			}
-			return event
-		})
-	stripe.SetChangedFunc(func() { s.app.Draw() })
-	s.ledDisplay = stripe
+		case tcell.KeyUp:
+			row, col := s.logView.GetScrollOffset()
+			s.logView.ScrollTo(row-1, col)
+			return nil
+		case tcell.KeyDown:
+			row, col := s.logView.GetScrollOffset()
+			s.logView.ScrollTo(row+1, col)
+			return nil
+		}
+		return event
+	})
 
+	// --- Sensor Mapping ---
 	s.chartosensor = make(map[string]string, len(s.sensors))
 	s.sensorline = strings.Repeat(" ", ledsTotal)
 	sensorvals := maps.Values(s.sensors)
 	sort.Slice(sensorvals, func(i, j int) bool { return sensorvals[i].LedIndex < sensorvals[j].LedIndex })
 	for i, sen := range sensorvals {
 		index := sen.LedIndex
-		s.sensorline = s.sensorline[0:index] + fmt.Sprintf("%d", i+1) + s.sensorline[index+1:ledsTotal]
+		s.sensorline = s.sensorline[0:index] + fmt.Sprintf("%d", i+1) + s.sensorline[index+1:]
 		s.chartosensor[fmt.Sprintf("%d", i+1)] = sen.uid
 	}
 
+	// --- Start TUI ---
 	go func() {
-		if err := s.app.Run(); err != nil {
+		if err := s.app.SetRoot(layout, true).Run(); err != nil {
+			// Since we are stopping, restore the logger to stderr
+			log.SetOutput(os.Stderr)
 			log.Fatalf("Error running TUI: %v", err)
 		}
 	}()
 }
 
+// simulateLedDisplay redraws the entire LED display pane.
+// This function must be called on the main TUI thread via app.QueueUpdateDraw().
 func (s *TUIPlatform) simulateLedDisplay() {
 	var buf strings.Builder
-	keys := maps.Keys(s.displayManager.Segments)
-	sort.Strings(keys)
-	for _, name := range keys {
-		segarray := s.displayManager.Segments[name]
-		tops := make([]string, len(segarray))
-		bots := make([]string, len(segarray))
-		for i, seg := range segarray {
-			tops[i], bots[i] = s.simulateLed(seg)
+	groupNames := maps.Keys(s.displayManager.Segments)
+	sort.Strings(groupNames)
+
+	for _, name := range groupNames {
+		segments := s.displayManager.Segments[name]
+		// Sort segments by their start index to ensure correct order
+		sort.Slice(segments, func(i, j int) bool {
+			return segments[i].FirstLed < segments[j].FirstLed
+		})
+
+		tops := make([]string, len(segments))
+		bots := make([]string, len(segments))
+		for i, seg := range segments {
+			tops[i], bots[i] = s.simulateLedSegment(seg)
 		}
+
 		buf.WriteString(" ")
-		for i := range segarray {
-			buf.WriteString(tops[i])
-		}
+		buf.WriteString(strings.Join(tops, ""))
 		buf.WriteString("\n ")
-		for i := range segarray {
-			buf.WriteString(bots[i])
-		}
+		buf.WriteString(strings.Join(bots, ""))
 		buf.WriteString("\n\n")
 	}
 	buf.WriteString(" [blue]" + s.sensorline + "[:]")
 	s.ledDisplay.SetText(buf.String())
 }
 
-func (s *TUIPlatform) simulateLed(segment *Segment) (string, string) {
+// simulateLedSegment generates the two-line representation for a single segment.
+func (s *TUIPlatform) simulateLedSegment(segment *Segment) (string, string) {
 	if !segment.Visible {
-		return strings.Repeat(" ", segment.LastLed-segment.FirstLed+1),
-			strings.Repeat("·", segment.LastLed-segment.FirstLed+1)
-	} else {
-		values := segment.Leds
-		var buf1 strings.Builder
-		var buf2 strings.Builder
-		buf1.Grow(len(values))
-		buf2.Grow(len(values))
-		for _, v := range values {
-			if v.IsEmpty() {
-				buf1.WriteString(" ")
-				buf2.WriteString(" ")
-			} else {
-				value := byte(math.Round(float64(v.Red+v.Green+v.Blue) / 3.0))
-				buf1.WriteString(scaledColor(v))
-				buf2.WriteString(scaledColor(v))
-				if value <= 2 {
-					buf1.WriteString(" ")
-					buf2.WriteString("▁")
-				} else if value <= 4 {
-					buf1.WriteString(" ")
-					buf2.WriteString("▂")
-				} else if value <= 6 {
-					buf1.WriteString(" ")
-					buf2.WriteString("▃")
-				} else if value <= 8 {
-					buf1.WriteString(" ")
-					buf2.WriteString("▄")
-				} else if value <= 10 {
-					buf1.WriteString(" ")
-					buf2.WriteString("▅")
-				} else if value <= 12 {
-					buf1.WriteString(" ")
-					buf2.WriteString("▆")
-				} else if value <= 14 {
-					buf1.WriteString(" ")
-					buf2.WriteString("▇")
-				} else if value <= 16 {
-					buf1.WriteString(" ")
-					buf2.WriteString("█")
-				} else if value <= 18 {
-					buf1.WriteString(" ")
-					buf2.WriteString("█")
-				} else if value <= 20 {
-					buf1.WriteString("▂")
-					buf2.WriteString("█")
-				} else if value <= 22 {
-					buf1.WriteString("▃")
-					buf2.WriteString("█")
-				} else if value <= 24 {
-					buf1.WriteString("▄")
-					buf2.WriteString("█")
-				} else if value <= 26 {
-					buf1.WriteString("▅")
-					buf2.WriteString("█")
-				} else if value <= 28 {
-					buf1.WriteString("▆")
-					buf2.WriteString("█")
-				} else if value <= 30 {
-					buf1.WriteString("▇")
-					buf2.WriteString("█")
-				} else {
-					buf1.WriteString("█")
-					buf2.WriteString("█")
-				}
-				buf1.WriteString("[-]")
-				buf2.WriteString("[-]")
-			}
-		}
-		return buf1.String(), buf2.String()
+		length := segment.LastLed - segment.FirstLed + 1
+		return strings.Repeat(" ", length), strings.Repeat("·", length)
 	}
+
+	values := segment.Leds
+	var buf1, buf2 strings.Builder
+	buf1.Grow(len(values) * (len("[-][#000000]") + 1)) // Pre-allocate memory
+	buf2.Grow(len(values) * (len("[-][#000000]") + 1))
+
+	for _, v := range values {
+		if v.IsEmpty() {
+			buf1.WriteString(" ")
+			buf2.WriteString(" ")
+		} else {
+			value := byte(math.Round(float64(v.Red+v.Green+v.Blue) / 3.0))
+			colorStr := scaledColor(v)
+			buf1.WriteString(colorStr)
+			buf2.WriteString(colorStr)
+
+			// This can be simplified, but we'll keep the original block logic
+			topChar, bottomChar := " ", " "
+			if value <= 2 {
+				bottomChar = "▁"
+			} else if value <= 4 {
+				bottomChar = "▂"
+			} else if value <= 6 {
+				bottomChar = "▃"
+			} else if value <= 8 {
+				bottomChar = "▄"
+			} else if value <= 10 {
+				bottomChar = "▅"
+			} else if value <= 12 {
+				bottomChar = "▆"
+			} else if value <= 14 {
+				bottomChar = "▇"
+			} else if value <= 16 {
+				bottomChar = "█"
+			} else if value <= 18 {
+				topChar, bottomChar = " ", "█"
+			} else if value <= 20 {
+				topChar, bottomChar = "▂", "█"
+			} else if value <= 22 {
+				topChar, bottomChar = "▃", "█"
+			} else if value <= 24 {
+				topChar, bottomChar = "▄", "█"
+			} else if value <= 26 {
+				topChar, bottomChar = "▅", "█"
+			} else if value <= 28 {
+				topChar, bottomChar = "▆", "█"
+			} else if value <= 30 {
+				topChar, bottomChar = "▇", "█"
+			} else {
+				topChar, bottomChar = "█", "█"
+			}
+			buf1.WriteString(topChar)
+			buf2.WriteString(bottomChar)
+			buf1.WriteString("[-]")
+			buf2.WriteString("[-]")
+		}
+	}
+	return buf1.String(), buf2.String()
 }
 
 func scaledColor(led producer.Led) string {
