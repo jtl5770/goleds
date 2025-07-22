@@ -43,7 +43,6 @@ func NewAbstractProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ru
 		leds:        make([]Led, ledsTotal),
 		ledsChanged: ledsChanged,
 		stopchan:    make(chan bool),
-		triggerchan: make(chan *u.Trigger, 10),
 		runfunc:     runfunc,
 	}
 	return &inst
@@ -97,6 +96,7 @@ func (s *AbstractProducer) Start(trigger *u.Trigger) {
 	s.lastTrigger = trigger
 	if !s.isRunning && !s.hasExited {
 		s.isRunning = true
+		s.triggerchan = make(chan *u.Trigger, 10) // Reset the trigger channel
 		go s.runfunc(trigger)
 	} else if !s.hasExited {
 		select {
