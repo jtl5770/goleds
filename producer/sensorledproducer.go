@@ -99,7 +99,7 @@ func (s *SensorLedProducer) runUpPhase(left, right int) (nleft, nright int, stop
 
 		select {
 		case <-ticker.C:
-		case <-s.stop:
+		case <-s.stopchan:
 			return left, right, true
 		}
 	}
@@ -120,7 +120,7 @@ func (s *SensorLedProducer) holdPhase() (lastStartSeen t.Time, stopped bool) {
 		select {
 		case <-t.After(t.Until(holdUntil)):
 			// Time expired, loop again to re-check for new triggers
-		case <-s.stop:
+		case <-s.stopchan:
 			return t.Time{}, true
 		}
 	}
@@ -160,7 +160,7 @@ func (s *SensorLedProducer) runDownPhase(left, right int, lastStartSeen t.Time) 
 
 		select {
 		case <-ticker.C:
-		case <-s.stop:
+		case <-s.stopchan:
 			return left, right, false, true
 		}
 	}

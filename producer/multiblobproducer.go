@@ -120,7 +120,7 @@ func (s *MultiBlobProducer) runner(trigger *u.Trigger) {
 			}
 			s.fade_in_or_out(false)
 			return
-		case <-s.stop:
+		case <-s.stopchan:
 			// Doing the fadeout when Stop() is triggered
 			s.fade_in_or_out(false)
 			// log.Println("Stopped MultiBlobProducer...")

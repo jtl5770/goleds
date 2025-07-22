@@ -95,7 +95,7 @@ func (s *NightlightProducer) runner(trigger *u.Trigger) {
 		select {
 		case <-time.After(wakeupAfter):
 			// nothing, just continue
-		case <-s.stop:
+		case <-s.stopchan:
 			// log.Println("Stopped NightlightProducer...")
 			return
 		}

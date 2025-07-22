@@ -54,7 +54,7 @@ func (s *CylonProducer) runner(trigger *u.Trigger) {
 		select {
 		case <-triggerduration.C:
 			return
-		case <-s.stop:
+		case <-s.stopchan:
 			return
 		case <-tick.C:
 			if s.x < 0 || s.x > float64(len(s.leds)-1) {

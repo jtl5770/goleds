@@ -25,7 +25,16 @@ type AbstractProducer struct {
 	runfunc func(trigger *u.Trigger)
 	// this channel will be signaled via the Stop method. Your runfunc
 	// MUST listen to this channel and exit when it receives a signal
-	stop chan bool
+	stopchan chan bool
+	// this channel is written to by the Start(*u.Trigger) method
+	// whenever it is called. Your runfunc MAY read from this channel
+	// if it is interested in those triggers. The Start(*u.Trigger)
+	// method will NOT block if it can't put more triggers into the
+	// channel but just silently drop them.
+	triggerchan chan *u.Trigger
+	// The Start(*u.Trigger) always stores the last received
+	// *u.Trigger here
+	lastTrigger *u.Trigger
 }
 
 // Creates a new instance of AbstractProducer. The uid must be unique

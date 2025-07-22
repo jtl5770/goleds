@@ -37,7 +37,7 @@ func (s *HoldProducer) runner(trigger *u.Trigger) {
 
 	for {
 		select {
-		case <-s.stop:
+		case <-s.stopchan:
 			return
 		case <-time.After(s.holdT):
 			return
