@@ -4,10 +4,10 @@
 // terminal-based simulation.
 //
 // The core logic is organized into several packages:
-// - platform: Defines the interface for hardware interaction and provides
-//   implementations for Raspberry Pi (rpi) and a terminal UI (tui).
-// - producer: Contains different animation producers that generate LED patterns.
-// - config: Handles loading and parsing of the application configuration from a YAML file.
+//   - platform: Defines the interface for hardware interaction and provides
+//     implementations for Raspberry Pi (rpi) and a terminal UI (tui).
+//   - producer: Contains different animation producers that generate LED patterns.
+//   - config: Handles loading and parsing of the application configuration from a YAML file.
 //
 // The application is configured via a file (default: config.yml) and supports
 // dynamic reloading of the configuration on SIGHUP signals. It can be gracefully
@@ -21,7 +21,6 @@ package main
 import (
 	"flag"
 	"log"
-	"math/rand"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -74,7 +73,9 @@ func main() {
 	exPath := filepath.Dir(ex)
 	cfile := flag.String("config", exPath+"/"+c.CONFILE, "Config file to use")
 	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
-	sensp := flag.Bool("show-sensors", false, "Set to true if program should only display"+"sensor values (will be random values if -real is not given)")
+	sensp := flag.Bool("show-sensors", false, "Set to true if program should only display sensor values.\n"+
+		"* will be using live data from the sensor hardware if -real is given - useful for calibrating the sensors' trigger values\n"+
+		"* will be using random values if -real is not given - useful only for development of the viewer component itself")
 	flag.Parse()
 
 	app := NewApp(ossignal)
@@ -107,17 +108,13 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 
 	conf := c.ReadConfig(cfile, realp, sensp)
 
-	// Handle the special sensor-show development mode
+	// Handle the special "-sensor-show development mode"
 	if !conf.RealHW && conf.SensorShow {
 		log.Println("Starting in Sensor Viewer development mode...")
-		introText := "Displaying random sensor values for development.\n" +
-			"Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload config file and restart\n" +
-			"[#ff0000]'-real' flag not given, using random numbers for testing![-]"
-
-		viewer := pl.NewSensorViewer(conf.Hardware.Sensors.SensorCfg, a.ossignal, introText)
+		viewer := pl.NewSensorViewer(conf.Hardware.Sensors.SensorCfg, a.ossignal, true)
 		a.shutdownWg.Add(2) // For viewer + generator
 		go viewer.Start(a.stopsignal, &a.shutdownWg)
-		go a.runSensorDataGenerator(viewer, conf, a.stopsignal, &a.shutdownWg)
+		go viewer.RunSensorDataGenForDev(conf.Hardware.Sensors.LoopDelay, a.stopsignal, &a.shutdownWg)
 		// In this mode, we don't need any platforms or producers, so we exit early.
 		return
 	}
@@ -126,9 +123,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	if conf.RealHW {
 		rpiPlatform := pl.NewRaspberryPiPlatform(conf)
 		if conf.SensorShow {
-			introText := "Displaying real sensor values.\n" +
-				"Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload config file and restart"
-			viewer := pl.NewSensorViewer(conf.Hardware.Sensors.SensorCfg, a.ossignal, introText)
+			viewer := pl.NewSensorViewer(conf.Hardware.Sensors.SensorCfg, a.ossignal, false)
 			rpiPlatform.SetSensorViewer(viewer)
 			a.shutdownWg.Add(1)
 			go viewer.Start(a.stopsignal, &a.shutdownWg)
@@ -205,29 +200,6 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	go a.fireController(holdledp, conf.HoldLED.TriggerDelay, conf.HoldLED.TriggerValue)
 	go a.platform.DisplayDriver(ledWriter, a.stopsignal, &a.shutdownWg)
 	go a.platform.SensorDriver(a.stopsignal, &a.shutdownWg)
-}
-
-// runSensorDataGenerator is used for development mode to feed random data
-// to the SensorViewer without any real hardware.
-func (a *App) runSensorDataGenerator(viewer *pl.SensorViewer, conf *c.Config, stopSignal chan bool, wg *sync.WaitGroup) {
-	defer wg.Done()
-	ticker := time.NewTicker(conf.Hardware.Sensors.LoopDelay)
-	defer ticker.Stop()
-
-	latestValues := make(map[string]int)
-
-	for {
-		select {
-		case <-stopSignal:
-			log.Println("Ending sensor data generator...")
-			return
-		case <-ticker.C:
-			for name := range conf.Hardware.Sensors.SensorCfg {
-				latestValues[name] = rand.Intn(1024)
-			}
-			viewer.Update(latestValues)
-		}
-	}
 }
 
 func (a *App) shutdown() {

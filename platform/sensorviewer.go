@@ -4,32 +4,36 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/rand"
 	"os"
 	"sort"
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/gammazero/deque"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"lautenbacher.net/goleds/config"
+	c "lautenbacher.net/goleds/config"
 )
 
 const (
 	maxSensorHistory = 500
 	viewerTitle      = " GOLEDS Sensor Viewer "
+	colWidth         = 18 // Width for each sensor's data column
 )
 
 // SensorViewer is a TUI component for displaying real-time sensor data.
 type SensorViewer struct {
-	app          *tview.Application
+	tuiApp       *tview.Application
 	view         *tview.TextView
 	sensorValues map[string]*deque.Deque[int]
+	sensorCfgs   map[string]c.SensorCfg
 	sensorNames  []string
 	mu           sync.Mutex
 	ossignal     chan os.Signal
-	introText    string
+	devMode      bool
 }
 
 type sensorStats struct {
@@ -41,13 +45,14 @@ type sensorStats struct {
 }
 
 // NewSensorViewer creates and initializes a new SensorViewer.
-func NewSensorViewer(sensorCfgs map[string]config.SensorCfg, ossignal chan os.Signal, introText string) *SensorViewer {
+func NewSensorViewer(sensorCfgs map[string]c.SensorCfg, ossignal chan os.Signal, devMode bool) *SensorViewer {
 	sv := &SensorViewer{
-		app:          tview.NewApplication(),
+		tuiApp:       tview.NewApplication(),
 		sensorValues: make(map[string]*deque.Deque[int]),
+		sensorCfgs:   sensorCfgs,
 		sensorNames:  make([]string, 0, len(sensorCfgs)),
 		ossignal:     ossignal,
-		introText:    introText,
+		devMode:      devMode,
 	}
 
 	for name := range sensorCfgs {
@@ -55,8 +60,12 @@ func NewSensorViewer(sensorCfgs map[string]config.SensorCfg, ossignal chan os.Si
 		sv.sensorValues[name] = new(deque.Deque[int])
 		sv.sensorValues[name].Grow(maxSensorHistory)
 	}
-	// Sort names for consistent display order
-	sort.Strings(sv.sensorNames)
+	// Sort sensorNames based on the LedIndex from sensorCfgs to match the old layout.
+	sort.Slice(sv.sensorNames, func(i, j int) bool {
+		nameI := sv.sensorNames[i]
+		nameJ := sv.sensorNames[j]
+		return sv.sensorCfgs[nameI].LedIndex < sv.sensorCfgs[nameJ].LedIndex
+	})
 
 	return sv
 }
@@ -71,20 +80,19 @@ func (sv *SensorViewer) Start(stopSignal chan bool, wg *sync.WaitGroup) {
 	go func() {
 		<-stopSignal
 		log.Println("Stopping SensorViewer TUI...")
-		sv.app.Stop()
+		sv.tuiApp.Stop()
 	}()
 
-	if err := sv.app.Run(); err != nil {
+	if err := sv.tuiApp.Run(); err != nil {
 		log.Fatalf("Error running SensorViewer TUI: %v", err)
 	}
 	log.Println("SensorViewer TUI has stopped.")
 }
 
-// Update receives the latest sensor values, updates the internal state,
-// and redraws the TUI. This method is safe for concurrent use.
+// Update receives the latest sensor values, prepares the display strings,
+// and schedules a TUI redraw. This method is safe for concurrent use.
 func (sv *SensorViewer) Update(latestValues map[string]int) {
 	sv.mu.Lock()
-	defer sv.mu.Unlock()
 
 	for name, value := range latestValues {
 		if q, ok := sv.sensorValues[name]; ok {
@@ -95,10 +103,39 @@ func (sv *SensorViewer) Update(latestValues map[string]int) {
 		}
 	}
 
-	// Redraw the view in the main TUI thread
-	sv.app.QueueUpdateDraw(func() {
-		sv.draw()
+	// Prepare display strings while still under the lock
+	line1, line2, line3 := sv.prepareDisplayStrings()
+
+	sv.mu.Unlock()
+
+	// Redraw the view in the main TUI thread, passing the prepared data via a closure.
+	sv.tuiApp.QueueUpdateDraw(func() {
+		sv.draw(line1, line2, line3)
 	})
+}
+
+// runSensorDataGenerator is used only during development of this
+// component to feed random data to the SensorViewer without the need
+// for real hardware.
+func (sv *SensorViewer) RunSensorDataGenForDev(loopDelay time.Duration, stopSignal chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
+	ticker := time.NewTicker(loopDelay)
+	defer ticker.Stop()
+
+	latestValues := make(map[string]int)
+
+	for {
+		select {
+		case <-stopSignal:
+			log.Println("Ending sensor data generator...")
+			return
+		case <-ticker.C:
+			for _, name := range sv.sensorNames {
+				latestValues[name] = rand.Intn(1024)
+			}
+			sv.Update(latestValues)
+		}
+	}
 }
 
 func (sv *SensorViewer) setupUI() {
@@ -108,57 +145,86 @@ func (sv *SensorViewer) setupUI() {
 	sv.view.SetBackgroundColor(tcell.ColorDarkSlateGray)
 	sv.view.SetBorder(true).SetTitle(viewerTitle).SetTitleColor(tcell.ColorLightBlue)
 
+	// Generate the intro text within the component
+	var introText strings.Builder
+	if !sv.devMode {
+		introText.WriteString("Displaying real sensor values.\n")
+	} else {
+		introText.WriteString("[#ff0000]Caution:[-] Displaying random sensor values for development.\n")
+	}
+	introText.WriteString("Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload config file and restart")
+
 	intro := tview.NewTextView()
 	intro.SetBorder(true).SetTitle(" GOLEDS Simulation ").SetTitleColor(tcell.ColorLightBlue)
-	intro.SetText(sv.introText)
-	intro.SetTextAlign(1)
+	intro.SetText(introText.String())
+	intro.SetTextAlign(tview.AlignCenter)
 	intro.SetDynamicColors(true)
 	intro.SetBackgroundColor(tcell.ColorDarkSlateGray)
 
-	numSensors := len(sv.sensorNames)
 	layout := tview.NewFlex().SetDirection(tview.FlexRow)
 	layout.AddItem(intro, 4, 1, false)
-	layout.AddItem(sv.view, numSensors*2+3, 1, true)
-	layout.SetRect(1, 1, int(math.Max(float64(numSensors*15+24), 70)), numSensors*2+10)
+	// The sensor view itself is 3 lines of text + 2 for the border.
+	layout.AddItem(sv.view, 5, 1, true)
 
-	sv.app.SetRoot(layout, true).SetFocus(sv.view)
-	sv.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	// Set a reasonable overall size for the layout
+	width := 22 + (colWidth * len(sv.sensorNames))
+	layout.SetRect(1, 1, width, 10)
+
+	sv.tuiApp.SetRoot(layout, true).SetFocus(sv.view)
+	sv.tuiApp.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		key := string(event.Rune())
-		if key == "q" || key == "Q" {
-			sv.app.Stop()
+		switch key {
+		case "q", "Q":
+			sv.tuiApp.Stop()
 			sv.ossignal <- os.Interrupt
-		} else if key == "r" || key == "R" {
-			sv.app.Stop()
+		case "r", "R":
+			sv.tuiApp.Stop()
 			sv.ossignal <- syscall.SIGHUP
 		}
 		return event
 	})
 }
 
-// draw updates the TextView with the current sensor data.
-// This must be called from within the TUI's main thread.
-func (sv *SensorViewer) draw() {
-	var b strings.Builder
-	b.WriteString("[yellow]Sensor            Last    Min    Max     Mean   Median   StdDev[white]\n")
-	for _, name := range sv.sensorNames {
-		if values, ok := sv.sensorValues[name]; ok && values.Len() > 0 {
-			lastVal := values.Back()
+// prepareDisplayStrings generates the output strings from the current sensor data.
+// This method MUST be called with the mutex already held.
+func (sv *SensorViewer) prepareDisplayStrings() (string, string, string) {
+	var buft, bufm, bufb strings.Builder
 
-			// Create a slice copy for calculations
+	// Use fmt.Sprintf with negative width for left-justified padding
+	buft.WriteString(fmt.Sprintf("[yellow]%-*s[white]", colWidth+4, " [min|mean|max]"))
+	bufm.WriteString(fmt.Sprintf("[yellow]%-*s[white]", colWidth+4, " Standard Deviation"))
+	bufb.WriteString(fmt.Sprintf("[yellow]%-*s[white]", colWidth+4, " Name: Trigger value"))
+
+	for _, name := range sv.sensorNames {
+		cfg := sv.sensorCfgs[name]
+		values, ok := sv.sensorValues[name]
+
+		var min, max float64
+		var mean, stdev float64
+
+		if ok && values.Len() > 0 {
 			data := make([]int, values.Len())
 			for i := 0; i < values.Len(); i++ {
 				data[i] = values.At(i)
 			}
-
 			stats := calculateStats(data)
-
-			b.WriteString(fmt.Sprintf("%-18s %5d %5d %5d %8.2f %8.2f %8.2f\n",
-				name, lastVal, stats.min, stats.max, stats.mean, stats.median, stats.stdDev))
-		} else {
-			b.WriteString(fmt.Sprintf("%-18s (no data)\n", name))
+			min = float64(stats.min)
+			max = float64(stats.max)
+			mean = math.Round(stats.mean)
+			stdev = stats.stdDev
 		}
+
+		buft.WriteString(fmt.Sprintf(" [%4.0f|%4.0f|%4.0f] ", min, mean, max))
+		bufm.WriteString(fmt.Sprintf("       %5.1f      ", stdev))
+		bufb.WriteString(fmt.Sprintf("     [blue]%3s:[-] %-3d     ", name, cfg.TriggerValue))
 	}
-	sv.view.SetText(b.String())
+	return buft.String(), bufm.String(), bufb.String()
+}
+
+// draw updates the TextView with the provided strings.
+// This must be called from within the TUI's main thread via QueueUpdateDraw.
+func (sv *SensorViewer) draw(line1, line2, line3 string) {
+	sv.view.SetText(fmt.Sprintf("%s\n%s\n%s", line1, line2, line3))
 }
 
 func calculateStats(data []int) sensorStats {
