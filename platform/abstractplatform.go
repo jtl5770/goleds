@@ -61,7 +61,7 @@ func (s *AbstractPlatform) DisplayDriver(display chan []p.Led, stopSignal chan b
 	}
 }
 
-// sensor struct and related functions (now internal to TUIPlatform)
+// sensor struct and related functions
 type sensor struct {
 	uid          string
 	LedIndex     int
