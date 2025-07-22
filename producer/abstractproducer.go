@@ -11,11 +11,10 @@ import (
 // Implementation of common and shared functionality between the
 // concrete Implementations of the ledproducer interface
 type AbstractProducer struct {
-	uid         string
-	leds        []Led
-	isRunning   bool
-	hasExited   bool
-	lastTrigger *u.Trigger
+	uid       string
+	leds      []Led
+	isRunning bool
+	hasExited bool
 	// Guards getting and setting LED values
 	ledsMutex sync.RWMutex
 	// Guards changes to lastStart & isRunning & hasExited
@@ -43,7 +42,8 @@ func NewAbstractProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ru
 		uid:         uid,
 		leds:        make([]Led, ledsTotal),
 		ledsChanged: ledsChanged,
-		stop:        make(chan bool),
+		stopchan:    make(chan bool),
+		triggerchan: make(chan *u.Trigger, 10),
 		runfunc:     runfunc,
 	}
 	return &inst
@@ -84,7 +84,7 @@ func (s *AbstractProducer) getLastTrigger() *u.Trigger {
 
 // Used to start the main worker process as a go routine. Does never
 // block.  When the worker go routine is already running, it does
-// nothing besides updating s.lastStart to the current time. If the
+// nothing besides updating s.lastTrigger to the current trigger. If the
 // worker go routine is started and s.isRunning is set to true, no
 // intermediate call to Start() will be able to start another worker
 // concurrently.  The method is guarded by s.updateMutex
@@ -98,6 +98,13 @@ func (s *AbstractProducer) Start(trigger *u.Trigger) {
 	if !s.isRunning && !s.hasExited {
 		s.isRunning = true
 		go s.runfunc(trigger)
+	} else if !s.hasExited {
+		select {
+		case s.triggerchan <- trigger:
+			// Successfully sent the trigger to the channel
+		default:
+			log.Println("Trigger channel for", s.GetUID(), "is full, dropping trigger")
+		}
 	}
 }
 
@@ -107,8 +114,8 @@ func (s *AbstractProducer) Stop() {
 	defer s.updateMutex.RUnlock()
 	if s.isRunning && !s.hasExited {
 		select {
-		case s.stop <- true:
-		case <-t.After(1 * t.Second):
+		case s.stopchan <- true:
+		case <-t.After(5 * t.Second):
 			log.Println("Timeout reached in ", s.GetUID(),
 				": blocked sending stop signal")
 		}
@@ -120,7 +127,7 @@ func (s *AbstractProducer) Exit() {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 	if s.isRunning {
-		close(s.stop)
+		close(s.stopchan)
 	}
 	s.hasExited = true
 }
