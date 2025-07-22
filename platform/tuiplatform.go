@@ -44,8 +44,6 @@ func (s *TUIPlatform) Start() error {
 	s.displayManager = NewDisplayManager(s.config.Hardware.Display)
 	s.initSimulationTUI(
 		s.ossignalChan,
-		s.config.SensorShow,
-		s.config.RealHW,
 		len(s.config.Hardware.Sensors.SensorCfg),
 		len(s.config.Hardware.Display.LedSegments),
 		s.config.Hardware.Display.LedsTotal,
@@ -65,7 +63,7 @@ func (s *TUIPlatform) DisplayLeds(leds []producer.Led) {
 			seg.SetLeds(leds)
 		}
 	}
-	s.simulateLedDisplay(s.config.SensorShow)
+	s.simulateLedDisplay()
 }
 
 func (s *TUIPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
@@ -82,16 +80,11 @@ func (s *TUIPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
 	}
 }
 
-func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, sensorShow bool, realHW bool, numSensors int, numSegments int, ledsTotal int) {
+func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int, numSegments int, ledsTotal int) {
 	var buf strings.Builder
-	if !sensorShow {
-		buf.WriteString("Hit [blue]1[-]...[blue]" +
-			fmt.Sprintf("%d", numSensors) + "[-] to fire a sensor\n")
-	}
+	buf.WriteString("Hit [blue]1[-]...[blue]" +
+		fmt.Sprintf("%d", numSensors) + "[-] to fire a sensor\n")
 	buf.WriteString("Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload config file and restart")
-	if sensorShow && !realHW {
-		buf.WriteString("\n[#ff0000] '-real' flag not given, using random numbers for testing![-]")
-	}
 
 	layout := tview.NewFlex()
 	layout.SetDirection(tview.FlexRow)
@@ -107,12 +100,8 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, sensorShow bool
 	height := 3 * numSegments
 	layout.AddItem(intro, 4, 1, false)
 	layout.AddItem(stripe, 3+height, 1, false)
-	if sensorShow {
-		layout.SetRect(1, 1, int(math.Max(float64(numSensors*15+24), 70)), 10)
-	} else {
-		height := 8 + (2 * numSegments)
-		layout.SetRect(1, 1, ledsTotal+4, 8+height)
-	}
+	height = 8 + (2 * numSegments)
+	layout.SetRect(1, 1, ledsTotal+4, 8+height)
 	stripe.SetBorder(true)
 	stripe.SetTextAlign(0)
 	stripe.SetDynamicColors(true)
@@ -124,7 +113,7 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, sensorShow bool
 		func(event *tcell.EventKey) *tcell.EventKey {
 			key := string(event.Rune())
 			senuid, exist := s.chartosensor[key]
-			if exist && !sensorShow {
+			if exist {
 				s.sensorEvents <- util.NewTrigger(senuid, 80, time.Now())
 			} else if key == "q" || key == "Q" {
 				s.app.Stop()
@@ -155,34 +144,29 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, sensorShow bool
 	}()
 }
 
-func (s *TUIPlatform) simulateLedDisplay(sensorShow bool) {
-	if s.ledDisplay == nil {
-		return
-	}
-	if !sensorShow {
-		var buf strings.Builder
-		keys := maps.Keys(s.displayManager.Segments)
-		sort.Strings(keys)
-		for _, name := range keys {
-			segarray := s.displayManager.Segments[name]
-			tops := make([]string, len(segarray))
-			bots := make([]string, len(segarray))
-			for i, seg := range segarray {
-				tops[i], bots[i] = s.simulateLed(seg)
-			}
-			buf.WriteString(" ")
-			for i := range segarray {
-				buf.WriteString(tops[i])
-			}
-			buf.WriteString("\n ")
-			for i := range segarray {
-				buf.WriteString(bots[i])
-			}
-			buf.WriteString("\n\n")
+func (s *TUIPlatform) simulateLedDisplay() {
+	var buf strings.Builder
+	keys := maps.Keys(s.displayManager.Segments)
+	sort.Strings(keys)
+	for _, name := range keys {
+		segarray := s.displayManager.Segments[name]
+		tops := make([]string, len(segarray))
+		bots := make([]string, len(segarray))
+		for i, seg := range segarray {
+			tops[i], bots[i] = s.simulateLed(seg)
 		}
-		buf.WriteString(" [blue]" + s.sensorline + "[:]")
-		s.ledDisplay.SetText(buf.String())
+		buf.WriteString(" ")
+		for i := range segarray {
+			buf.WriteString(tops[i])
+		}
+		buf.WriteString("\n ")
+		for i := range segarray {
+			buf.WriteString(bots[i])
+		}
+		buf.WriteString("\n\n")
 	}
+	buf.WriteString(" [blue]" + s.sensorline + "[:]")
+	s.ledDisplay.SetText(buf.String())
 }
 
 func (s *TUIPlatform) simulateLed(segment *Segment) (string, string) {
