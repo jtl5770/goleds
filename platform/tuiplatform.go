@@ -22,19 +22,22 @@ import (
 
 type TUIPlatform struct {
 	*AbstractPlatform
-	app          *tview.Application
-	sensorline   string
-	ledDisplay   *tview.TextView
-	logView      *tview.TextView
-	ossignalChan chan os.Signal
-	chartosensor map[string]string
-	stopChan     chan bool
+	app             *tview.Application
+	intro           *tview.TextView
+	sensorline      string
+	ledDisplay      *tview.TextView
+	logView         *tview.TextView
+	ossignalChan    chan os.Signal
+	chartosensor    map[string]string
+	stopChan        chan bool
+	tuiTriggerValue int
 }
 
 func NewTUIPlatform(conf *config.Config, ossignalchan chan os.Signal, stopchan chan bool) *TUIPlatform {
 	inst := &TUIPlatform{
-		ossignalChan: ossignalchan,
-		stopChan:     stopchan,
+		ossignalChan:    ossignalchan,
+		stopChan:        stopchan,
+		tuiTriggerValue: 200, // Default trigger value
 	}
 	inst.AbstractPlatform = NewAbstractPlatform(conf, inst.DisplayLeds)
 	return inst
@@ -85,19 +88,27 @@ func (s *TUIPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
 	}
 }
 
+// getIntroText generates the dynamic text for the top info pane.
+func (s *TUIPlatform) getIntroText(numSensors int) string {
+	triggerValue := s.tuiTriggerValue
+
+	line1 := fmt.Sprintf("Trigger value: [#ffff00]%-4d[white] | Hit [#ff0000]+[white]/[#ff0000]-[white] to change", triggerValue)
+	line2 := fmt.Sprintf("Hit [blue]1[-]...[blue]%d[-] to fire a sensor", numSensors)
+	line3 := "Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload, [#ff0000]Up/Down[-] to scroll logs"
+
+	return fmt.Sprintf("%s\n%s\n%s", line1, line2, line3)
+}
+
 func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int, numSegmentGroups int, ledsTotal int) {
 	s.app = tview.NewApplication()
 
 	// --- Intro Pane ---
-	var introText strings.Builder
-	introText.WriteString("Hit [blue]1[-]...[blue]" + fmt.Sprintf("%d", numSensors) + "[-] to fire a sensor\n")
-	introText.WriteString("Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload config, [#ff0000]Up/Down[-] to scroll logs")
-	intro := tview.NewTextView().
+	s.intro = tview.NewTextView().
 		SetDynamicColors(true).
-		SetTextAlign(tview.AlignCenter).
-		SetText(introText.String())
-	intro.SetBorder(true).SetTitle(" GOLEDS Simulation ").SetTitleColor(tcell.ColorLightBlue)
-	intro.SetBackgroundColor(tcell.ColorDarkSlateGray)
+		SetTextAlign(tview.AlignCenter)
+	s.intro.SetText(s.getIntroText(numSensors)) // Set initial text
+	s.intro.SetBorder(true).SetTitle(" GOLEDS Simulation ").SetTitleColor(tcell.ColorLightBlue)
+	s.intro.SetBackgroundColor(tcell.ColorDarkSlateGray)
 
 	// --- LED Display Pane ---
 	s.ledDisplay = tview.NewTextView().
@@ -122,23 +133,28 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 	log.SetOutput(logWriter)
 
 	// --- Layout ---
-	// Calculate height for the LED pane based on segment groups
 	stripeHeight := 1 + (3 * numSegmentGroups) + 2 // 1 for sensor line, 3 per group, 2 for border
 
 	layout := tview.NewFlex().SetDirection(tview.FlexRow).
-		AddItem(intro, 4, 0, false).
+		AddItem(s.intro, 5, 0, false). // Increased height for 3 lines of text
 		AddItem(s.ledDisplay, stripeHeight, 0, false).
-		AddItem(s.logView, 0, 1, false) // Flexible height
+		AddItem(s.logView, 0, 1, true) // Flexible height, gets focus
 
 	// --- Input Handling ---
 	s.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		// Global key handlers that work regardless of focus.
 		switch event.Key() {
 		case tcell.KeyRune:
 			key := string(event.Rune())
 			if senuid, exist := s.chartosensor[key]; exist {
-				s.sensorEvents <- util.NewTrigger(senuid, 80, time.Now())
-				return nil // Event handled
+				currentTriggerValue := s.tuiTriggerValue
+				minimum := s.sensors[senuid].triggerValue
+				if currentTriggerValue >= minimum {
+					log.Printf("Triggering sensor %s with value %d", senuid, currentTriggerValue)
+					s.sensorEvents <- util.NewTrigger(senuid, currentTriggerValue, time.Now())
+				} else {
+					log.Printf("Sensor %s not triggered, current value %d is below minimum %d", senuid, currentTriggerValue, minimum)
+					return nil
+				}
 			}
 			switch key {
 			case "q", "Q":
@@ -148,6 +164,20 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 			case "r", "R":
 				s.app.Stop()
 				ossignal <- syscall.SIGHUP
+				return nil
+			case "+":
+				s.tuiTriggerValue = s.tuiTriggerValue + 5
+				if s.tuiTriggerValue > 1023 {
+					s.tuiTriggerValue = 1023
+				}
+				s.intro.SetText(s.getIntroText(numSensors))
+				return nil
+			case "-":
+				s.tuiTriggerValue = s.tuiTriggerValue - 5
+				if s.tuiTriggerValue < 0 {
+					s.tuiTriggerValue = 0
+				}
+				s.intro.SetText(s.getIntroText(numSensors))
 				return nil
 			}
 		case tcell.KeyUp:
@@ -176,7 +206,6 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 	// --- Start TUI ---
 	go func() {
 		if err := s.app.SetRoot(layout, true).Run(); err != nil {
-			// Since we are stopping, restore the logger to stderr
 			log.SetOutput(os.Stderr)
 			log.Fatalf("Error running TUI: %v", err)
 		}
@@ -192,7 +221,6 @@ func (s *TUIPlatform) simulateLedDisplay() {
 
 	for _, name := range groupNames {
 		segments := s.displayManager.Segments[name]
-		// Sort segments by their start index to ensure correct order
 		sort.Slice(segments, func(i, j int) bool {
 			return segments[i].FirstLed < segments[j].FirstLed
 		})
@@ -222,7 +250,7 @@ func (s *TUIPlatform) simulateLedSegment(segment *Segment) (string, string) {
 
 	values := segment.Leds
 	var buf1, buf2 strings.Builder
-	buf1.Grow(len(values) * (len("[-][#000000]") + 1)) // Pre-allocate memory
+	buf1.Grow(len(values) * (len("[-][#000000]") + 1))
 	buf2.Grow(len(values) * (len("[-][#000000]") + 1))
 
 	for _, v := range values {
@@ -235,7 +263,6 @@ func (s *TUIPlatform) simulateLedSegment(segment *Segment) (string, string) {
 			buf1.WriteString(colorStr)
 			buf2.WriteString(colorStr)
 
-			// This can be simplified, but we'll keep the original block logic
 			topChar, bottomChar := " ", " "
 			if value <= 2 {
 				bottomChar = "▁"
