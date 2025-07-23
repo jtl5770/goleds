@@ -237,7 +237,7 @@ func detectBlobColl(blob_a *Blob, blob_b *Blob) bool {
 			// log.Println(fmt.Sprintf("Chasing L2R: %s - Direction %f  |  %s - Direction %f", left.uid, left.dir, right.uid, right.dir))
 			left.switchDirection()
 		} else if left.dir < 0 && right.dir < 0 {
-			// chsing from right to left - only right changes direction
+			// chasing from right to left - only right changes direction
 			// log.Println(fmt.Sprintf("Chasing R2L: %s - Direction %f  |  %s - Direction %f", left.uid, left.dir, right.uid, right.dir))
 			right.switchDirection()
 		} else if left.dir < 0 && right.dir > 0 {
