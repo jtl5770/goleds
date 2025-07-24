@@ -22,7 +22,7 @@ import (
 
 type TUIPlatform struct {
 	*AbstractPlatform
-	app             *tview.Application
+	tviewapp        *tview.Application
 	intro           *tview.TextView
 	sensorline      string
 	ledDisplay      *tview.TextView
@@ -56,8 +56,8 @@ func (s *TUIPlatform) Start() error {
 }
 
 func (s *TUIPlatform) Stop() {
-	if s.app != nil {
-		s.app.Stop()
+	if s.tviewapp != nil {
+		s.tviewapp.Stop()
 	}
 }
 
@@ -69,7 +69,7 @@ func (s *TUIPlatform) DisplayLeds(leds []producer.Led) {
 		}
 	}
 	// Now, schedule a redraw on the main TUI thread.
-	s.app.QueueUpdateDraw(s.simulateLedDisplay)
+	s.tviewapp.QueueUpdateDraw(s.simulateLedDisplay)
 }
 
 func (s *TUIPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
@@ -93,7 +93,7 @@ func (s *TUIPlatform) getIntroText(numSensors int) string {
 }
 
 func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int, numSegmentGroups int, ledsTotal int) {
-	s.app = tview.NewApplication()
+	s.tviewapp = tview.NewApplication()
 
 	// --- Intro Pane ---
 	s.intro = tview.NewTextView().
@@ -116,7 +116,7 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 		SetScrollable(true).
 		SetChangedFunc(func() {
 			s.logView.ScrollToEnd()
-			s.app.Draw()
+			s.tviewapp.Draw()
 		})
 	s.logView.SetBorder(true).SetTitle(" Logs ").SetTitleColor(tcell.ColorLightBlue)
 	s.logView.SetBackgroundColor(tcell.ColorDarkSlateGray)
@@ -134,7 +134,7 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 		AddItem(s.logView, 0, 1, true) // Flexible height, gets focus
 
 	// --- Input Handling ---
-	s.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	s.tviewapp.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyRune:
 			key := string(event.Rune())
@@ -151,11 +151,11 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 			}
 			switch key {
 			case "q", "Q":
-				s.app.Stop()
+				s.tviewapp.Stop()
 				ossignal <- os.Interrupt
 				return nil
 			case "r", "R":
-				s.app.Stop()
+				s.tviewapp.Stop()
 				ossignal <- syscall.SIGHUP
 				return nil
 			case "+":
