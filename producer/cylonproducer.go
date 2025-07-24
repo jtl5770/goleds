@@ -45,7 +45,6 @@ func (s *CylonProducer) runner() {
 		s.ledsChanged.Send(s)
 		tick.Stop()
 		triggerduration.Stop()
-		s.setIsRunning(false)
 	}()
 
 	for {

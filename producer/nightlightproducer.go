@@ -42,7 +42,6 @@ func (s *NightlightProducer) runner() {
 	defer func() {
 		s.leds = make([]Led, len(s.leds)) // Reset LEDs
 		s.ledsChanged.Send(s)
-		s.setIsRunning(false)
 	}()
 
 	for {
