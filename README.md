@@ -176,26 +176,26 @@ light can also affect the sensor readings.
 
 *   **SensorLedProducer**: The core producer. Creates a
     grow-stay-shrink light effect that radiates from a triggered
-    sensor.
+    sensor. Can be toggled to produce a continous bright light for a
+    configurable time ("latch mode").
 *   **MultiBlobProducer**: Generates multiple, slowly moving blobs of
     color that bounce off each other and the ends of the strip. Starts
-    automatically after a `SensorLedProducer` cycle finishes.
+    automatically after a `SensorLedProducer` cycle finishes (if
+    enabled).
 *   **CylonProducer**: A simple, moving red "eye" reminiscent of the
     Battlestar Galactica Cylons. A great starting point for creating
-    new custom animations.
+    new custom animations. Starts automatically after a
+    SensorLedProducer cycle finishes (if enabled).
 *   **NightLightProducer**: Provides a constant, gentle glow during
     the night. The color can be configured to change at different
     times between sunset and sunrise.
-*   **HoldProducer**: Lights up the entire strip for a fixed duration
-    when a sensor is held for a few seconds, useful for temporarily
-    illuminating an area.
 
 https://github.com/jtl5770/goleds/assets/24967370/865c70b6-cc20-4b60-899c-8e9182680e21
 
 ## Future Ideas
 
 I would like to add a sound-reactive producer. The idea is to run
-`squeezelite` (a software client for the Logitech Media Server) on the
+e.g. `squeezelite` (a software client for the Logitech Media Server) on the
 Raspberry Pi and have Go-LEDS read the audio data from its
 output. This would allow for effects like a VU meter that could be
 synchronized with other Squeezebox players in the house. The main
