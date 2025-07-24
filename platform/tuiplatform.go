@@ -160,16 +160,12 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 				return nil
 			case "+":
 				s.tuiTriggerValue = s.tuiTriggerValue + 5
-				if s.tuiTriggerValue > 1023 {
-					s.tuiTriggerValue = 1023
-				}
+				s.tuiTriggerValue = min(s.tuiTriggerValue, 1023)
 				s.intro.SetText(s.getIntroText(numSensors))
 				return nil
 			case "-":
 				s.tuiTriggerValue = s.tuiTriggerValue - 5
-				if s.tuiTriggerValue < 0 {
-					s.tuiTriggerValue = 0
-				}
+				s.tuiTriggerValue = max(s.tuiTriggerValue, 0)
 				s.intro.SetText(s.getIntroText(numSensors))
 				return nil
 			}

@@ -44,7 +44,7 @@ func NewBlob(uid string, ledRGB []float64, x, width, deltaX float64) *Blob {
 func (s *Blob) getBlobLeds(ledsTotal int) []Led {
 	leds := make([]Led, ledsTotal)
 
-	for i := 0; i < ledsTotal; i++ {
+	for i := range ledsTotal {
 		y := math.Exp(-1 * (math.Pow(float64(i)-s.x, 2) / s.width))
 		leds[i] = Led{s.led.Red * y, s.led.Green * y, s.led.Blue * y}
 	}
@@ -185,7 +185,7 @@ func detectAndHandleCollisions(blobs map[string]*Blob, ledsTotal int) {
 
 	size := len(checkinter)
 	if size >= 2 {
-		for i := 0; i < size; i++ {
+		for i := range size {
 			blob_a := checkinter[i]
 			for j := i + 1; j < size; j++ {
 				blob_b := checkinter[j]
