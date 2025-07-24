@@ -101,7 +101,7 @@ func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {
 	}
 }
 
-func (s *MultiBlobProducer) runner(trigger *u.Trigger) {
+func (s *MultiBlobProducer) runner() {
 	triggerduration := time.NewTicker(s.duration)
 	tick := time.NewTicker(s.delay)
 	countup_run := false
@@ -116,7 +116,7 @@ func (s *MultiBlobProducer) runner(trigger *u.Trigger) {
 		case <-triggerduration.C:
 			// Doing the fadeout after the time is up
 			if s.nlproducer != nil && !s.nlproducer.GetIsRunning() {
-				s.nlproducer.Start(u.NewTrigger(s.nlproducer.GetUID(), 0, time.Now()))
+				s.nlproducer.Start()
 			}
 			s.fade_in_or_out(false)
 			return

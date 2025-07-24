@@ -37,13 +37,11 @@ func NewCylonProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ledsT
 	return inst
 }
 
-func (s *CylonProducer) runner(trigger *u.Trigger) {
+func (s *CylonProducer) runner() {
 	triggerduration := time.NewTicker(s.duration)
 	tick := time.NewTicker(s.delay)
 	defer func() {
-		for i := range s.leds {
-			s.setLed(i, Led{})
-		}
+		s.leds = make([]Led, len(s.leds)) // Reset LEDs
 		s.ledsChanged.Send(s)
 		tick.Stop()
 		triggerduration.Stop()
