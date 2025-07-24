@@ -20,30 +20,27 @@ type AbstractProducer struct {
 	// Guards changes to lastStart & isRunning & hasExited
 	updateMutex sync.RWMutex
 	ledsChanged *u.AtomicEvent[LedProducer]
-	// the method Start() should call. It is set via NewAbstractProducer.
-	runfunc func(trigger *u.Trigger)
 	// this channel will be signaled via the Stop method. Your runfunc
 	// MUST listen to this channel and exit when it receives a signal
 	stopchan chan bool
-	// this channel is written to by the Start(*u.Trigger) method
-	// whenever it is called. Your runfunc MAY read from this channel
-	// if it is interested in those triggers. The Start(*u.Trigger)
-	// method will NOT block if it can't put more triggers into the
-	// channel but just silently drop them.
-	triggerchan chan *u.Trigger
-	// The Start(*u.Trigger) always stores the last received
-	// *u.Trigger here
-	lastTrigger *u.Trigger
+	// this AtomicEvent contains the channel that is written to by the
+	// SendTrigger(*u.Trigger) method whenever it is called. Your
+	// runfunc MAY read from this channel if it is interested in those
+	// triggers. Only the newest Trigger will be available.
+	triggerEvent *u.AtomicEvent[*u.Trigger]
+	// the method Start() should call. It is set via NewAbstractProducer.
+	runfunc func()
 }
 
 // Creates a new instance of AbstractProducer. The uid must be unique
-func NewAbstractProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], runfunc func(trigger *u.Trigger), ledsTotal int) *AbstractProducer {
+func NewAbstractProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], runfunc func(), ledsTotal int) *AbstractProducer {
 	inst := AbstractProducer{
-		uid:         uid,
-		leds:        make([]Led, ledsTotal),
-		ledsChanged: ledsChanged,
-		stopchan:    make(chan bool),
-		runfunc:     runfunc,
+		uid:          uid,
+		leds:         make([]Led, ledsTotal),
+		ledsChanged:  ledsChanged,
+		stopchan:     make(chan bool),
+		runfunc:      runfunc,
+		triggerEvent: u.NewAtomicEvent[*u.Trigger](),
 	}
 	return &inst
 }
@@ -72,15 +69,6 @@ func (s *AbstractProducer) GetUID() string {
 	return s.uid
 }
 
-// Returns last time when s.Start() has been called. This is
-// guarded by s.updateMutex
-func (s *AbstractProducer) getLastTrigger() *u.Trigger {
-	s.updateMutex.RLock()
-	defer s.updateMutex.RUnlock()
-
-	return s.lastTrigger
-}
-
 // Used to start the main worker process as a go routine. Does never
 // block.  When the worker go routine is already running, it does
 // nothing besides updating s.lastTrigger to the current trigger. If the
@@ -89,22 +77,24 @@ func (s *AbstractProducer) getLastTrigger() *u.Trigger {
 // concurrently.  The method is guarded by s.updateMutex
 // IMPORTANT: After constructing your concrete instance you MUST set
 // AbstractProducer.runfunc to the concrete worker method to call.
-func (s *AbstractProducer) Start(trigger *u.Trigger) {
+func (s *AbstractProducer) Start() {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 
-	s.lastTrigger = trigger
 	if !s.isRunning && !s.hasExited {
 		s.isRunning = true
-		s.triggerchan = make(chan *u.Trigger, 10) // Reset the trigger channel
-		go s.runfunc(trigger)
-	} else if !s.hasExited {
-		select {
-		case s.triggerchan <- trigger:
-			// Successfully sent the trigger to the channel
-		default:
-			log.Println("Trigger channel for", s.GetUID(), "is full, dropping trigger")
-		}
+		go s.runfunc()
+	} else if s.hasExited || s.isRunning {
+		log.Println("Start() called on AbstractProducer that is already running or has exited:", s.GetUID())
+	}
+}
+
+func (s *AbstractProducer) SendTrigger(trigger *u.Trigger) {
+	s.updateMutex.Lock()
+	defer s.updateMutex.Unlock()
+
+	if s.isRunning && !s.hasExited {
+		s.triggerEvent.Send(trigger)
 	}
 }
 

@@ -6,7 +6,8 @@ import u "lautenbacher.net/goleds/util"
 type LedProducer interface {
 	GetLeds() []Led
 	GetUID() string
-	Start(trigger *u.Trigger)
+	Start()
+	SendTrigger(trigger *u.Trigger)
 	Stop()
 	Exit()
 	GetIsRunning() bool
