@@ -317,6 +317,11 @@ func (a *App) fireController() {
 }
 
 func (a *App) afterProdRunner() {
+	defer func() {
+		a.afterProdIsRunning = false
+		a.afterpMutex.Unlock()
+	}()
+
 	log.Println("         --> In afterProdRunner go-routine... Blocking on WaitGroup")
 	a.afterprodWg.Wait()
 	log.Println("         <-- WaitGroup unblocked - ending afterProdRunner go-routing")
@@ -325,6 +330,4 @@ func (a *App) afterProdRunner() {
 		log.Printf("===> Starting afterProd %s", prod.GetUID())
 		prod.Start() // This will start the producer
 	}
-	a.afterProdIsRunning = false
-	a.afterpMutex.Unlock()
 }
