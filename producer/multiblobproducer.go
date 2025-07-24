@@ -57,17 +57,15 @@ func (s *Blob) switchDirection() {
 
 type MultiBlobProducer struct {
 	*AbstractProducer
-	allblobs   map[string]*Blob
-	nlproducer *NightlightProducer
-	duration   time.Duration
-	delay      time.Duration
+	allblobs map[string]*Blob
+	duration time.Duration
+	delay    time.Duration
 }
 
-func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], nlprod *NightlightProducer, ledsTotal int, duration, delay time.Duration, blobCfg map[string]c.BlobCfg) *MultiBlobProducer {
+func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, duration, delay time.Duration, blobCfg map[string]c.BlobCfg) *MultiBlobProducer {
 	inst := &MultiBlobProducer{
-		duration:   duration,
-		delay:      delay,
-		nlproducer: nlprod,
+		duration: duration,
+		delay:    delay,
 	}
 	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
 
@@ -114,15 +112,11 @@ func (s *MultiBlobProducer) runner() {
 		select {
 		case <-triggerduration.C:
 			// Doing the fadeout after the time is up
-			if s.nlproducer != nil && !s.nlproducer.GetIsRunning() {
-				s.nlproducer.Start()
-			}
 			s.fade_in_or_out(false)
 			return
 		case <-s.stopchan:
 			// Doing the fadeout when Stop() is triggered
 			s.fade_in_or_out(false)
-			// log.Println("Stopped MultiBlobProducer...")
 			return
 		case <-tick.C:
 			// compute new x value
@@ -150,10 +144,6 @@ func (s *MultiBlobProducer) runner() {
 				// at the start of the blob period
 				s.fade_in_or_out(true)
 				countup_run = true
-				// if the NightlightProducer is running, stop it
-				if s.nlproducer != nil && s.nlproducer.GetIsRunning() {
-					s.nlproducer.Stop()
-				}
 			}
 			// update last_x value to current x
 			for _, blob := range s.allblobs {

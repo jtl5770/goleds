@@ -12,7 +12,6 @@ import (
 
 func TestNewMultiBlobProducer(t *testing.T) {
 	ledsChanged := u.NewAtomicEvent[LedProducer]()
-	nlProducer := NewNightlightProducer("nl_test", ledsChanged, 10, 0, 0, [][]float64{{0, 0, 0}}) // Dummy NightlightProducer
 	ledsTotal := 10
 	duration := 5 * time.Second
 	delay := 50 * time.Millisecond
@@ -21,13 +20,12 @@ func TestNewMultiBlobProducer(t *testing.T) {
 		"blob2": {DeltaX: -0.2, X: 8.0, Width: 1.5, LedRGB: []float64{0, 255, 0}},
 	}
 
-	p := NewMultiBlobProducer("test_multiblob", ledsChanged, nlProducer, ledsTotal, duration, delay, blobCfg)
+	p := NewMultiBlobProducer("test_multiblob", ledsChanged, ledsTotal, duration, delay, blobCfg)
 
 	assert.Equal(t, "test_multiblob", p.GetUID())
 	assert.Len(t, p.leds, ledsTotal)
 	assert.Equal(t, duration, p.duration)
 	assert.Equal(t, delay, p.delay)
-	assert.Equal(t, nlProducer, p.nlproducer)
 	assert.Len(t, p.allblobs, 2)
 
 	// Verify individual blobs

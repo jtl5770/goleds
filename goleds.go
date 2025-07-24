@@ -170,8 +170,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	// on application state
 	if multiblobledp {
 		cfg := conf.MultiBlobLED
-		// multiblobproducer gets the - maybe nil - prodnight instance to control it
-		prodmulti = p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader, prodnight,
+		prodmulti := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader,
 			ledsTotal, cfg.Duration, cfg.Delay, cfg.BlobCfg)
 		a.ledproducers[MULTI_BLOB_UID] = prodmulti
 		a.afterProd = append(a.afterProd, prodmulti)
