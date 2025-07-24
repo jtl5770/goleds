@@ -53,7 +53,7 @@ func (s *AbstractPlatform) DisplayDriver(display chan []p.Led, stopSignal chan b
 	for {
 		select {
 		case <-stopSignal:
-			log.Println("Ending DisplayDriver go-routine...")
+			log.Println("Ending DisplayDriver go-routine")
 			return
 		case sumLeds := <-display:
 			s.displayFunc(sumLeds)
