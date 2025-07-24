@@ -198,7 +198,7 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 
 	// --- Start TUI ---
 	go func() {
-		if err := s.app.SetRoot(layout, true).Run(); err != nil {
+		if err := s.tviewapp.SetRoot(layout, true).Run(); err != nil {
 			log.SetOutput(os.Stderr)
 			log.Fatalf("Error running TUI: %v", err)
 		}
