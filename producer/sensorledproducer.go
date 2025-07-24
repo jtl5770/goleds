@@ -48,30 +48,45 @@ import (
 	"sync"
 	t "time"
 
+	c "lautenbacher.net/goleds/config"
 	u "lautenbacher.net/goleds/util"
 )
 
 type SensorLedProducer struct {
 	*AbstractProducer
-	ledIndex    int
-	holdT       t.Duration
-	runUpT      t.Duration
-	runDownT    t.Duration
-	ledOn       Led
-	afterprodWg *sync.WaitGroup
+	ledIndex          int
+	holdT             t.Duration
+	runUpT            t.Duration
+	runDownT          t.Duration
+	ledOn             Led
+	afterprodWg       *sync.WaitGroup
+	latchEnabled      bool
+	latchTriggerValue int
+	latchTriggerDelay t.Duration
+	latchTime         t.Duration
+	latchLed          Led
 }
 
-func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, holdT t.Duration, runUpT t.Duration, runDownT t.Duration, ledRGB []float64, afterprodwg *sync.WaitGroup) *SensorLedProducer {
+func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, cfg c.SensorLEDConfig, afterprodwg *sync.WaitGroup) *SensorLedProducer {
 	inst := &SensorLedProducer{
-		ledIndex:    index,
-		holdT:       holdT,
-		runUpT:      runUpT,
-		runDownT:    runDownT,
-		afterprodWg: afterprodwg,
+		ledIndex:          index,
+		holdT:             cfg.HoldTime,
+		runUpT:            cfg.RunUpDelay,
+		runDownT:          cfg.RunDownDelay,
+		afterprodWg:       afterprodwg,
+		latchEnabled:      cfg.LatchEnabled,
+		latchTriggerValue: cfg.LatchTriggerValue,
+		latchTriggerDelay: cfg.LatchTriggerDelay,
+		latchTime:         cfg.LatchTime,
 		ledOn: Led{
-			Red:   ledRGB[0],
-			Green: ledRGB[1],
-			Blue:  ledRGB[2],
+			Red:   cfg.LedRGB[0],
+			Green: cfg.LedRGB[1],
+			Blue:  cfg.LedRGB[2],
+		},
+		latchLed: Led{
+			Red:   cfg.LatchLedRGB[0],
+			Green: cfg.LatchLedRGB[1],
+			Blue:  cfg.LatchLedRGB[2],
 		},
 	}
 	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
@@ -109,20 +124,98 @@ func (s *SensorLedProducer) runUpPhase(left, right int) (nleft, nright int, stop
 	}
 }
 
-// holdPhase handles the "hold" part, keeping LEDs on. The hold time
-// is extended if new triggers arrive.
+// is extended if new triggers arrive. It also checks for the "latch"
+// trigger pattern.
 func (s *SensorLedProducer) holdPhase() (stopped bool) {
+	var latchStart t.Time
+	inLatchZone := false
+
 	for {
-		holdUntil := t.Now().Add(s.holdT)
+		holdTimer := t.NewTimer(s.holdT)
+
 		select {
 		case <-s.stopchan:
+			holdTimer.Stop()
 			return true // Stop requested
-		case <-t.After(t.Until(holdUntil)):
+		case <-holdTimer.C:
+			return false // Hold time expired
+		case <-s.triggerEvent.Channel():
+			holdTimer.Stop() // Reset hold timer on any trigger
+			trigger := s.triggerEvent.Value()
+
+			if s.latchEnabled && trigger.Value >= s.latchTriggerValue {
+				if !inLatchZone {
+					// Start of a potential latch-on sequence
+					inLatchZone = true
+					latchStart = trigger.Timestamp
+				} else {
+					// Check if the latch-on delay has been met
+					if t.Since(latchStart) >= s.latchTriggerDelay {
+						if s.runLatchMode() {
+							return true // Latch mode was stopped via stopchan
+						}
+						// Latch mode finished, reset and continue normal hold.
+						inLatchZone = false
+					}
+				}
+			} else {
+				// Trigger was not a latch trigger, reset the sequence.
+				inLatchZone = false
+			}
+		}
+	}
+}
+
+// runLatchMode activates the high-intensity "latch" mode. It remains
+// active for latchTime unless another latch trigger toggles it off early.
+func (s *SensorLedProducer) runLatchMode() (stopped bool) {
+	log.Printf("   ===> Latch Mode Activated for %s", s.GetUID())
+	// Set all LEDs to the bright latch color
+	for i := range s.leds {
+		s.setLed(i, s.latchLed)
+	}
+	s.ledsChanged.Send(s)
+
+	// Defer reverting the LEDs to the normal color to simplify exit paths.
+	defer func() {
+		for i := range s.leds {
+			s.setLed(i, s.ledOn)
+		}
+		s.ledsChanged.Send(s)
+	}()
+
+	latchTimer := t.NewTimer(s.latchTime)
+	defer latchTimer.Stop()
+
+	var latchOffStart t.Time
+	inLatchOffZone := false
+
+	for {
+		select {
+		case <-s.stopchan:
+			return true // Stop requested by system
+		case <-latchTimer.C:
+			// Main latch time expired
+			log.Printf("   <=== Latch Mode Timed Out for %s", s.GetUID())
 			return false
 		case <-s.triggerEvent.Channel():
-			// New trigger arrived, extend hold time
-			// We do not need to do anything here, as the next
-			// iteration of the loop will re-check the hold time.
+			trigger := s.triggerEvent.Value()
+			if s.latchEnabled && trigger.Value >= s.latchTriggerValue {
+				if !inLatchOffZone {
+					// Start of a potential latch-off sequence
+					inLatchOffZone = true
+					latchOffStart = trigger.Timestamp
+				} else {
+					// Check if the latch-off delay has been met
+					if t.Since(latchOffStart) >= s.latchTriggerDelay {
+						log.Printf("   <=== Latch Mode Deactivated by toggle for %s", s.GetUID())
+						return false
+					}
+				}
+			} else {
+				// Not a latch trigger, reset the toggle-off sequence.
+				inLatchOffZone = false
+			}
 		}
 	}
 }

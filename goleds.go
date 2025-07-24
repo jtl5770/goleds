@@ -191,7 +191,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 		a.sensorProducers = make([]p.LedProducer, 0, len(a.platform.GetSensorLedIndices()))
 		for uid, ledIndex := range a.platform.GetSensorLedIndices() {
 			producer := p.NewSensorLedProducer(uid, ledIndex, ledReader,
-				ledsTotal, cfg.HoldTime, cfg.RunUpDelay, cfg.RunDownDelay, cfg.LedRGB, &a.afterprodWg)
+				ledsTotal, cfg, &a.afterprodWg)
 			a.ledproducers[uid] = producer
 			a.sensorProducers = append(a.sensorProducers, producer)
 		}
