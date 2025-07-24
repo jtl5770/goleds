@@ -37,7 +37,6 @@ import (
 
 // UIDs for the different types of producers
 const (
-	HOLD_LED_UID   = "__hold_producer"
 	NIGHT_LED_UID  = "__night_producer"
 	MULTI_BLOB_UID = "__multiblob_producer"
 	CYLON_LED_UID  = "__cylon_producer"
@@ -145,27 +144,6 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	sensorledp := conf.SensorLED.Enabled
 	multiblobledp := conf.MultiBlobLED.Enabled
 	cylonledp := conf.CylonLED.Enabled
-	holdledp := conf.HoldLED.Enabled
-	nightledp := conf.NightLED.Enabled
-
-	// This is the main producer: reacting to a sensor trigger to light the stripes
-	if sensorledp {
-		cfg := conf.SensorLED
-		a.sensorProducers = make([]p.LedProducer, 0, len(a.platform.GetSensorLedIndices()))
-		for uid, ledIndex := range a.platform.GetSensorLedIndices() {
-			producer := p.NewSensorLedProducer(uid, ledIndex, ledReader,
-				ledsTotal, cfg.HoldTime, cfg.RunUpDelay, cfg.RunDownDelay, cfg.LedRGB)
-			a.ledproducers[uid] = producer
-			a.sensorProducers = append(a.sensorProducers, producer)
-		}
-	}
-
-	if holdledp {
-		cfg := conf.HoldLED
-		prodhold := p.NewHoldProducer(HOLD_LED_UID, ledReader,
-			ledsTotal, cfg.HoldTime, cfg.LedRGB)
-		a.ledproducers[HOLD_LED_UID] = prodhold
-	}
 
 	var prodnight *p.NightlightProducer = nil
 	if nightledp {

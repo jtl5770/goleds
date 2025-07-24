@@ -29,15 +29,6 @@ type NightLEDConfig struct {
 	LedRGB    [][]float64 `yaml:"LedRGB"`
 }
 
-// HoldLEDConfig defines the configuration for the HoldLED producer.
-type HoldLEDConfig struct {
-	Enabled      bool          `yaml:"Enabled"`
-	HoldTime     time.Duration `yaml:"HoldTime"`
-	TriggerDelay time.Duration `yaml:"TriggerDelay"`
-	TriggerValue int           `yaml:"TriggerValue"`
-	LedRGB       []float64     `yaml:"LedRGB"`
-}
-
 // CylonLEDConfig defines the configuration for the CylonLED producer.
 type CylonLEDConfig struct {
 	Enabled  bool          `yaml:"Enabled"`
@@ -114,7 +105,6 @@ type Config struct {
 	Configfile   string
 	SensorLED    SensorLEDConfig    `yaml:"SensorLED"`
 	NightLED     NightLEDConfig     `yaml:"NightLED"`
-	HoldLED      HoldLEDConfig      `yaml:"HoldLED"`
 	CylonLED     CylonLEDConfig     `yaml:"CylonLED"`
 	MultiBlobLED MultiBlobLEDConfig `yaml:"MultiBlobLED"`
 	Hardware     HardwareConfig     `yaml:"Hardware"`

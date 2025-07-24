@@ -107,17 +107,12 @@ func TestFireController(t *testing.T) {
 	mockPlatform := NewMockPlatform()
 	app.platform = mockPlatform
 
-	triggerValue := 100
-	triggerDelay := 1 * time.Second
-
 	mockProducer := NewMockLedProducer("test")
 	app.ledproducers["test"] = mockProducer
-	mockHoldProducer := NewMockLedProducer(HOLD_LED_UID)
-	app.ledproducers[HOLD_LED_UID] = mockHoldProducer
 
 	app.stopsignal = make(chan bool)
 	app.shutdownWg.Add(1)
-	go app.fireController(true, triggerDelay, triggerValue)
+	go app.fireController()
 	t.Cleanup(func() {
 		close(app.stopsignal)
 		app.shutdownWg.Wait()
@@ -130,29 +125,6 @@ func TestFireController(t *testing.T) {
 		t.Error("Expected producer to be running")
 	}
 	mockProducer.Stop()
-
-	// test hold trigger
-	now := time.Now()
-	// first trigger, should not start hold producer
-	mockPlatform.sensorEvents <- u.NewTrigger(HOLD_LED_UID, 110, now)
-	time.Sleep(100 * time.Millisecond)
-	if mockHoldProducer.GetIsRunning() {
-		t.Fatal("Expected hold producer to not be running yet")
-	}
-
-	// second trigger in the time window, should start hold producer
-	mockPlatform.sensorEvents <- u.NewTrigger(HOLD_LED_UID, 110, now.Add(triggerDelay+200*time.Millisecond))
-	time.Sleep(100 * time.Millisecond)
-	if !mockHoldProducer.GetIsRunning() {
-		t.Fatal("Expected hold producer to be running")
-	}
-
-	// third trigger in the time window, should stop hold producer
-	mockPlatform.sensorEvents <- u.NewTrigger(HOLD_LED_UID, 110, now.Add(2*(triggerDelay+200*time.Millisecond)))
-	time.Sleep(100 * time.Millisecond)
-	if mockHoldProducer.GetIsRunning() {
-		t.Fatal("Expected hold producer to be stopped")
-	}
 }
 
 func TestCombineAndUpdateDisplay(t *testing.T) {

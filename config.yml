@@ -127,19 +127,19 @@ NightLED:
     # 20 * 0.05 = 1, which is the minimum visible blue level in this setup.
     - [0, 0, 20]
 
-# HoldLED: Lights up the entire strip when a sensor is held continuously
-# and with a higher value (typically: holding your hand directly in front of it)
-# Useful for temporarily lighting up an area on demand.
-HoldLED:
-  Enabled: true
-  # How long the strip stays lit if not turned off earlier.
-  HoldTime: 5m
-  # How long the sensor must be held to activate/deactivate the light.
-  TriggerDelay: 3s
-  # The sensor must read above this value for the entire TriggerDelay.
-  TriggerValue: 512
-  # The color and intensity of the light.
-  LedRGB: [140, 140, 140]
+# # HoldLED: Lights up the entire strip when a sensor is held continuously
+# # and with a higher value (typically: holding your hand directly in front of it)
+# # Useful for temporarily lighting up an area on demand.
+# HoldLED:
+#   Enabled: true
+#   # How long the strip stays lit if not turned off earlier.
+#   HoldTime: 5m
+#   # How long the sensor must be held to activate/deactivate the light.
+#   TriggerDelay: 3s
+#   # The sensor must read above this value for the entire TriggerDelay.
+#   TriggerValue: 512
+#   # The color and intensity of the light.
+#   LedRGB: [140, 140, 140]
 
 # MultiBlobLED: A playful effect with colored blobs moving and bouncing along
 # the strip. It automatically starts after a SensorLED cycle completes.
