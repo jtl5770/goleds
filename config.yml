@@ -171,7 +171,7 @@ MultiBlobLED:
 # inspired by Battlestar Galactica's Cylons. A good starting point for
 # creating your own custom producers.
 CylonLED:
-  Enabled: false
+  Enabled: true
   # How long the effect runs before stopping.
   Duration: 20s
   # Delay between animation steps.
@@ -181,5 +181,5 @@ CylonLED:
   # The width of the moving "eye".
   Width: 7
   # The color of the eye.
-  LedRGB: [255, 0, 0]
+  LedRGB: [75, 0, 0]
 
