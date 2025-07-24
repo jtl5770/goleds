@@ -72,12 +72,9 @@ Hardware:
         # tuning to be sensitive enough without picking up noise. Use the
         # `-show-sensors` flag to calibrate this value.
         TriggerValue: 130
-      S1:
-        { LedIndex: 69, SpiMultiplex: ADC1, AdcChannel: 7, TriggerValue: 130 }
-      S2:
-        { LedIndex: 111, SpiMultiplex: ADC2, AdcChannel: 0, TriggerValue: 180 }
-      S3:
-        { LedIndex: 164, SpiMultiplex: ADC2, AdcChannel: 5, TriggerValue: 150 }
+      S1: { LedIndex: 69, SpiMultiplex: ADC1, AdcChannel: 7, TriggerValue: 130 }
+      S2: { LedIndex: 111, SpiMultiplex: ADC2, AdcChannel: 0, TriggerValue: 180 }
+      S3: { LedIndex: 164, SpiMultiplex: ADC2, AdcChannel: 5, TriggerValue: 150 }
 
   # Defines the GPIO pin settings required to activate a specific SPI device.
   # This is the core of the SPI multiplexing configuration.
@@ -88,12 +85,9 @@ Hardware:
       Low: [17]
       # GPIO pins that must be set HIGH to select this device.
       High: [22,23,24]
-    L2:
-      { Low: [22], High: [17,23,24] }
-    ADC1:
-      { Low: [17,22,23], High: [24] }
-    ADC2:
-      { Low: [17,22,24], High: [23] }
+    L2: { Low: [22], High: [17,23,24] }
+    ADC1: { Low: [17,22,23], High: [24] }
+    ADC2: { Low: [17,22,24], High: [23] }
 
 # --- Producer Configurations ---
 # Each section below configures a different type of light animation producer.
@@ -139,20 +133,6 @@ NightLED:
     # 20 * 0.05 = 1, which is the minimum visible blue level in this setup.
     - [0, 0, 20]
 
-# # HoldLED: Lights up the entire strip when a sensor is held continuously
-# # and with a higher value (typically: holding your hand directly in front of it)
-# # Useful for temporarily lighting up an area on demand.
-# HoldLED:
-#   Enabled: true
-#   # How long the strip stays lit if not turned off earlier.
-#   HoldTime: 5m
-#   # How long the sensor must be held to activate/deactivate the light.
-#   TriggerDelay: 3s
-#   # The sensor must read above this value for the entire TriggerDelay.
-#   TriggerValue: 512
-#   # The color and intensity of the light.
-#   LedRGB: [140, 140, 140]
-
 # MultiBlobLED: A playful effect with colored blobs moving and bouncing along
 # the strip. It automatically starts after a SensorLED cycle completes.
 MultiBlobLED:
@@ -172,12 +152,9 @@ MultiBlobLED:
       Width: 512
       # The color and intensity of the blob.
       LedRGB: [30, 0, 0]
-    BlobGreen:
-      { DeltaX: -0.5, X: 40, Width: 512, LedRGB: [0, 30, 0] }
-    BlobBlue:
-      { DeltaX: 0.4, X: 130, Width: 768, LedRGB: [0, 0, 40] }
-    BlobRed2:
-      { DeltaX: -0.2, X: 150, Width: 512, LedRGB: [30, 0, 0] }
+    BlobGreen: { DeltaX: -0.5, X: 40, Width: 512, LedRGB: [0, 30, 0] }
+    BlobBlue: { DeltaX: 0.4, X: 130, Width: 768, LedRGB: [0, 0, 40] }
+    BlobRed2: { DeltaX: -0.2, X: 150, Width: 512, LedRGB: [30, 0, 0] }
 
 # CylonLED: A simple producer that creates a red "eye" moving back and forth,
 # inspired by Battlestar Galactica's Cylons. A good starting point for
