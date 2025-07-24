@@ -53,6 +53,14 @@ func (m *MockPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
 	<-stopSignal
 }
 
+func (m *MockPlatform) GetForceUpdateDelay() time.Duration {
+	return 1 * time.Second
+}
+
+func (m *MockPlatform) GetLedsTotal() int {
+	return 10
+}
+
 func NewMockPlatform() *MockPlatform {
 	return &MockPlatform{
 		sensorEvents: make(chan *u.Trigger),
@@ -67,8 +75,12 @@ type MockLedProducer struct {
 	leds      []p.Led
 }
 
-func (m *MockLedProducer) Start(trigger *u.Trigger) {
+func (m *MockLedProducer) Start() {
 	m.isRunning = true
+}
+
+func (m *MockLedProducer) SendTrigger(trigger *u.Trigger) {
+	// do nothing
 }
 
 func (m *MockLedProducer) Stop() {
@@ -132,9 +144,6 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	app := NewApp(ossignal)
 	app.ledproducers = make(map[string]p.LedProducer)
 
-	ledsTotal := 10
-	forceUpdateDelay := 1 * time.Second
-
 	mockPlatform := NewMockPlatform()
 	app.platform = mockPlatform
 
@@ -151,7 +160,7 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	app.stopsignal = make(chan bool)
 
 	app.shutdownWg.Add(1)
-	go app.combineAndUpdateDisplay(app.sensorProducers, false, true, false, ledReader, ledWriter, ledsTotal, forceUpdateDelay)
+	go app.combineAndUpdateDisplay(ledReader, ledWriter)
 	t.Cleanup(func() {
 		close(app.stopsignal)
 		app.shutdownWg.Wait()
@@ -165,7 +174,7 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	}
 
 	// test sensor trigger
-	mockSensorProducer.Start(u.NewTrigger("test", 0, time.Now()))
+	mockSensorProducer.Start()
 	ledReader.Send(mockSensorProducer)
 	time.Sleep(100 * time.Millisecond)
 	select {
@@ -175,16 +184,8 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 		t.Error("Expected leds to be written")
 	}
 
-	// test multiblob trigger
-	mockSensorProducer.Stop()
-	ledReader.Send(mockSensorProducer)
-	time.Sleep(100 * time.Millisecond)
-	if !mockMultiBlobProducer.GetIsRunning() {
-		t.Error("Expected multiblob producer to be running")
-	}
-
 	// test stop
-	mockSensorProducer.Start(u.NewTrigger("test", 0, time.Now()))
+	mockSensorProducer.Start()
 	ledReader.Send(mockSensorProducer)
 	time.Sleep(100 * time.Millisecond)
 	if mockMultiBlobProducer.GetIsRunning() {
