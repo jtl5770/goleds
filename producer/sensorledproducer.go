@@ -44,6 +44,8 @@
 package producer
 
 import (
+	"log"
+	"sync"
 	t "time"
 
 	u "lautenbacher.net/goleds/util"
@@ -51,19 +53,21 @@ import (
 
 type SensorLedProducer struct {
 	*AbstractProducer
-	ledIndex int
-	holdT    t.Duration
-	runUpT   t.Duration
-	runDownT t.Duration
-	ledOn    Led
+	ledIndex    int
+	holdT       t.Duration
+	runUpT      t.Duration
+	runDownT    t.Duration
+	ledOn       Led
+	afterprodWg *sync.WaitGroup
 }
 
-func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, holdT t.Duration, runUpT t.Duration, runDownT t.Duration, ledRGB []float64) *SensorLedProducer {
+func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, holdT t.Duration, runUpT t.Duration, runDownT t.Duration, ledRGB []float64, afterprodwg *sync.WaitGroup) *SensorLedProducer {
 	inst := &SensorLedProducer{
-		ledIndex: index,
-		holdT:    holdT,
-		runUpT:   runUpT,
-		runDownT: runDownT,
+		ledIndex:    index,
+		holdT:       holdT,
+		runUpT:      runUpT,
+		runDownT:    runDownT,
+		afterprodWg: afterprodwg,
 		ledOn: Led{
 			Red:   ledRGB[0],
 			Green: ledRGB[1],
@@ -107,21 +111,18 @@ func (s *SensorLedProducer) runUpPhase(left, right int) (nleft, nright int, stop
 
 // holdPhase handles the "hold" part, keeping LEDs on. The hold time
 // is extended if new triggers arrive.
-func (s *SensorLedProducer) holdPhase() (lastStartSeen t.Time, stopped bool) {
+func (s *SensorLedProducer) holdPhase() (stopped bool) {
 	for {
-		lastStart := s.getLastTrigger().Timestamp
-		holdUntil := lastStart.Add(s.holdT)
-
-		if t.Now().After(holdUntil) {
-			// Hold time expired
-			return lastStart, false
-		}
-
+		holdUntil := t.Now().Add(s.holdT)
 		select {
-		case <-t.After(t.Until(holdUntil)):
-			// Time expired, loop again to re-check for new triggers
 		case <-s.stopchan:
-			return t.Time{}, true
+			return true // Stop requested
+		case <-t.After(t.Until(holdUntil)):
+			return false
+		case <-s.triggerEvent.Channel():
+			// New trigger arrived, extend hold time
+			// We do not need to do anything here, as the next
+			// iteration of the loop will re-check the hold time.
 		}
 	}
 }
@@ -129,16 +130,10 @@ func (s *SensorLedProducer) holdPhase() (lastStartSeen t.Time, stopped bool) {
 // runDownPhase handles the "run-down" part, turning LEDs off from the
 // edges inwards. It can be interrupted by a new trigger, which
 // signals that the animation should restart.
-func (s *SensorLedProducer) runDownPhase(left, right int, lastStartSeen t.Time) (nleft, nright int, shouldRestart, stopped bool) {
+func (s *SensorLedProducer) runDownPhase(left, right int) (nleft, nright int, shouldRestart, stopped bool) {
 	ticker := t.NewTicker(s.runDownT)
 	defer ticker.Stop()
-
 	for {
-		if s.getLastTrigger().Timestamp.After(lastStartSeen) {
-			// New trigger arrived, restart animation cycle
-			return left, right, true, false
-		}
-
 		if left <= s.ledIndex && left >= 0 {
 			s.setLed(left, Led{})
 		}
@@ -146,22 +141,24 @@ func (s *SensorLedProducer) runDownPhase(left, right int, lastStartSeen t.Time) 
 			s.setLed(right, Led{})
 		}
 		s.ledsChanged.Send(s)
-
 		if left == s.ledIndex && right == s.ledIndex {
-			// Run-down complete, final check for new trigger
-			if s.getLastTrigger().Timestamp.After(lastStartSeen) {
-				return left, right, true, false // restart
-			}
 			return left, right, false, false // normal exit
 		}
-
-		left++
-		right--
+		if left < s.ledIndex {
+			left++
+		}
+		if right > s.ledIndex {
+			right--
+		}
 
 		select {
-		case <-ticker.C:
+		case <-s.triggerEvent.Channel():
+			// New trigger arrived, restart animation cycle
+			return left, right, true, false
 		case <-s.stopchan:
-			return left, right, false, true
+			return left, right, false, true // Stop requested
+		case <-ticker.C:
+			// Continue run-down phase
 		}
 	}
 }
@@ -174,34 +171,41 @@ func (s *SensorLedProducer) runDownPhase(left, right int, lastStartSeen t.Time) 
 // intermediate Start() before finally setting s.isRunning to false and
 // ending the go routine. All this is either guarded directly or
 // indirectly (by calls to s.getLastStart()) by s.updateMutex.
-func (s *SensorLedProducer) runner(trigger *u.Trigger) {
+func (s *SensorLedProducer) runner() {
+	defer log.Printf("   <=== Stopping SensorLedProducer %s", s.GetUID())
 	defer s.setIsRunning(false)
+	defer s.afterprodWg.Done()
 
 	left, right := s.ledIndex, s.ledIndex
 
-	for {
-		var stopped, shouldRestart bool
-		var lastStartSeen t.Time
+	select {
+	case <-s.triggerEvent.Channel():
+		// trigger := s.triggerEvent.Value()
+		for {
+			var stopped, shouldRestart bool
 
-		left, right, stopped = s.runUpPhase(left, right)
-		if stopped {
-			return
-		}
+			left, right, stopped = s.runUpPhase(left, right)
+			if stopped {
+				return
+			}
 
-		lastStartSeen, stopped = s.holdPhase()
-		if stopped {
-			return
-		}
+			stopped = s.holdPhase()
+			if stopped {
+				return
+			}
 
-		left, right, shouldRestart, stopped = s.runDownPhase(left, right, lastStartSeen)
-		if stopped {
-			return
-		}
+			left, right, shouldRestart, stopped = s.runDownPhase(left, right)
+			if stopped {
+				return
+			}
 
-		if !shouldRestart {
-			// Animation finished normally
-			return
+			if !shouldRestart {
+				// Animation finished normally
+				return
+			}
+			// A new trigger arrived during run-down, so restart the cycle.
 		}
-		// A new trigger arrived during run-down, so restart the cycle.
+	case <-s.stopchan:
+		return
 	}
 }
