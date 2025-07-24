@@ -32,21 +32,15 @@ func NewNightlightProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], 
 	return inst
 }
 
-func (s *NightlightProducer) setNightLed(on bool, index int) {
-	if on {
-		for i := range s.leds {
-			s.setLed(i, s.ledNight[index])
-		}
-	} else {
-		for i := range s.leds {
-			s.setLed(i, Led{})
-		}
+func (s *NightlightProducer) setNightLed(index int) {
+	for i := range s.leds {
+		s.setLed(i, s.ledNight[index])
 	}
 }
 
-func (s *NightlightProducer) runner(trigger *u.Trigger) {
+func (s *NightlightProducer) runner() {
 	defer func() {
-		s.setNightLed(false, 0)
+		s.leds = make([]Led, len(s.leds)) // Reset LEDs
 		s.ledsChanged.Send(s)
 		s.setIsRunning(false)
 	}()
@@ -61,7 +55,7 @@ func (s *NightlightProducer) runner(trigger *u.Trigger) {
 		var wakeupAfter time.Duration
 		if now.After(rise) && now.Before(set) {
 			// During the day - between sunrise and sunset
-			s.setNightLed(false, 0)
+			s.leds = make([]Led, len(s.leds)) // Reset LEDs
 			s.ledsChanged.Send(s)
 			wakeupAfter = set.Sub(now)
 		} else {
@@ -86,7 +80,7 @@ func (s *NightlightProducer) runner(trigger *u.Trigger) {
 				tillNextInterval = set.Add(time.Duration((currInterval + 1)) * waitIntervalDuration).Sub(now)
 			}
 			// log.Printf("Current NightLED index %d : waitInterval %d : tillNextInterval %d", currInterval, waitIntervalDuration, tillNextInterval)
-			s.setNightLed(true, currInterval)
+			s.setNightLed(currInterval)
 			s.ledsChanged.Send(s)
 			// + 1s maybe not needed, but so we are sure to really be
 			// in the next interval
