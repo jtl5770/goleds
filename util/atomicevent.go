@@ -20,8 +20,6 @@ func NewAtomicEvent[T any]() *AtomicEvent[T] {
 }
 
 // Send updates with the latest event. It is non-blocking.
-// If a notification is already pending (i.e., the 'notify' channel is full),
-// it will simply overwrite the internal value without sending another notification.
 func (ae *AtomicEvent[T]) Send(event T) {
 	ae.mu.Lock()
 	defer ae.mu.Unlock()
@@ -30,26 +28,26 @@ func (ae *AtomicEvent[T]) Send(event T) {
 
 	select {
 	case ae.notify <- struct{}{}:
-		// Notification sent successfully. This happens if the 'notify' channel
-		// was empty (no pending notification).
+		// Notification sent successfully.
 	default:
-		// The 'notify' channel was already full, meaning a notification
-		// is already pending. No need to send another one; the receiver
-		// will still get the latest value when it processes the pending notification.
+		// Channel was already full, notification is already pending.
 	}
 }
 
-// Channel returns the notification channel.
-// This allows the caller to use it in a select statement.
-// After receiving from this channel, the caller should call Value() to get the latest event.
+// Channel returns the notification channel for use in select statements.
 func (ae *AtomicEvent[T]) Channel() <-chan struct{} {
 	return ae.notify
 }
 
 // Value returns the current latest event.
-// This method is safe for concurrent access.
 func (ae *AtomicEvent[T]) Value() T {
 	ae.mu.Lock()
 	defer ae.mu.Unlock()
 	return ae.value
+}
+
+// HasPending checks if a notification is waiting to be consumed.
+// This is a non-destructive check.
+func (ae *AtomicEvent[T]) HasPending() bool {
+	return len(ae.notify) > 0
 }

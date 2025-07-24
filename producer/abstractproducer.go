@@ -11,25 +11,16 @@ import (
 // Implementation of common and shared functionality between the
 // concrete Implementations of the ledproducer interface
 type AbstractProducer struct {
-	uid       string
-	leds      []Led
-	isRunning bool
-	hasExited bool
-	// Guards getting and setting LED values
-	ledsMutex sync.RWMutex
-	// Guards changes to lastStart & isRunning & hasExited
-	updateMutex sync.RWMutex
-	ledsChanged *u.AtomicEvent[LedProducer]
-	// this channel will be signaled via the Stop method. Your runfunc
-	// MUST listen to this channel and exit when it receives a signal
-	stopchan chan bool
-	// this AtomicEvent contains the channel that is written to by the
-	// SendTrigger(*u.Trigger) method whenever it is called. Your
-	// runfunc MAY read from this channel if it is interested in those
-	// triggers. Only the newest Trigger will be available.
+	uid          string
+	leds         []Led
+	isRunning    bool
+	hasExited    bool
+	ledsMutex    sync.RWMutex
+	updateMutex  sync.RWMutex
+	ledsChanged  *u.AtomicEvent[LedProducer]
+	stopchan     chan bool
 	triggerEvent *u.AtomicEvent[*u.Trigger]
-	// the method Start() should call. It is set via NewAbstractProducer.
-	runfunc func()
+	runfunc      func()
 }
 
 // Creates a new instance of AbstractProducer. The uid must be unique
@@ -46,7 +37,6 @@ func NewAbstractProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ru
 }
 
 // Sets a single LED at index index to value
-// Guarded by s.ledsMutex
 func (s *AbstractProducer) setLed(index int, value Led) {
 	s.ledsMutex.Lock()
 	defer s.ledsMutex.Unlock()
@@ -55,7 +45,6 @@ func (s *AbstractProducer) setLed(index int, value Led) {
 }
 
 // Returns a slice with the current values of all the LEDs.
-// Guarded by s.ledsMutex
 func (s *AbstractProducer) GetLeds() []Led {
 	s.ledsMutex.RLock()
 	defer s.ledsMutex.RUnlock()
@@ -69,24 +58,41 @@ func (s *AbstractProducer) GetUID() string {
 	return s.uid
 }
 
-// Used to start the main worker process as a go routine. Does never
-// block.  When the worker go routine is already running, it does
-// nothing besides updating s.lastTrigger to the current trigger. If the
-// worker go routine is started and s.isRunning is set to true, no
-// intermediate call to Start() will be able to start another worker
-// concurrently.  The method is guarded by s.updateMutex
-// IMPORTANT: After constructing your concrete instance you MUST set
-// AbstractProducer.runfunc to the concrete worker method to call.
+// Start is the main entry point to begin the producer's execution.
 func (s *AbstractProducer) Start() {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 
 	if !s.isRunning && !s.hasExited {
 		s.isRunning = true
-		go s.runfunc()
+		go s.runner()
 	} else if s.hasExited || s.isRunning {
 		log.Println("Start() called on AbstractProducer that is already running or has exited:", s.GetUID())
 	}
+}
+
+// runner is the central goroutine for a producer. It calls the concrete
+// implementation's runfunc and includes logic to handle the race condition
+// where a trigger arrives just as the animation is finishing.
+func (s *AbstractProducer) runner() {
+	defer func() {
+		s.updateMutex.Lock()
+		defer s.updateMutex.Unlock()
+
+		// This is the core of the race condition fix.
+		// After the runfunc completes, we do a final non-destructive check for a trigger.
+		if s.triggerEvent.HasPending() {
+			// A trigger was pending. Relaunch the runner to handle it.
+			// The pending notification remains in the channel for the new runner to consume.
+			log.Printf("Relaunching runner for %s due to late trigger", s.uid)
+			go s.runner()
+		} else {
+			// No trigger was pending, it's safe to stop.
+			s.isRunning = false
+		}
+	}()
+
+	s.runfunc()
 }
 
 func (s *AbstractProducer) SendTrigger(trigger *u.Trigger) {
@@ -126,10 +132,4 @@ func (s *AbstractProducer) GetIsRunning() bool {
 	s.updateMutex.RLock()
 	defer s.updateMutex.RUnlock()
 	return s.isRunning
-}
-
-func (s *AbstractProducer) setIsRunning(running bool) {
-	s.updateMutex.Lock()
-	defer s.updateMutex.Unlock()
-	s.isRunning = running
 }

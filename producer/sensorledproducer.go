@@ -173,14 +173,11 @@ func (s *SensorLedProducer) runDownPhase(left, right int) (nleft, nright int, sh
 // indirectly (by calls to s.getLastStart()) by s.updateMutex.
 func (s *SensorLedProducer) runner() {
 	defer log.Printf("   <=== Stopping SensorLedProducer %s", s.GetUID())
-	defer s.setIsRunning(false)
 	defer s.afterprodWg.Done()
-
-	left, right := s.ledIndex, s.ledIndex
 
 	select {
 	case <-s.triggerEvent.Channel():
-		// trigger := s.triggerEvent.Value()
+		left, right := s.ledIndex, s.ledIndex
 		for {
 			var stopped, shouldRestart bool
 
@@ -200,10 +197,10 @@ func (s *SensorLedProducer) runner() {
 			}
 
 			if !shouldRestart {
-				// Animation finished normally
+				// Animation finished normally, exit the cycle
 				return
 			}
-			// A new trigger arrived during run-down, so restart the cycle.
+			// A new trigger arrived during run-down, so restart animation.
 		}
 	case <-s.stopchan:
 		return
