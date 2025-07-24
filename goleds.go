@@ -147,28 +147,18 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	ledWriter := make(chan []p.Led, 1)
 	ledsTotal := a.platform.GetLedsTotal()
 
-	sensorledp := conf.SensorLED.Enabled
-	nightledp := conf.NightLED.Enabled
-	multiblobledp := conf.MultiBlobLED.Enabled
-	cylonledp := conf.CylonLED.Enabled
-
-	var prodnight *p.NightlightProducer = nil
-	var prodmulti *p.MultiBlobProducer = nil
-	var prodcylon *p.CylonProducer = nil
-
 	// This producer runs all the time and will be started right away here
-	if nightledp {
+	if conf.NightLED.Enabled {
 		cfg := conf.NightLED
-		// The Nightlight producer creates a permanent glow during night time
-		prodnight = p.NewNightlightProducer(NIGHT_LED_UID, ledReader,
+		prodnight := p.NewNightlightProducer(NIGHT_LED_UID, ledReader,
 			ledsTotal, cfg.Latitude, cfg.Longitude, cfg.LedRGB)
 		a.ledproducers[NIGHT_LED_UID] = prodnight
 		prodnight.Start()
 	}
 
 	// These producers will be started and stopped on demand depending
-	// on application state
-	if multiblobledp {
+	// on the running state of the SensorLedProducers.
+	if conf.MultiBlobLED.Enabled {
 		cfg := conf.MultiBlobLED
 		prodmulti := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader,
 			ledsTotal, cfg.Duration, cfg.Delay, cfg.BlobCfg)
@@ -176,16 +166,16 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 		a.afterProd = append(a.afterProd, prodmulti)
 	}
 
-	if cylonledp {
+	if conf.CylonLED.Enabled {
 		cfg := conf.CylonLED
-		prodcylon = p.NewCylonProducer(CYLON_LED_UID, ledReader, ledsTotal,
+		prodcylon := p.NewCylonProducer(CYLON_LED_UID, ledReader, ledsTotal,
 			cfg.Duration, cfg.Delay, cfg.Step, cfg.Width, cfg.LedRGB)
 		a.ledproducers[CYLON_LED_UID] = prodcylon
 		a.afterProd = append(a.afterProd, prodcylon)
 	}
 
 	// This producer reacts on sensor triggers to light the stripes.
-	if sensorledp {
+	if conf.SensorLED.Enabled {
 		cfg := conf.SensorLED
 		a.sensorProducers = make([]p.LedProducer, 0, len(a.platform.GetSensorLedIndices()))
 		for uid, ledIndex := range a.platform.GetSensorLedIndices() {
