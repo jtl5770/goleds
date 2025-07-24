@@ -57,8 +57,6 @@ func (s *TUIPlatform) Start() error {
 
 func (s *TUIPlatform) Stop() {
 	if s.app != nil {
-		// Restore logger to stdout before stopping
-		log.SetOutput(os.Stderr)
 		s.app.Stop()
 	}
 }
@@ -79,13 +77,8 @@ func (s *TUIPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
 	// In the TUI platform, sensor events are triggered by key presses,
 	// not by a continuous reading loop. This function is here to satisfy the
 	// platform.Platform interface, but it doesn't need to do anything.
-	for {
-		select {
-		case <-stopSignal:
-			log.Println("Ending SensorDriver go-routine (TUI)")
-			return
-		}
-	}
+	<-stopSignal
+	log.Println("Ending SensorDriver go-routine (TUI)")
 }
 
 // getIntroText generates the dynamic text for the top info pane.

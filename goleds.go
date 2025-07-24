@@ -83,19 +83,20 @@ func main() {
 
 	signal.Notify(ossignal, os.Interrupt, syscall.SIGHUP)
 
-	for {
-		select {
-		case sig := <-ossignal:
-			switch sig {
-			case os.Interrupt:
-				log.Println("Exiting...")
-				app.shutdown()
-				os.Exit(0)
-			case syscall.SIGHUP:
-				log.Println("Resetting...")
-				app.shutdown()
-				app.initialise(*cfile, *realp, *sensp)
-			}
+	for sig := range ossignal {
+		switch sig {
+		case os.Interrupt:
+			// Restore logger to stderr
+			log.SetOutput(os.Stderr)
+			log.Println("Exiting...")
+			app.shutdown()
+			os.Exit(0)
+		case syscall.SIGHUP:
+			// Restore logger to stderr
+			log.SetOutput(os.Stderr)
+			log.Println("Resetting...")
+			app.shutdown()
+			app.initialise(*cfile, *realp, *sensp)
 		}
 	}
 }
