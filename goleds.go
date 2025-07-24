@@ -59,9 +59,7 @@ type App struct {
 // NewApp creates a new App instance
 func NewApp(ossignal chan os.Signal) *App {
 	return &App{
-		ossignal:           ossignal,
-		afterProdIsRunning: false,
-		afterProd:          make([]p.LedProducer, 0),
+		ossignal: ossignal,
 	}
 }
 
@@ -109,6 +107,8 @@ func main() {
 func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	log.Println("Initializing...")
 
+	a.afterProdIsRunning = false
+	a.afterProd = make([]p.LedProducer, 0)
 	a.stopsignal = make(chan bool)
 	a.ledproducers = make(map[string]p.LedProducer)
 
