@@ -110,6 +110,18 @@ SensorLED:
   HoldTime: 10s
   # The color and intensity of the illuminated LEDs.
   LedRGB: [70, 70, 70]
+  # "Latch Mode" can be triggered by holding a hand in front of a sensor.
+  # This will turn on the entire strip with a brighter light for a longer duration.
+  # Triggering it again while active will turn it off.
+  LatchEnabled: true
+  # The sensor must read above this value to be considered for latch mode.
+  LatchTriggerValue: 512
+  # How long the sensor must be held above the LatchTriggerValue to activate.
+  LatchTriggerDelay: 3s
+  # How long the strip stays lit in latch mode (if not toggled off early).
+  LatchTime: 5m
+  # The color and intensity of the light in latch mode.
+  LatchLedRGB: [140, 140, 140]
 
 # NightLED: Provides a continuous, gentle glow between sunset and sunrise.
 NightLED:

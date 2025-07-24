@@ -14,11 +14,16 @@ var CONFIG *Config
 
 // SensorLEDConfig defines the configuration for the SensorLED producer.
 type SensorLEDConfig struct {
-	Enabled      bool          `yaml:"Enabled"`
-	RunUpDelay   time.Duration `yaml:"RunUpDelay"`
-	RunDownDelay time.Duration `yaml:"RunDownDelay"`
-	HoldTime     time.Duration `yaml:"HoldTime"`
-	LedRGB       []float64     `yaml:"LedRGB"`
+	Enabled           bool          `yaml:"Enabled"`
+	RunUpDelay        time.Duration `yaml:"RunUpDelay"`
+	RunDownDelay      time.Duration `yaml:"RunDownDelay"`
+	HoldTime          time.Duration `yaml:"HoldTime"`
+	LedRGB            []float64     `yaml:"LedRGB"`
+	LatchEnabled      bool          `yaml:"LatchEnabled"`
+	LatchTriggerValue int           `yaml:"LatchTriggerValue"`
+	LatchTriggerDelay time.Duration `yaml:"LatchTriggerDelay"`
+	LatchTime         time.Duration `yaml:"LatchTime"`
+	LatchLedRGB       []float64     `yaml:"LatchLedRGB"`
 }
 
 // NightLEDConfig defines the configuration for the NightLED producer.
