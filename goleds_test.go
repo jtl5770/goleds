@@ -153,7 +153,7 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	mockMultiBlobProducer := NewMockLedProducer(MULTI_BLOB_UID)
 	app.ledproducers["sensor"] = mockSensorProducer
 	app.ledproducers[MULTI_BLOB_UID] = mockMultiBlobProducer
-	app.sensorProducers = []p.LedProducer{mockSensorProducer}
+	app.sensorProd = []p.LedProducer{mockSensorProducer}
 
 	ledReader := u.NewAtomicEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)

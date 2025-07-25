@@ -52,12 +52,12 @@ const (
 // App holds the global state of the application
 type App struct {
 	ledproducers       map[string]p.LedProducer
-	sensorProducers    []p.LedProducer
+	sensorProd         []p.LedProducer
 	stopsignal         chan bool
 	shutdownWg         sync.WaitGroup
 	ossignal           chan os.Signal
 	platform           pl.Platform
-	afterprodWg        sync.WaitGroup
+	sensorProdWg       sync.WaitGroup
 	afterpMutex        sync.RWMutex
 	afterProdIsRunning bool
 	afterProd          []p.LedProducer
@@ -182,12 +182,12 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	// This producer reacts on sensor triggers to light the stripes.
 	if conf.SensorLED.Enabled {
 		cfg := conf.SensorLED
-		a.sensorProducers = make([]p.LedProducer, 0, len(a.platform.GetSensorLedIndices()))
+		a.sensorProd = make([]p.LedProducer, 0, len(a.platform.GetSensorLedIndices()))
 		for uid, ledIndex := range a.platform.GetSensorLedIndices() {
 			producer := p.NewSensorLedProducer(uid, ledIndex, ledReader,
-				ledsTotal, cfg, &a.afterprodWg)
+				ledsTotal, cfg, &a.sensorProdWg)
 			a.ledproducers[uid] = producer
-			a.sensorProducers = append(a.sensorProducers, producer)
+			a.sensorProd = append(a.sensorProd, producer)
 		}
 	}
 
@@ -290,7 +290,7 @@ func (a *App) fireController() {
 						}
 					}
 					log.Printf("   ===> Starting SensorLedProducer %s", trigger.ID)
-					a.afterprodWg.Add(1)
+					a.sensorProdWg.Add(1)
 					producer.Start()
 					if !a.afterProdIsRunning {
 						log.Printf("      ---> Starting afterprodRunner go-routine")
@@ -317,7 +317,7 @@ func (a *App) afterProdRunner() {
 	}()
 
 	log.Println("         --> In afterProdRunner go-routine... Blocking on WaitGroup")
-	a.afterprodWg.Wait()
+	a.sensorProdWg.Wait()
 	log.Println("         <-- WaitGroup unblocked - ending afterProdRunner go-routing")
 	a.afterpMutex.Lock()
 	for _, prod := range a.afterProd {
