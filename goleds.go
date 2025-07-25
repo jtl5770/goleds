@@ -290,7 +290,6 @@ func (a *App) fireController() {
 						}
 					}
 					log.Printf("   ===> Starting SensorLedProducer %s", trigger.ID)
-					a.sensorProdWg.Add(1)
 					producer.Start()
 					if !a.afterProdIsRunning {
 						log.Printf("      ---> Starting afterprodRunner go-routine")

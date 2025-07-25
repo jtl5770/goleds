@@ -20,6 +20,7 @@ type AbstractProducer struct {
 	ledsChanged  *u.AtomicEvent[LedProducer]
 	stopchan     chan bool
 	triggerEvent *u.AtomicEvent[*u.Trigger]
+	endWg        *sync.WaitGroup
 	runfunc      func()
 }
 
@@ -32,6 +33,7 @@ func NewAbstractProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ru
 		stopchan:     make(chan bool),
 		runfunc:      runfunc,
 		triggerEvent: u.NewAtomicEvent[*u.Trigger](),
+		endWg:        &sync.WaitGroup{},
 	}
 	return &inst
 }
@@ -65,6 +67,7 @@ func (s *AbstractProducer) Start() {
 
 	if !s.isRunning && !s.hasExited {
 		s.isRunning = true
+		s.endWg.Add(1)
 		go s.runner()
 	} else if s.hasExited || s.isRunning {
 		log.Println("Start() called on AbstractProducer that is already running or has exited:", s.GetUID())
@@ -89,6 +92,7 @@ func (s *AbstractProducer) runner() {
 		} else {
 			// No trigger was pending, it's safe to stop.
 			s.isRunning = false
+			s.endWg.Done()
 		}
 	}()
 

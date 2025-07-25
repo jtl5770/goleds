@@ -59,7 +59,6 @@ type SensorLedProducer struct {
 	runUpT            t.Duration
 	runDownT          t.Duration
 	ledOn             Led
-	afterprodWg       *sync.WaitGroup
 	latchEnabled      bool
 	latchTriggerValue int
 	latchTriggerDelay t.Duration
@@ -67,13 +66,12 @@ type SensorLedProducer struct {
 	latchLed          Led
 }
 
-func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, cfg c.SensorLEDConfig, afterprodwg *sync.WaitGroup) *SensorLedProducer {
+func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, cfg c.SensorLEDConfig, endwg *sync.WaitGroup) *SensorLedProducer {
 	inst := &SensorLedProducer{
 		ledIndex:          index,
 		holdT:             cfg.HoldTime,
 		runUpT:            cfg.RunUpDelay,
 		runDownT:          cfg.RunDownDelay,
-		afterprodWg:       afterprodwg,
 		latchEnabled:      cfg.LatchEnabled,
 		latchTriggerValue: cfg.LatchTriggerValue,
 		latchTriggerDelay: cfg.LatchTriggerDelay,
@@ -90,6 +88,7 @@ func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicEvent[LedP
 		},
 	}
 	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
+	inst.AbstractProducer.endWg = endwg
 	return inst
 }
 
@@ -266,7 +265,6 @@ func (s *SensorLedProducer) runDownPhase(left, right int) (nleft, nright int, sh
 // indirectly (by calls to s.getLastStart()) by s.updateMutex.
 func (s *SensorLedProducer) runner() {
 	defer log.Printf("   <=== Stopping SensorLedProducer %s", s.GetUID())
-	defer s.afterprodWg.Done()
 
 	select {
 	case <-s.triggerEvent.Channel():
