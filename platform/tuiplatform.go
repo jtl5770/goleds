@@ -70,12 +70,12 @@ func (s *TUIPlatform) DisplayLeds(leds []producer.Led) {
 	s.tviewapp.QueueUpdateDraw(s.simulateLedDisplay)
 }
 
-func (s *TUIPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
+func (s *TUIPlatform) SensorDriver(stopchan chan bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 	// In the TUI platform, sensor events are triggered by key presses,
 	// not by a continuous reading loop. This function is here to satisfy the
 	// platform.Platform interface, but it doesn't need to do anything.
-	<-stopSignal
+	<-stopchan
 	log.Println("Ending SensorDriver go-routine (TUI)")
 }
 

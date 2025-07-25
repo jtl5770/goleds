@@ -89,13 +89,11 @@ func main() {
 	for sig := range ossignal {
 		switch sig {
 		case os.Interrupt:
-			// Restore logger to stderr
 			log.SetOutput(os.Stderr)
 			log.Println("Exiting...")
 			app.shutdown()
 			os.Exit(0)
 		case syscall.SIGHUP:
-			// Restore logger to stderr
 			log.SetOutput(os.Stderr)
 			log.Println("Resetting...")
 			app.shutdown()
