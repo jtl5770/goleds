@@ -1,21 +1,28 @@
-// A package to read infrared sensor data and drive LED stripes.
-// The hardware interaction is abstracted through a platform interface,
-// allowing the application to run on real Raspberry Pi hardware or in a
-// terminal-based simulation.
+// A package to read infrared sensor data and drive LED stripes.  The
+// hardware interaction is abstracted through a platform interface,
+// allowing the application to run on real Raspberry Pi hardware or in
+// a terminal-based simulation.
 //
 // The core logic is organized into several packages:
-//   - platform: Defines the interface for hardware interaction and provides
-//     implementations for Raspberry Pi (rpi) and a terminal UI (tui).
-//   - producer: Contains different animation producers that generate LED patterns.
-//   - config: Handles loading and parsing of the application configuration from a YAML file.
 //
-// The application is configured via a file (default: config.yml) and supports
-// dynamic reloading of the configuration on SIGHUP signals. It can be gracefully
-// shut down with an Interrupt signal.
+//   - platform: Defines the interface for hardware interaction and
+//     provides implementations for Raspberry Pi (rpi) and a terminal
+//     UI (tui).
 //
-// The main functionality is to read sensor data from the chosen platform and
-// drive the LED stripes using various producers. Multiple producers can be active
-// simultaneously, and their outputs are combined to create complex lighting effects.
+//   - producer: Contains different animation producers that generate
+//     LED patterns.
+//
+//   - config: Handles loading and parsing of the application
+//     configuration from a YAML file.
+//
+// The application is configured via a file (default: config.yml) and
+// supports dynamic reloading of the configuration on SIGHUP
+// signals. It can be gracefully shut down with an Interrupt signal.
+//
+// The main functionality is to read sensor data from the chosen
+// platform and drive the LED stripes using various
+// producers. Multiple producers can be active simultaneously, and
+// their outputs are combined to create complex lighting effects.
 package main
 
 import (
