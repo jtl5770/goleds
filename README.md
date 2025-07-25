@@ -77,7 +77,7 @@ This powerful layering allows for complex and interacting visual effects.
 The original setup for this project was a hallway with a door in the
 middle, splitting the LED strip into two physical segments.
 
-| Stripe 1             | Door                 |              Stripe 2 |
+| Strip 1              | Door                 |               Strip 2 |
 |:---------------------|:--------------------:|----------------------:|
 | LED 0-69             | "virtual" LED 70-110 |           LED 111-164 |
 | Sensor S0 (index 0)  |                      | Sensor S2 (index 111) |
