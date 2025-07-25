@@ -29,14 +29,12 @@ type TUIPlatform struct {
 	logView         *tview.TextView
 	ossignalChan    chan os.Signal
 	chartosensor    map[string]string
-	stopChan        chan bool
 	tuiTriggerValue int
 }
 
 func NewTUIPlatform(conf *config.Config, ossignalchan chan os.Signal, stopchan chan bool) *TUIPlatform {
 	inst := &TUIPlatform{
 		ossignalChan:    ossignalchan,
-		stopChan:        stopchan,
 		tuiTriggerValue: 200, // Default trigger value
 	}
 	inst.AbstractPlatform = NewAbstractPlatform(conf, inst.DisplayLeds)
