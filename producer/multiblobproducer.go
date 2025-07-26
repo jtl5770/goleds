@@ -3,6 +3,7 @@ package producer
 import (
 	"log"
 	"math"
+	"sync"
 	"time"
 
 	c "lautenbacher.net/goleds/config"
@@ -62,12 +63,15 @@ type MultiBlobProducer struct {
 	delay    time.Duration
 }
 
-func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, duration, delay time.Duration, blobCfg map[string]c.BlobCfg) *MultiBlobProducer {
+func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, duration, delay time.Duration, blobCfg map[string]c.BlobCfg, endwg *sync.WaitGroup) *MultiBlobProducer {
 	inst := &MultiBlobProducer{
 		duration: duration,
 		delay:    delay,
 	}
 	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
+	if endwg != nil {
+		inst.AbstractProducer.endWg = endwg
+	}
 
 	inst.allblobs = make(map[string]*Blob)
 	for uid, cfg := range blobCfg {

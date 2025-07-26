@@ -88,7 +88,9 @@ func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicEvent[LedP
 		},
 	}
 	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
-	inst.AbstractProducer.endWg = endwg
+	if endwg != nil {
+		inst.AbstractProducer.endWg = endwg
+	}
 	return inst
 }
 

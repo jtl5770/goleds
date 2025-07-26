@@ -20,7 +20,7 @@ func TestNewMultiBlobProducer(t *testing.T) {
 		"blob2": {DeltaX: -0.2, X: 8.0, Width: 1.5, LedRGB: []float64{0, 255, 0}},
 	}
 
-	p := NewMultiBlobProducer("test_multiblob", ledsChanged, ledsTotal, duration, delay, blobCfg)
+	p := NewMultiBlobProducer("test_multiblob", ledsChanged, ledsTotal, duration, delay, blobCfg, nil)
 
 	assert.Equal(t, "test_multiblob", p.GetUID())
 	assert.Len(t, p.leds, ledsTotal)

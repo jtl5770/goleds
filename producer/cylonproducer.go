@@ -2,6 +2,7 @@ package producer
 
 import (
 	"math"
+	"sync"
 	"time"
 
 	u "lautenbacher.net/goleds/util"
@@ -18,7 +19,7 @@ type CylonProducer struct {
 	delay     time.Duration
 }
 
-func NewCylonProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, duration time.Duration, delay time.Duration, step float64, width int, ledRGB []float64) *CylonProducer {
+func NewCylonProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, duration time.Duration, delay time.Duration, step float64, width int, ledRGB []float64, endwg *sync.WaitGroup) *CylonProducer {
 	inst := &CylonProducer{
 		color: Led{
 			Red:   ledRGB[0],
@@ -33,6 +34,9 @@ func NewCylonProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ledsT
 	}
 	inst.radius = width / 2
 	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
+	if endwg != nil {
+		inst.AbstractProducer.endWg = endwg
+	}
 
 	return inst
 }
