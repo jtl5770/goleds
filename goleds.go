@@ -57,10 +57,13 @@ type App struct {
 	shutdownWg         sync.WaitGroup
 	ossignal           chan os.Signal
 	platform           pl.Platform
+	prodMutex          sync.RWMutex
 	sensorProdWg       sync.WaitGroup
-	afterpMutex        sync.RWMutex
 	afterProdIsRunning bool
 	afterProd          []p.LedProducer
+	afterProdWg        sync.WaitGroup
+	permProdIsRunning  bool
+	permProd           []p.LedProducer
 }
 
 // NewApp creates a new App instance
@@ -114,6 +117,8 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 
 	a.afterProdIsRunning = false
 	a.afterProd = make([]p.LedProducer, 0)
+	a.permProdIsRunning = false
+	a.permProd = make([]p.LedProducer, 0)
 	a.stopsignal = make(chan bool)
 	a.ledproducers = make(map[string]p.LedProducer)
 
@@ -158,6 +163,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 		prodnight := p.NewNightlightProducer(NIGHT_LED_UID, ledReader,
 			ledsTotal, cfg.Latitude, cfg.Longitude, cfg.LedRGB)
 		a.ledproducers[NIGHT_LED_UID] = prodnight
+		a.permProd = append(a.permProd, prodnight)
 		prodnight.Start()
 	}
 
@@ -166,7 +172,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	if conf.MultiBlobLED.Enabled {
 		cfg := conf.MultiBlobLED
 		prodmulti := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader,
-			ledsTotal, cfg.Duration, cfg.Delay, cfg.BlobCfg)
+			ledsTotal, cfg.Duration, cfg.Delay, cfg.BlobCfg, &a.afterProdWg)
 		a.ledproducers[MULTI_BLOB_UID] = prodmulti
 		a.afterProd = append(a.afterProd, prodmulti)
 	}
@@ -174,7 +180,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	if conf.CylonLED.Enabled {
 		cfg := conf.CylonLED
 		prodcylon := p.NewCylonProducer(CYLON_LED_UID, ledReader, ledsTotal,
-			cfg.Duration, cfg.Delay, cfg.Step, cfg.Width, cfg.LedRGB)
+			cfg.Duration, cfg.Delay, cfg.Step, cfg.Width, cfg.LedRGB, &a.afterProdWg)
 		a.ledproducers[CYLON_LED_UID] = prodcylon
 		a.afterProd = append(a.afterProd, prodcylon)
 	}
@@ -281,11 +287,17 @@ func (a *App) fireController() {
 		select {
 		case trigger := <-a.platform.GetSensorEvents():
 			if producer, ok := a.ledproducers[trigger.ID]; ok {
-				a.afterpMutex.Lock()
+				a.prodMutex.Lock()
 				if !producer.GetIsRunning() {
 					for _, prod := range a.afterProd {
 						if prod.GetIsRunning() {
-							log.Printf("===> Stopping afterprod %s", prod.GetUID())
+							log.Printf("===> Stopping after Producer %s", prod.GetUID())
+							prod.Stop() // This will signal the go-routine to stop
+						}
+					}
+					for _, prod := range a.permProd {
+						if prod.GetIsRunning() {
+							log.Printf("===> Stopping perm Producer %s", prod.GetUID())
 							prod.Stop() // This will signal the go-routine to stop
 						}
 					}
@@ -294,11 +306,11 @@ func (a *App) fireController() {
 					if !a.afterProdIsRunning {
 						log.Printf("      ---> Starting afterprodRunner go-routine")
 						go a.afterProdRunner()
+						a.afterProdIsRunning = true
 					}
-					a.afterProdIsRunning = true
 				}
 				producer.SendTrigger(trigger)
-				a.afterpMutex.Unlock()
+				a.prodMutex.Unlock()
 			} else {
 				log.Printf("Unknown UID %s", trigger.ID)
 			}
@@ -310,17 +322,37 @@ func (a *App) fireController() {
 }
 
 func (a *App) afterProdRunner() {
-	defer func() {
-		a.afterProdIsRunning = false
-		a.afterpMutex.Unlock()
-	}()
-
-	log.Println("         --> In afterProdRunner go-routine... Blocking on WaitGroup")
+	log.Println("         --> In afterProdRunner go-routine... Blocking on WaitGroup sensorProdWg")
 	a.sensorProdWg.Wait()
-	log.Println("         <-- WaitGroup unblocked - ending afterProdRunner go-routing")
-	a.afterpMutex.Lock()
+	log.Println("         <-- sensorProdWg unblocked - ending afterProdRunner go-routing")
+	a.prodMutex.Lock()
 	for _, prod := range a.afterProd {
 		log.Printf("===> Starting afterProd %s", prod.GetUID())
-		prod.Start() // This will start the producer
+		prod.Start()
 	}
+	go a.permProdRunner()
+	a.afterProdIsRunning = false
+	a.prodMutex.Unlock()
+}
+
+func (a *App) permProdRunner() {
+	log.Println("            --> In permProdRunner go-routine... Blocking on WaitGroup afterProdWg")
+	a.afterProdWg.Wait()
+	log.Println("            <-- afterProdWg unblocked - ending permProdRunner go-routing")
+	a.prodMutex.Lock()
+	s_running := false
+	for _, prod := range a.sensorProd {
+		s_running = s_running || prod.GetIsRunning()
+	}
+	if !s_running {
+		for _, prod := range a.permProd {
+			log.Printf("===> Starting permProd %s", prod.GetUID())
+			prod.Start()
+		}
+	} else {
+		log.Println("===> Not starting permProd, because SensorLedProducers are running")
+	}
+
+	a.permProdIsRunning = false
+	a.prodMutex.Unlock()
 }
