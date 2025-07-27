@@ -164,7 +164,7 @@ ClockLED:
   # Which LED to use as the "end" of the clock. (hour: 11 and minute: 59)
   EndLed: 69
   LedHour: [75, 0, 0]
-  LedMinute: [0, 75, 0]
+  LedMinute: [40, 35, 0]
 
 # CylonLED: A simple producer that creates a red "eye" moving back and forth,
 # inspired by Battlestar Galactica's Cylons. A good starting point for
