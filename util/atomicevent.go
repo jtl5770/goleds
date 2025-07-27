@@ -92,10 +92,11 @@ func (ae *AtomicMapEvent[T]) Channel() <-chan struct{} {
 // Value returns the current latest event.
 func (ae *AtomicMapEvent[T]) Value() map[string]T {
 	ae.mu.Lock()
-	defer ae.mu.Unlock()
-	ret := make(map[string]T, len(ae.value))
-	maps.Copy(ret, ae.value)
-	return ret
+	defer func() {
+		clear(ae.value)
+		ae.mu.Unlock()
+	}()
+	return maps.Clone(ae.value)
 }
 
 // HasPending checks if a notification is waiting to be consumed.

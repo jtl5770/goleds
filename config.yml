@@ -156,6 +156,16 @@ MultiBlobLED:
     BlobBlue: { DeltaX: 0.4, X: 130, Width: 768, LedRGB: [0, 0, 40] }
     BlobRed2: { DeltaX: -0.2, X: 150, Width: 512, LedRGB: [30, 0, 0] }
 
+# ClockLED: A simple producer that creates a clock-like effect, 
+ClockLED:
+  Enabled: true
+  # Which LED to use as the "start" of the clock. (hour: 0 and minute: 0)
+  StartLed: 0
+  # Which LED to use as the "end" of the clock. (hour: 11 and minute: 59)
+  EndLed: 69
+  LedHour: [75, 0, 0]
+  LedMinute: [0, 75, 0]
+
 # CylonLED: A simple producer that creates a red "eye" moving back and forth,
 # inspired by Battlestar Galactica's Cylons. A good starting point for
 # creating your own custom producers.
