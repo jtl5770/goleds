@@ -1,6 +1,7 @@
 package util
 
 import (
+	"maps"
 	"sync"
 )
 
@@ -93,9 +94,7 @@ func (ae *AtomicMapEvent[T]) Value() map[string]T {
 	ae.mu.Lock()
 	defer ae.mu.Unlock()
 	ret := make(map[string]T, len(ae.value))
-	for key, value := range ae.value {
-		ret[key] = value
-	}
+	maps.Copy(ret, ae.value)
 	return ret
 }
 
