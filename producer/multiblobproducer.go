@@ -63,7 +63,7 @@ type MultiBlobProducer struct {
 	delay    time.Duration
 }
 
-func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, duration, delay time.Duration, blobCfg map[string]c.BlobCfg, endwg *sync.WaitGroup) *MultiBlobProducer {
+func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, duration, delay time.Duration, blobCfg map[string]c.BlobCfg, endwg *sync.WaitGroup) *MultiBlobProducer {
 	inst := &MultiBlobProducer{
 		duration: duration,
 		delay:    delay,
@@ -98,7 +98,7 @@ func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {
 		for i, led := range currentleds {
 			s.setLed(i, Led{led.Red * factor, led.Green * factor, led.Blue * factor})
 		}
-		s.ledsChanged.Send(s)
+		s.ledsChanged.Send(s.GetUID(), s)
 		time.Sleep(delay)
 	}
 }
@@ -142,7 +142,7 @@ func (s *MultiBlobProducer) runner() {
 			}
 
 			if countup_run {
-				s.ledsChanged.Send(s)
+				s.ledsChanged.Send(s.GetUID(), s)
 			} else {
 				// The "countup" similar to the "countdown" fade out but fade in
 				// at the start of the blob period

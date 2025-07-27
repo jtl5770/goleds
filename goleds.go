@@ -153,7 +153,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 		log.Fatalf("Failed to start platform: %v", err)
 	}
 
-	ledReader := u.NewAtomicEvent[p.LedProducer]()
+	ledReader := u.NewAtomicMapEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
 	ledsTotal := a.platform.GetLedsTotal()
 
@@ -228,7 +228,7 @@ func (a *App) shutdown() {
 // This go-routine combines the LED values from all producers and writes them to the
 // ledWriter channel.
 // It also forces an update of the LED stripe at regular intervals to avoid artifacts.
-func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicEvent[p.LedProducer], ledwriter chan []p.Led) {
+func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer], ledwriter chan []p.Led) {
 	defer a.shutdownWg.Done()
 
 	var oldSumLeds []p.Led
@@ -243,8 +243,10 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicEvent[p.LedProducer], l
 	for {
 		select {
 		case <-ledreader.Channel():
-			s := ledreader.Value()
-			allLedRanges[s.GetUID()] = s.GetLeds()
+			pmap := ledreader.Value()
+			for key, prod := range pmap {
+				allLedRanges[key] = prod.GetLeds()
+			}
 			sumLeds := p.CombineLeds(allLedRanges, a.platform.GetLedsTotal())
 			if !reflect.DeepEqual(sumLeds, oldSumLeds) {
 				select {

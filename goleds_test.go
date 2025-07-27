@@ -155,7 +155,7 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	app.ledproducers[MULTI_BLOB_UID] = mockMultiBlobProducer
 	app.sensorProd = []p.LedProducer{mockSensorProducer}
 
-	ledReader := u.NewAtomicEvent[p.LedProducer]()
+	ledReader := u.NewAtomicMapEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
 	app.stopsignal = make(chan bool)
 
@@ -175,7 +175,7 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 
 	// test sensor trigger
 	mockSensorProducer.Start()
-	ledReader.Send(mockSensorProducer)
+	ledReader.Send(mockSensorProducer.GetUID(), mockSensorProducer)
 	time.Sleep(100 * time.Millisecond)
 	select {
 	case <-ledWriter:
@@ -186,7 +186,7 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 
 	// test stop
 	mockSensorProducer.Start()
-	ledReader.Send(mockSensorProducer)
+	ledReader.Send(mockSensorProducer.GetUID(), mockSensorProducer)
 	time.Sleep(100 * time.Millisecond)
 	if mockMultiBlobProducer.GetIsRunning() {
 		t.Error("Expected multiblob producer to be stopped")

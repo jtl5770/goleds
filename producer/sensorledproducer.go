@@ -66,7 +66,7 @@ type SensorLedProducer struct {
 	latchLed          Led
 }
 
-func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, cfg c.SensorLEDConfig, endwg *sync.WaitGroup) *SensorLedProducer {
+func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, cfg c.SensorLEDConfig, endwg *sync.WaitGroup) *SensorLedProducer {
 	inst := &SensorLedProducer{
 		ledIndex:          index,
 		holdT:             cfg.HoldTime,
@@ -107,7 +107,7 @@ func (s *SensorLedProducer) runUpPhase(left, right int) (nleft, nright int, stop
 		if right < len(s.leds) {
 			s.setLed(right, s.ledOn)
 		}
-		s.ledsChanged.Send(s)
+		s.ledsChanged.Send(s.GetUID(), s)
 
 		if left <= 0 && right >= len(s.leds)-1 {
 			// run-up is complete
@@ -175,14 +175,14 @@ func (s *SensorLedProducer) runLatchMode() (stopped bool) {
 	for i := range s.leds {
 		s.setLed(i, s.latchLed)
 	}
-	s.ledsChanged.Send(s)
+	s.ledsChanged.Send(s.GetUID(), s)
 
 	// Defer reverting the LEDs to the normal color to simplify exit paths.
 	defer func() {
 		for i := range s.leds {
 			s.setLed(i, s.ledOn)
 		}
-		s.ledsChanged.Send(s)
+		s.ledsChanged.Send(s.GetUID(), s)
 	}()
 
 	latchTimer := t.NewTimer(s.latchTime)
@@ -234,7 +234,7 @@ func (s *SensorLedProducer) runDownPhase(left, right int) (nleft, nright int, sh
 		if right >= s.ledIndex && right < len(s.leds) {
 			s.setLed(right, Led{})
 		}
-		s.ledsChanged.Send(s)
+		s.ledsChanged.Send(s.GetUID(), s)
 		if left == s.ledIndex && right == s.ledIndex {
 			return left, right, false, false // normal exit
 		}

@@ -11,7 +11,7 @@ import (
 )
 
 func TestNewMultiBlobProducer(t *testing.T) {
-	ledsChanged := u.NewAtomicEvent[LedProducer]()
+	ledsChanged := u.NewAtomicMapEvent[LedProducer]()
 	ledsTotal := 10
 	duration := 5 * time.Second
 	delay := 50 * time.Millisecond

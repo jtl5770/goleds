@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewCylonProducer(t *testing.T) {
-	ledsChanged := u.NewAtomicEvent[LedProducer]()
+	ledsChanged := u.NewAtomicMapEvent[LedProducer]()
 	p := NewCylonProducer("test", ledsChanged, 10, 1*time.Second, 10*time.Millisecond, 0.5, 4, []float64{1, 2, 3}, nil)
 
 	assert.Equal(t, "test", p.GetUID())
@@ -23,7 +23,7 @@ func TestNewCylonProducer(t *testing.T) {
 }
 
 func TestCylonProducer_Runner(t *testing.T) {
-	ledsChanged := u.NewAtomicEvent[LedProducer]()
+	ledsChanged := u.NewAtomicMapEvent[LedProducer]()
 	p := NewCylonProducer("test", ledsChanged, 20, 100*time.Millisecond, 10*time.Millisecond, 1, 4, []float64{255, 0, 0}, nil)
 
 	p.Start()
@@ -50,7 +50,7 @@ func TestCylonProducer_Runner(t *testing.T) {
 }
 
 func TestCylonProducer_Stop(t *testing.T) {
-	ledsChanged := u.NewAtomicEvent[LedProducer]()
+	ledsChanged := u.NewAtomicMapEvent[LedProducer]()
 	p := NewCylonProducer("test", ledsChanged, 20, 200*time.Millisecond, 10*time.Millisecond, 1, 4, []float64{255, 0, 0}, nil)
 
 	p.Start()

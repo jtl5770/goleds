@@ -19,7 +19,7 @@ type NightlightProducer struct {
 	ledNight  []Led
 }
 
-func NewNightlightProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], ledsTotal int, latitude float64, longitude float64, ledRGB [][]float64) *NightlightProducer {
+func NewNightlightProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, latitude float64, longitude float64, ledRGB [][]float64) *NightlightProducer {
 	inst := &NightlightProducer{
 		latitude:  latitude,
 		longitude: longitude,
@@ -41,7 +41,7 @@ func (s *NightlightProducer) setNightLed(index int) {
 func (s *NightlightProducer) runner() {
 	defer func() {
 		s.leds = make([]Led, len(s.leds)) // Reset LEDs
-		s.ledsChanged.Send(s)
+		s.ledsChanged.Send(s.GetUID(), s)
 	}()
 
 	for {
@@ -55,7 +55,7 @@ func (s *NightlightProducer) runner() {
 		if now.After(rise) && now.Before(set) {
 			// During the day - between sunrise and sunset
 			s.leds = make([]Led, len(s.leds)) // Reset LEDs
-			s.ledsChanged.Send(s)
+			s.ledsChanged.Send(s.GetUID(), s)
 			wakeupAfter = set.Sub(now)
 		} else {
 			var waitIntervalDuration time.Duration
@@ -80,7 +80,7 @@ func (s *NightlightProducer) runner() {
 			}
 			// log.Printf("Current NightLED index %d : waitInterval %d : tillNextInterval %d", currInterval, waitIntervalDuration, tillNextInterval)
 			s.setNightLed(currInterval)
-			s.ledsChanged.Send(s)
+			s.ledsChanged.Send(s.GetUID(), s)
 			// + 1s maybe not needed, but so we are sure to really be
 			// in the next interval
 			wakeupAfter = tillNextInterval + time.Second

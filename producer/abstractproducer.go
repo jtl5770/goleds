@@ -17,7 +17,7 @@ type AbstractProducer struct {
 	hasExited    bool
 	ledsMutex    sync.RWMutex
 	updateMutex  sync.RWMutex
-	ledsChanged  *u.AtomicEvent[LedProducer]
+	ledsChanged  *u.AtomicMapEvent[LedProducer]
 	stopchan     chan bool
 	triggerEvent *u.AtomicEvent[*u.Trigger]
 	endWg        *sync.WaitGroup
@@ -25,7 +25,7 @@ type AbstractProducer struct {
 }
 
 // Creates a new instance of AbstractProducer. The uid must be unique
-func NewAbstractProducer(uid string, ledsChanged *u.AtomicEvent[LedProducer], runfunc func(), ledsTotal int) *AbstractProducer {
+func NewAbstractProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], runfunc func(), ledsTotal int) *AbstractProducer {
 	inst := AbstractProducer{
 		uid:          uid,
 		leds:         make([]Led, ledsTotal),
@@ -43,7 +43,7 @@ func (s *AbstractProducer) setLed(index int, value Led) {
 	s.ledsMutex.Lock()
 	defer s.ledsMutex.Unlock()
 	s.leds[index] = value
-	s.ledsChanged.Send(s)
+	s.ledsChanged.Send(s.GetUID(), s)
 }
 
 // Returns a slice with the current values of all the LEDs.
