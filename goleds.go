@@ -172,6 +172,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	if conf.ClockLED.Enabled {
 		cfg := conf.ClockLED
 		prodclock := p.NewClockProducer(CLOCK_UID, ledReader, ledsTotal, cfg)
+		a.ledproducers[CLOCK_UID] = prodclock
 		a.permProd = append(a.permProd, prodclock)
 		prodclock.Start()
 	}
