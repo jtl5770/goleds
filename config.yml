@@ -163,8 +163,25 @@ ClockLED:
   StartLed: 0
   # Which LED to use as the "end" of the clock. (hour: 11 and minute: 59)
   EndLed: 69
-  LedHour: [75, 0, 0]
-  LedMinute: [40, 35, 0]
+  LedHour: [100, 0, 0]
+  LedMinute: [65, 35, 0]
+
+# AudioLED: A producer connecting to squeezelite and shows a VU meter
+AudioLED:
+  Enabled: true
+  # Which LED to use as the "start" of the VU meter.
+  StartLed: 0
+  # Which LED to use as the "end" of the VU meter.
+  EndLed: 69
+  # A (sub-) string used to find the right audio device   
+  Device: "squeezelite"
+  LedGreen: [0, 100, 0]
+  LedYellow: [50, 50, 0]
+  LedRed: [100, 0, 0]
+  SampleRate: 48000
+  FramesPerBuffer: 512
+  MinDB: -50.0
+  MaxDB: -3.0
 
 # CylonLED: A simple producer that creates a red "eye" moving back and forth,
 # inspired by Battlestar Galactica's Cylons. A good starting point for

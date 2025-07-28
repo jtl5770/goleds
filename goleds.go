@@ -46,6 +46,7 @@ import (
 const (
 	NIGHT_LED_UID  = "__night_producer"
 	CLOCK_UID      = "__clock_producer"
+	AUDIO_LED_UID  = "__audio_producer"
 	MULTI_BLOB_UID = "__multiblob_producer"
 	CYLON_LED_UID  = "__cylon_producer"
 )
@@ -173,6 +174,14 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 		prodclock := p.NewClockProducer(CLOCK_UID, ledReader, ledsTotal, cfg)
 		a.permProd = append(a.permProd, prodclock)
 		prodclock.Start()
+	}
+
+	if conf.AudioLED.Enabled {
+		cfg := conf.AudioLED
+		prodaudio := p.NewAudioLEDProducer(AUDIO_LED_UID, ledReader, ledsTotal, cfg)
+		a.ledproducers[AUDIO_LED_UID] = prodaudio
+		a.permProd = append(a.permProd, prodaudio)
+		prodaudio.Start()
 	}
 
 	// These producers will be started and stopped on demand depending
