@@ -179,7 +179,9 @@ AudioLED:
   LedYellow: [50, 50, 0]
   LedRed: [100, 0, 0]
   SampleRate: 48000
-  FramesPerBuffer: 512
+  # How often to read out samples and update the LED strip in ms
+  UpdateFreq: 50
+  FramesPerBuffer: 4096
   MinDB: -50.0
   MaxDB: -3.0
 

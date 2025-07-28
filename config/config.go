@@ -54,6 +54,7 @@ type AudioLEDConfig struct {
 	LedRed          []float64 `yaml:"LedRed"`
 	SampleRate      int       `yaml:"SampleRate"`
 	FramesPerBuffer int       `yaml:"FramesPerBuffer"`
+	UpdateFreq      int       `yaml:"UpdateFreq"`
 	MinDB           float64   `yaml:"MinDB"`
 	MaxDB           float64   `yaml:"MaxDB"`
 }

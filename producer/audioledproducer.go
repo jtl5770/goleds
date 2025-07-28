@@ -27,6 +27,7 @@ type AudioLEDProducer struct {
 	}
 	sampleRate      int
 	framesPerBuffer int
+	updateFreq      int
 	minDB           float64
 	maxDB           float64
 }
@@ -44,6 +45,7 @@ func NewAudioLEDProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer],
 	p.colors.Red = Led{Red: cfg.LedRed[0], Green: cfg.LedRed[1], Blue: cfg.LedRed[2]}
 	p.sampleRate = cfg.SampleRate
 	p.framesPerBuffer = cfg.FramesPerBuffer
+	p.updateFreq = cfg.UpdateFreq
 	p.minDB = cfg.MinDB
 	p.maxDB = cfg.MaxDB
 	p.AbstractProducer = NewAbstractProducer(uid, ledsChanged, p.runner, ledsTotal)
@@ -90,7 +92,7 @@ func (p *AudioLEDProducer) runner() {
 	}
 	defer stream.Stop()
 
-	ticker := time.NewTicker(20 * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(p.updateFreq) * time.Millisecond)
 	defer ticker.Stop()
 
 	// Clean up LEDs on exit
