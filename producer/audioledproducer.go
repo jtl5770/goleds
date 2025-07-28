@@ -17,6 +17,7 @@ import (
 type AudioLEDProducer struct {
 	*AbstractProducer
 	ledsChanged *u.AtomicMapEvent[LedProducer]
+	Device      string
 	startLed    int
 	endLed      int
 	colors      struct {
@@ -36,6 +37,7 @@ func NewAudioLEDProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer],
 		ledsChanged: ledsChanged,
 		startLed:    cfg.StartLed,
 		endLed:      cfg.EndLed,
+		Device:      cfg.Device,
 	}
 	p.colors.Green = Led{Red: cfg.LedGreen[0], Green: cfg.LedGreen[1], Blue: cfg.LedGreen[2]}
 	p.colors.Yellow = Led{Red: cfg.LedYellow[0], Green: cfg.LedYellow[1], Blue: cfg.LedYellow[2]}
@@ -56,7 +58,7 @@ func (p *AudioLEDProducer) runner() {
 	}
 	defer portaudio.Terminate()
 
-	inDevice, err := findDevice()
+	inDevice, err := p.findDevice()
 	if err != nil {
 		log.Printf("AudioLEDProducer (%s): %v", p.uid, err)
 		return
@@ -154,7 +156,7 @@ func (p *AudioLEDProducer) updateLeds(db float64) {
 
 // findMonitorDevice attempts to find a suitable audio input device,
 // preferring devices with "Monitor" in their name.
-func findDevice() (*portaudio.DeviceInfo, error) {
+func (p *AudioLEDProducer) findDevice() (*portaudio.DeviceInfo, error) {
 	devices, err := portaudio.Devices()
 	if err != nil {
 		return nil, fmt.Errorf("could not list audio devices: %w", err)
@@ -163,7 +165,7 @@ func findDevice() (*portaudio.DeviceInfo, error) {
 	// Look for a squeezelite device
 	for _, device := range devices {
 		log.Printf("AudioLEDProducer: found device: %s", device.Name)
-		if device.MaxInputChannels > 0 && strings.Contains(strings.ToLower(device.Name), "squeezelite") {
+		if device.MaxInputChannels > 0 && strings.Contains(strings.ToLower(device.Name), p.Device) {
 			return device, nil
 		}
 	}

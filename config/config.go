@@ -43,9 +43,10 @@ type ClockLEDConfig struct {
 	LedMinute []float64 `yaml:"LedMinute"`
 }
 
-// ClockLEDConfig defines the configuration for the ClockLED producer.
+// AudioLEDConfig defines the configuration for the AudioLED producer.
 type AudioLEDConfig struct {
 	Enabled         bool      `yaml:"Enabled"`
+	Device          string    `yaml:"Device"`
 	StartLed        int       `yaml:"StartLed"`
 	EndLed          int       `yaml:"EndLed"`
 	LedGreen        []float64 `yaml:"LedGreen"`
