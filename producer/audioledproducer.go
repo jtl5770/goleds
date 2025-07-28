@@ -27,7 +27,7 @@ type AudioLEDProducer struct {
 	}
 	sampleRate      int
 	framesPerBuffer int
-	updateFreq      int
+	updateFreq      time.Duration
 	minDB           float64
 	maxDB           float64
 }
@@ -92,7 +92,7 @@ func (p *AudioLEDProducer) runner() {
 	}
 	defer stream.Stop()
 
-	ticker := time.NewTicker(time.Duration(p.updateFreq) * time.Millisecond)
+	ticker := time.NewTicker(p.updateFreq)
 	defer ticker.Stop()
 
 	// Clean up LEDs on exit

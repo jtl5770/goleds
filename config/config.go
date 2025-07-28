@@ -45,18 +45,18 @@ type ClockLEDConfig struct {
 
 // AudioLEDConfig defines the configuration for the AudioLED producer.
 type AudioLEDConfig struct {
-	Enabled         bool      `yaml:"Enabled"`
-	Device          string    `yaml:"Device"`
-	StartLed        int       `yaml:"StartLed"`
-	EndLed          int       `yaml:"EndLed"`
-	LedGreen        []float64 `yaml:"LedGreen"`
-	LedYellow       []float64 `yaml:"LedYellow"`
-	LedRed          []float64 `yaml:"LedRed"`
-	SampleRate      int       `yaml:"SampleRate"`
-	FramesPerBuffer int       `yaml:"FramesPerBuffer"`
-	UpdateFreq      int       `yaml:"UpdateFreq"`
-	MinDB           float64   `yaml:"MinDB"`
-	MaxDB           float64   `yaml:"MaxDB"`
+	Enabled         bool          `yaml:"Enabled"`
+	Device          string        `yaml:"Device"`
+	StartLed        int           `yaml:"StartLed"`
+	EndLed          int           `yaml:"EndLed"`
+	LedGreen        []float64     `yaml:"LedGreen"`
+	LedYellow       []float64     `yaml:"LedYellow"`
+	LedRed          []float64     `yaml:"LedRed"`
+	SampleRate      int           `yaml:"SampleRate"`
+	FramesPerBuffer int           `yaml:"FramesPerBuffer"`
+	UpdateFreq      time.Duration `yaml:"UpdateFreq"`
+	MinDB           float64       `yaml:"MinDB"`
+	MaxDB           float64       `yaml:"MaxDB"`
 }
 
 // CylonLEDConfig defines the configuration for the CylonLED producer.
