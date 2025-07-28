@@ -69,8 +69,10 @@ func (s *AbstractProducer) Start() {
 		s.isRunning = true
 		s.endWg.Add(1)
 		go s.runner()
-	} else if s.hasExited || s.isRunning {
-		log.Println("Start() called on AbstractProducer that is already running or has exited:", s.GetUID())
+	} else if s.hasExited {
+		log.Println("Start() called on a Producer that has already exited: ", s.GetUID())
+	} else if s.isRunning {
+		log.Println("Start() called on a Producer that is already running: ", s.GetUID())
 	}
 }
 
@@ -126,9 +128,8 @@ func (s *AbstractProducer) Stop() {
 func (s *AbstractProducer) Exit() {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
-	if s.isRunning {
-		close(s.stopchan)
-	}
+	close(s.stopchan)
+	s.isRunning = false
 	s.hasExited = true
 }
 
