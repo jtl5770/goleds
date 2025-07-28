@@ -325,7 +325,11 @@ func (a *App) fireController() {
 					producer.Start()
 					if !a.afterProdIsRunning {
 						log.Printf("      ---> Starting afterprodRunner go-routine")
-						go a.afterProdRunner()
+						// we need to give the stop chan as a
+						// parameter to make sure the go routines use
+						// this and not a newly created inside the
+						// still existing App struct after reset...
+						go a.afterProdRunner(a.stopsignal)
 						a.afterProdIsRunning = true
 					}
 				}
@@ -341,24 +345,38 @@ func (a *App) fireController() {
 	}
 }
 
-func (a *App) afterProdRunner() {
+func (a *App) afterProdRunner(stop chan bool) {
 	log.Println("         --> In afterProdRunner go-routine... Blocking on WaitGroup sensorProdWg")
 	a.sensorProdWg.Wait()
-	log.Println("         <-- sensorProdWg unblocked - ending afterProdRunner go-routing")
+	log.Println("         <-- sensorProdWg unblocked - ending afterProdRunner go-routine")
+	select {
+	case <-stop:
+		log.Println("*** afterProdRunner go-routine stopped by signal")
+		return
+	default:
+	}
+
 	a.prodMutex.Lock()
 	for _, prod := range a.afterProd {
 		log.Printf("===> Starting afterProd %s", prod.GetUID())
 		prod.Start()
 	}
-	go a.permProdRunner()
+	go a.permProdRunner(stop)
 	a.afterProdIsRunning = false
 	a.prodMutex.Unlock()
 }
 
-func (a *App) permProdRunner() {
+func (a *App) permProdRunner(stop chan bool) {
 	log.Println("            --> In permProdRunner go-routine... Blocking on WaitGroup afterProdWg")
 	a.afterProdWg.Wait()
-	log.Println("            <-- afterProdWg unblocked - ending permProdRunner go-routing")
+	log.Println("            <-- afterProdWg unblocked - ending permProdRunner go-routine")
+	select {
+	case <-stop:
+		log.Println("*** permProdRunner go-routine stopped by signal")
+		return
+	default:
+	}
+
 	a.prodMutex.Lock()
 	s_running := false
 	for _, prod := range a.sensorProd {
