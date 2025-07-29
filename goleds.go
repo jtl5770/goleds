@@ -159,7 +159,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	ledWriter := make(chan []p.Led, 1)
 	ledsTotal := a.platform.GetLedsTotal()
 
-	// This producer runs all the time and will be started right away here
+	// These producers runs all the time and will be started right away here
 	if conf.NightLED.Enabled {
 		cfg := conf.NightLED
 		prodnight := p.NewNightlightProducer(NIGHT_LED_UID, ledReader,
@@ -203,7 +203,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 		a.afterProd = append(a.afterProd, prodcylon)
 	}
 
-	// This producer reacts on sensor triggers to light the stripes.
+	// This producer reacts on sensor triggers to light the strips.
 	if conf.SensorLED.Enabled {
 		cfg := conf.SensorLED
 		a.sensorProd = make([]p.LedProducer, 0, len(a.platform.GetSensorLedIndices()))
