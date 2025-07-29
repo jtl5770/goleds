@@ -25,11 +25,14 @@ type AudioLEDProducer struct {
 		Yellow Led
 		Red    Led
 	}
-	sampleRate      int
-	framesPerBuffer int
-	updateFreq      time.Duration
-	minDB           float64
-	maxDB           float64
+	sampleRate       int
+	framesPerBuffer  int
+	updateFreq       time.Duration
+	minDB            float64
+	maxDB            float64
+	silenceStartTime time.Time
+	silenceStart     bool
+	slowedDown       bool
 }
 
 // NewAudioLEDProducer creates a new AudioLEDProducer.
@@ -48,6 +51,8 @@ func NewAudioLEDProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer],
 	p.updateFreq = cfg.UpdateFreq
 	p.minDB = cfg.MinDB
 	p.maxDB = cfg.MaxDB
+	p.silenceStart = false
+	p.slowedDown = false
 	p.AbstractProducer = NewAbstractProducer(uid, ledsChanged, p.runner, ledsTotal)
 	return p
 }
@@ -114,9 +119,32 @@ func (p *AudioLEDProducer) runner() {
 
 			monoSamples := stereoToMono(buffer, inDevice.MaxInputChannels)
 			rms := calculateRMS(monoSamples)
+			p.checkSilence(rms, ticker)
 			db := rmsToDB(rms)
 			p.updateLeds(db)
 			p.ledsChanged.Send(p.GetUID(), p)
+		}
+	}
+}
+
+func (p *AudioLEDProducer) checkSilence(rms float64, ticker *time.Ticker) {
+	if rms > 0.001 {
+		if p.silenceStart {
+			log.Println("AudioLEDProducer: Audio input detected, back to full loop speed...")
+			p.silenceStart = false
+			ticker.Reset(p.updateFreq)
+			p.slowedDown = false
+		}
+	} else {
+		if p.silenceStart == false {
+			p.silenceStart = true
+			p.silenceStartTime = time.Now()
+		} else {
+			if !p.slowedDown && time.Since(p.silenceStartTime) > 10*time.Second {
+				log.Println("AudioLEDProducer: No audio input detected, slowing down loop...")
+				ticker.Reset(2 * time.Second)
+				p.slowedDown = true
+			}
 		}
 	}
 }
