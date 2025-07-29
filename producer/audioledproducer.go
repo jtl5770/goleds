@@ -128,20 +128,23 @@ func (p *AudioLEDProducer) runner() {
 }
 
 func (p *AudioLEDProducer) checkSilence(rms float64, ticker *time.Ticker) {
-	if rms > 0.001 {
-		if p.silenceStart {
+	if rms > 0 {
+		if p.slowedDown {
 			log.Println("AudioLEDProducer: Audio input detected, back to full loop speed...")
 			p.silenceStart = false
-			ticker.Reset(p.updateFreq)
 			p.slowedDown = false
+			ticker.Reset(p.updateFreq)
+		} else if p.silenceStart {
+			// Reset silence start if we detect audio after a period of silence
+			p.silenceStart = false
 		}
 	} else {
-		if p.silenceStart == false {
+		if !p.silenceStart {
 			p.silenceStart = true
 			p.silenceStartTime = time.Now()
 		} else {
-			if !p.slowedDown && time.Since(p.silenceStartTime) > 10*time.Second {
-				log.Println("AudioLEDProducer: No audio input detected, slowing down loop...")
+			if !p.slowedDown && time.Since(p.silenceStartTime) > 5*time.Second {
+				log.Println("AudioLEDProducer: No audio input detected for 5 seconds, slowing down loop...")
 				ticker.Reset(2 * time.Second)
 				p.slowedDown = true
 			}
