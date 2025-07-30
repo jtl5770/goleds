@@ -400,7 +400,6 @@ func (a *App) permProdRunner(stop chan bool) {
 func hashLeds(leds []p.Led) uint64 {
 	h := fnv.New64a() // FNV-1a is a fast, non-cryptographic hash function.
 	for _, led := range leds {
-		// Assuming p.Led has fields like R, G, B for RGB values.
 		h.Write([]byte{byte(led.Red), byte(led.Green), byte(led.Blue)})
 	}
 	return h.Sum64()
