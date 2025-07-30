@@ -170,7 +170,8 @@ ClockLED:
   LedHour: [100, 0, 0]
   LedMinute: [100, 0, 0]
 
-# AudioLED: A producer connecting to squeezelite and shows a VU meter
+# AudioLED: A producer connecting to squeezelite (or any other thing
+# producing audio) to show a VU meter
 AudioLED:
   Enabled: true
   # Which LED to use as the "start" of the left channel VU meter.
@@ -181,7 +182,9 @@ AudioLED:
   StartLedRight: 111
   # Which LED to use as the "end" of the right channel VU meter.
   EndLedRight: 164
-  # A (sub-) string used to find the right audio device   
+  # A (sub-) string used to find the right audio device. "squeezelite"
+  # works perfectly fine on a full default pipewire Fedora.
+  # On RaspberryPi try "pulse".
   Device: "squeezelite"
   LedGreen: [0, 100, 0]
   LedYellow: [50, 50, 0]
@@ -190,7 +193,7 @@ AudioLED:
   # How often to read out samples and update the LED strip
   UpdateFreq: 30ms
   FramesPerBuffer: 2048
-  MinDB: -50.0
+  MinDB: -60.0
   MaxDB: -3.0
 
 # CylonLED: A simple producer that creates a red "eye" moving back and forth,
