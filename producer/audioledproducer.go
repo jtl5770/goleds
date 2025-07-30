@@ -197,7 +197,7 @@ func (p *AudioLEDProducer) findDevice() (*portaudio.DeviceInfo, error) {
 
 	// Look for a squeezelite device
 	for _, device := range devices {
-		log.Printf("AudioLEDProducer: found device: %s", device.Name)
+		// log.Printf("AudioLEDProducer: found device: %s", device.Name)
 		if device.MaxInputChannels > 0 && strings.Contains(strings.ToLower(device.Name), p.Device) {
 			return device, nil
 		}
