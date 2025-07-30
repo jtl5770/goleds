@@ -98,14 +98,14 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 		SetTextAlign(tview.AlignCenter)
 	s.intro.SetText(s.getIntroText(numSensors)) // Set initial text
 	s.intro.SetBorder(true).SetTitle(" GOLEDS Simulation ").SetTitleColor(tcell.ColorLightBlue)
-	s.intro.SetBackgroundColor(tcell.ColorDarkSlateGray)
+	s.intro.SetBackgroundColor(tcell.NewRGBColor(0, 0, 0))
 
 	// --- LED Display Pane ---
 	s.ledDisplay = tview.NewTextView().
 		SetDynamicColors(true).
 		SetTextAlign(tview.AlignLeft)
 	s.ledDisplay.SetBorder(true)
-	s.ledDisplay.SetBackgroundColor(tcell.ColorDarkSlateGray)
+	s.ledDisplay.SetBackgroundColor(tcell.NewRGBColor(0, 0, 0))
 
 	// --- Log Pane ---
 	s.logView = tview.NewTextView().
@@ -116,7 +116,7 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 			s.tviewapp.Draw()
 		})
 	s.logView.SetBorder(true).SetTitle(" Logs ").SetTitleColor(tcell.ColorLightBlue)
-	s.logView.SetBackgroundColor(tcell.ColorDarkSlateGray)
+	s.logView.SetBackgroundColor(tcell.NewRGBColor(0, 0, 0))
 
 	// Redirect Go's default logger to the logView text view.
 	logWriter := tview.ANSIWriter(s.logView)
