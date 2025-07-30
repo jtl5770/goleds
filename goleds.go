@@ -27,11 +27,11 @@ package main
 
 import (
 	"flag"
+	"hash/fnv"
 	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"reflect"
 	"sync"
 	"syscall"
 	"time"
@@ -249,7 +249,7 @@ func (a *App) shutdown() {
 func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer], ledwriter chan []p.Led) {
 	defer a.shutdownWg.Done()
 
-	var oldSumLeds []p.Led
+	var oldLedsHash uint64
 	forceupdatedelay := a.platform.GetForceUpdateDelay()
 	allLedRanges := make(map[string][]p.Led)
 	var ticker *time.Ticker
@@ -266,7 +266,8 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 				allLedRanges[key] = prod.GetLeds()
 			}
 			sumLeds := p.CombineLeds(allLedRanges, a.platform.GetLedsTotal())
-			if !reflect.DeepEqual(sumLeds, oldSumLeds) {
+			newLedshash := hashLeds(sumLeds)
+			if newLedshash != oldLedsHash {
 				select {
 				case ledwriter <- sumLeds:
 				case <-a.stopsignal:
@@ -274,7 +275,7 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 					return
 				}
 			}
-			oldSumLeds = sumLeds
+			oldLedsHash = newLedshash
 		case <-ticker.C:
 			// We do this purely because there occasionally are
 			// artifacts on the led stripe from - maybe/somehow -
@@ -393,4 +394,14 @@ func (a *App) permProdRunner(stop chan bool) {
 
 	a.permProdIsRunning = false
 	a.prodMutex.Unlock()
+}
+
+// hashLeds computes a hash for the given LED state array.
+func hashLeds(leds []p.Led) uint64 {
+	h := fnv.New64a() // FNV-1a is a fast, non-cryptographic hash function.
+	for _, led := range leds {
+		// Assuming p.Led has fields like R, G, B for RGB values.
+		h.Write([]byte{byte(led.Red), byte(led.Green), byte(led.Blue)})
+	}
+	return h.Sum64()
 }
