@@ -36,11 +36,13 @@ type NightLEDConfig struct {
 
 // ClockLEDConfig defines the configuration for the ClockLED producer.
 type ClockLEDConfig struct {
-	Enabled   bool      `yaml:"Enabled"`
-	StartLed  int       `yaml:"StartLed"`
-	EndLed    int       `yaml:"EndLed"`
-	LedHour   []float64 `yaml:"LedHour"`
-	LedMinute []float64 `yaml:"LedMinute"`
+	Enabled        bool      `yaml:"Enabled"`
+	StartLedHour   int       `yaml:"StartLedHour"`
+	EndLedHour     int       `yaml:"EndLedHour"`
+	StartLedMinute int       `yaml:"StartLedMinute"`
+	EndLedMinute   int       `yaml:"EndLedMinute"`
+	LedHour        []float64 `yaml:"LedHour"`
+	LedMinute      []float64 `yaml:"LedMinute"`
 }
 
 // AudioLEDConfig defines the configuration for the AudioLED producer.

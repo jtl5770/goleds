@@ -11,17 +11,22 @@ import (
 
 type ClockProducer struct {
 	*AbstractProducer
-	hour        Led
-	minute      Led
-	hour_dist   float64
-	minute_dist float64
+	hour         Led
+	minute       Led
+	hour_dist    float64
+	minute_dist  float64
+	hour_start   int
+	minute_start int
 }
 
 func NewClockProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, cfg c.ClockLEDConfig) *ClockProducer {
-	start := cfg.StartLed
-	end := cfg.EndLed
+	hour_start := cfg.StartLedHour
+	hour_end := cfg.EndLedHour
+	hour_length := hour_end - hour_start
 
-	length := end - start
+	minute_start := cfg.StartLedMinute
+	minute_end := cfg.EndLedMinute
+	minute_length := minute_end - minute_start
 
 	inst := &ClockProducer{
 		hour: Led{
@@ -34,8 +39,10 @@ func NewClockProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], le
 			Green: cfg.LedMinute[1],
 			Blue:  cfg.LedMinute[2],
 		},
-		hour_dist:   float64(length) / 11.0,
-		minute_dist: float64(length) / 59.0,
+		hour_dist:    float64(hour_length) / (12*60.0 - 1),
+		minute_dist:  float64(minute_length) / (60.0 - 1),
+		hour_start:   hour_start,
+		minute_start: minute_start,
 	}
 	log.Printf("*** Clock distances: %f / %f", inst.hour_dist, inst.minute_dist)
 	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
@@ -47,8 +54,8 @@ func (s *ClockProducer) setTime() {
 	now := time.Now()
 	hour := now.Hour() % 12
 	minute := now.Minute()
-	s.setLed(int(math.Round(float64(hour)*s.hour_dist)), s.hour)
-	s.setLed(int(math.Round(float64(minute)*s.minute_dist)), s.minute)
+	s.setLed(s.hour_start+int(math.Round(float64(hour*60+minute)*s.hour_dist)), s.hour)
+	s.setLed(s.minute_start+int(math.Round(float64(minute)*s.minute_dist)), s.minute)
 }
 
 func (s *ClockProducer) runner() {
@@ -67,7 +74,6 @@ func (s *ClockProducer) runner() {
 			s.setTime()
 			s.ledsChanged.Send(s.GetUID(), s)
 		case <-s.stopchan:
-			// log.Println("Stopped NightlightProducer...")
 			return
 		}
 	}

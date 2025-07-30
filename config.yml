@@ -159,12 +159,16 @@ MultiBlobLED:
 # ClockLED: A simple producer that creates a clock-like effect, 
 ClockLED:
   Enabled: true
-  # Which LED to use as the "start" of the clock. (hour: 0 and minute: 0)
-  StartLed: 0
-  # Which LED to use as the "end" of the clock. (hour: 11 and minute: 59)
-  EndLed: 69
+  # Which LED to use as the "start" of the clock for the hours. (hour: 0 and minute: 0)
+  StartLedHour: 0
+  # Which LED to use as the "end" of the clock for the hours. (hour: 11 and minute: 59)
+  EndLedHour: 69
+  # Which LED to use as the "start" of the clock for the hours. (hour: 0 and minute: 0)
+  StartLedMinute: 111
+  # Which LED to use as the "end" of the clock for the hours. (hour: 11 and minute: 59)
+  EndLedMinute: 164
   LedHour: [100, 0, 0]
-  LedMinute: [65, 35, 0]
+  LedMinute: [100, 0, 0]
 
 # AudioLED: A producer connecting to squeezelite and shows a VU meter
 AudioLED:
