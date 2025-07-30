@@ -49,8 +49,10 @@ type ClockLEDConfig struct {
 type AudioLEDConfig struct {
 	Enabled         bool          `yaml:"Enabled"`
 	Device          string        `yaml:"Device"`
-	StartLed        int           `yaml:"StartLed"`
-	EndLed          int           `yaml:"EndLed"`
+	StartLedLeft    int           `yaml:"StartLedLeft"`
+	EndLedLeft      int           `yaml:"EndLedLeft"`
+	StartLedRight   int           `yaml:"StartLedRight"`
+	EndLedRight     int           `yaml:"EndLedRight"`
 	LedGreen        []float64     `yaml:"LedGreen"`
 	LedYellow       []float64     `yaml:"LedYellow"`
 	LedRed          []float64     `yaml:"LedRed"`

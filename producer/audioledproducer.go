@@ -16,11 +16,13 @@ import (
 // and displays the volume on a segment of LEDs.
 type AudioLEDProducer struct {
 	*AbstractProducer
-	ledsChanged *u.AtomicMapEvent[LedProducer]
-	Device      string
-	startLed    int
-	endLed      int
-	colors      struct {
+	ledsChanged   *u.AtomicMapEvent[LedProducer]
+	Device        string
+	startLedLeft  int
+	endLedLeft    int
+	startLedRight int
+	endLedRight   int
+	colors        struct {
 		Green  Led
 		Yellow Led
 		Red    Led
@@ -38,10 +40,12 @@ type AudioLEDProducer struct {
 // NewAudioLEDProducer creates a new AudioLEDProducer.
 func NewAudioLEDProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, cfg c.AudioLEDConfig) *AudioLEDProducer {
 	p := &AudioLEDProducer{
-		ledsChanged: ledsChanged,
-		startLed:    cfg.StartLed,
-		endLed:      cfg.EndLed,
-		Device:      cfg.Device,
+		ledsChanged:   ledsChanged,
+		startLedLeft:  cfg.StartLedLeft,
+		endLedLeft:    cfg.EndLedLeft,
+		startLedRight: cfg.StartLedRight,
+		endLedRight:   cfg.EndLedRight,
+		Device:        cfg.Device,
 	}
 	p.colors.Green = Led{Red: cfg.LedGreen[0], Green: cfg.LedGreen[1], Blue: cfg.LedGreen[2]}
 	p.colors.Yellow = Led{Red: cfg.LedYellow[0], Green: cfg.LedYellow[1], Blue: cfg.LedYellow[2]}
@@ -102,9 +106,7 @@ func (p *AudioLEDProducer) runner() {
 
 	// Clean up LEDs on exit
 	defer func() {
-		for i := p.startLed; i < p.endLed; i++ {
-			p.leds[i] = Led{}
-		}
+		p.leds = make([]Led, len(p.leds))
 		p.ledsChanged.Send(p.GetUID(), p)
 	}()
 
@@ -117,18 +119,22 @@ func (p *AudioLEDProducer) runner() {
 				// This can happen, e.g., portaudio.InputOverflowed. We can log it but continue.
 			}
 
-			monoSamples := stereoToMono(buffer, inDevice.MaxInputChannels)
-			rms := calculateRMS(monoSamples)
-			p.checkSilence(rms, ticker)
-			db := rmsToDB(rms)
-			p.updateLeds(db)
+			samplesL, samplesR := deInterleave(buffer, inDevice.MaxInputChannels)
+
+			rmsL := calculateRMS(samplesL)
+			rmsR := calculateRMS(samplesR)
+			p.checkSilence(rmsL, rmsR, ticker)
+			dbL := rmsToDB(rmsL)
+			dbR := rmsToDB(rmsR)
+			p.updateLeds(dbL, p.startLedLeft, p.endLedLeft)
+			p.updateLeds(dbR, p.startLedRight, p.endLedRight)
 			p.ledsChanged.Send(p.GetUID(), p)
 		}
 	}
 }
 
-func (p *AudioLEDProducer) checkSilence(rms float64, ticker *time.Ticker) {
-	if rms > 0 {
+func (p *AudioLEDProducer) checkSilence(rmsL float64, rmsR float64, ticker *time.Ticker) {
+	if rmsL > 0 || rmsR > 0 {
 		if p.slowedDown {
 			log.Println("AudioLEDProducer: Audio input detected, back to full loop speed...")
 			p.silenceStart = false
@@ -153,10 +159,13 @@ func (p *AudioLEDProducer) checkSilence(rms float64, ticker *time.Ticker) {
 }
 
 // updateLeds calculates and sets the LED colors based on the dB level.
-func (p *AudioLEDProducer) updateLeds(db float64) {
-	segmentLen := p.endLed - p.startLed
+func (p *AudioLEDProducer) updateLeds(db float64, startLed int, endLed int) {
+	segmentLen := endLed - startLed
+	reverse := false
 	if segmentLen <= 0 {
-		return
+		reverse = true
+		segmentLen = -segmentLen
+		startLed, endLed = endLed, startLed
 	}
 
 	// Clamp dB value to the expected range
@@ -172,7 +181,7 @@ func (p *AudioLEDProducer) updateLeds(db float64) {
 	yellowEnd := int(float64(segmentLen) * 0.9)
 
 	for i := range segmentLen {
-		stripIndex := p.startLed + i
+		stripIndex := startLed + i
 		if i < ledsToLight {
 			if i < greenEnd {
 				p.leds[stripIndex] = p.colors.Green
@@ -185,10 +194,13 @@ func (p *AudioLEDProducer) updateLeds(db float64) {
 			p.leds[stripIndex] = Led{} // Off
 		}
 	}
+	if reverse {
+		for i := 0; i < segmentLen/2; i++ {
+			p.leds[startLed+i], p.leds[endLed-i-1] = p.leds[endLed-i-1], p.leds[startLed+i]
+		}
+	}
 }
 
-// findMonitorDevice attempts to find a suitable audio input device,
-// preferring devices with "Monitor" in their name.
 func (p *AudioLEDProducer) findDevice() (*portaudio.DeviceInfo, error) {
 	devices, err := portaudio.Devices()
 	if err != nil {
@@ -206,17 +218,19 @@ func (p *AudioLEDProducer) findDevice() (*portaudio.DeviceInfo, error) {
 	return nil, fmt.Errorf("no suitable audio input device found")
 }
 
-// stereoToMono converts a buffer of interleaved stereo samples to mono.
-func stereoToMono(in []float32, channels int) []float32 {
+// deInterleave converts a buffer of interleaved stereo samples to mono.
+func deInterleave(in []float32, channels int) ([]float32, []float32) {
 	if channels == 1 {
-		return in
+		return in, in
 	}
 	numSamples := len(in) / channels
-	out := make([]float32, numSamples)
-	for i := range out {
-		out[i] = (in[i*channels] + in[i*channels+1]) / 2.0
+	outL := make([]float32, numSamples)
+	outR := make([]float32, numSamples)
+	for i := range numSamples {
+		outL[i] = in[channels*i]
+		outR[i] = in[channels*i+1]
 	}
-	return out
+	return outL, outR
 }
 
 // calculateRMS calculates the Root Mean Square of a slice of audio samples.
@@ -231,6 +245,6 @@ func calculateRMS(samples []float32) float64 {
 
 // rmsToDB converts an RMS value (0.0-1.0) to a decibel scale.
 func rmsToDB(rms float64) float64 {
-	rms = max(0.001, rms) // Avoid log(0)
+	rms = max(0.0001, rms) // Avoid log(0)
 	return 20 * math.Log10(rms)
 }
