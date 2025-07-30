@@ -70,8 +70,6 @@ func (s *RaspberryPiPlatform) Start() error {
 		}
 	}
 
-	s.displayManager = NewDisplayManager(s.config.Hardware.Display)
-
 	switch strings.ToUpper(s.config.Hardware.LEDType) {
 	case "APA102":
 		s.ledDriver = newAPA102Driver(s.config.Hardware.Display)
@@ -94,7 +92,7 @@ func (s *RaspberryPiPlatform) Stop() {
 }
 
 func (s *RaspberryPiPlatform) DisplayLeds(leds []producer.Led) {
-	for _, segarray := range s.displayManager.Segments {
+	for _, segarray := range s.Segments {
 		for _, seg := range segarray {
 			seg.SetLeds(leds)
 			if seg.Visible {

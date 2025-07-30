@@ -11,20 +11,20 @@ import (
 )
 
 type AbstractPlatform struct {
-	config         *c.Config
-	sensorEvents   chan *u.Trigger
-	sensors        map[string]*sensor
-	displayManager *DisplayManager
-	displayFunc    func([]p.Led)
+	config       *c.Config
+	sensorEvents chan *u.Trigger
+	sensors      map[string]*sensor
+	Segments     map[string][]*Segment
+	displayFunc  func([]p.Led)
 }
 
 func NewAbstractPlatform(conf *c.Config, displayFunc func([]p.Led)) *AbstractPlatform {
 	return &AbstractPlatform{
-		config:         conf,
-		sensorEvents:   make(chan *u.Trigger),
-		sensors:        make(map[string]*sensor),
-		displayManager: NewDisplayManager(conf.Hardware.Display),
-		displayFunc:    displayFunc,
+		config:       conf,
+		sensorEvents: make(chan *u.Trigger),
+		sensors:      make(map[string]*sensor),
+		Segments:     ParseDisplaySegments(conf.Hardware.Display),
+		displayFunc:  displayFunc,
 	}
 }
 

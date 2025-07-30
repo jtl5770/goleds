@@ -43,7 +43,6 @@ func NewTUIPlatform(conf *config.Config, ossignalchan chan os.Signal, stopchan c
 
 func (s *TUIPlatform) Start() error {
 	s.initSensors(s.config.Hardware.Sensors)
-	s.displayManager = NewDisplayManager(s.config.Hardware.Display)
 	s.initSimulationTUI(
 		s.ossignalChan,
 		len(s.config.Hardware.Sensors.SensorCfg),
@@ -61,7 +60,7 @@ func (s *TUIPlatform) Stop() {
 
 func (s *TUIPlatform) DisplayLeds(leds []producer.Led) {
 	// Update the segments with the new LED data
-	for _, segarray := range s.displayManager.Segments {
+	for _, segarray := range s.Segments {
 		for _, seg := range segarray {
 			seg.SetLeds(leds)
 		}
@@ -203,11 +202,11 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 // This function must be called on the main TUI thread via app.QueueUpdateDraw().
 func (s *TUIPlatform) simulateLedDisplay() {
 	var buf strings.Builder
-	groupNames := maps.Keys(s.displayManager.Segments)
+	groupNames := maps.Keys(s.Segments)
 	sort.Strings(groupNames)
 
 	for _, name := range groupNames {
-		segments := s.displayManager.Segments[name]
+		segments := s.Segments[name]
 		sort.Slice(segments, func(i, j int) bool {
 			return segments[i].FirstLed < segments[j].FirstLed
 		})

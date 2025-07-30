@@ -24,21 +24,18 @@ type Segment struct {
 	Leds         []p.Led
 }
 
-// NewDisplayManager initializes and returns a new DisplayManager.
-func NewDisplayManager(displayConfig c.DisplayConfig) *DisplayManager {
-	dm := &DisplayManager{
-		Segments: make(map[string][]*Segment),
-	}
+func ParseDisplaySegments(displayConfig c.DisplayConfig) map[string][]*Segment {
+	Segments := make(map[string][]*Segment)
 
 	for name, segarray := range displayConfig.LedSegments {
 		for _, seg := range segarray {
-			dm.Segments[name] = append(dm.Segments[name], NewSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Reverse, true, displayConfig.LedsTotal))
+			Segments[name] = append(Segments[name], NewSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Reverse, true, displayConfig.LedsTotal))
 		}
 	}
 
 	// This part handles the "invisible" segments to fill gaps,
 	// ensuring all LEDs are accounted for in each named group.
-	for name, segarray := range dm.Segments {
+	for name, segarray := range Segments {
 		all := make([]bool, displayConfig.LedsTotal)
 
 		for _, seg := range segarray {
@@ -55,17 +52,17 @@ func NewDisplayManager(displayConfig c.DisplayConfig) *DisplayManager {
 			if start == -1 && !elem {
 				start = index
 			} else if start != -1 && elem {
-				dm.Segments[name] = append(dm.Segments[name], NewSegment(start, index-1, "__", false, false, displayConfig.LedsTotal))
+				Segments[name] = append(Segments[name], NewSegment(start, index-1, "__", false, false, displayConfig.LedsTotal))
 				start = -1
 			}
 		}
 		if start != -1 {
-			dm.Segments[name] = append(dm.Segments[name], NewSegment(start, len(all)-1, "__", false, false, displayConfig.LedsTotal))
+			Segments[name] = append(Segments[name], NewSegment(start, len(all)-1, "__", false, false, displayConfig.LedsTotal))
 		}
 
-		sort.Slice(dm.Segments[name], func(i, j int) bool { return dm.Segments[name][i].FirstLed < dm.Segments[name][j].FirstLed })
+		sort.Slice(Segments[name], func(i, j int) bool { return Segments[name][i].FirstLed < Segments[name][j].FirstLed })
 	}
-	return dm
+	return Segments
 }
 
 // NewSegment creates a new Segment instance.
