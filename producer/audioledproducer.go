@@ -160,13 +160,12 @@ func (p *AudioLEDProducer) checkSilence(rmsL float64, rmsR float64, ticker *time
 
 // updateLeds calculates and sets the LED colors based on the dB level.
 func (p *AudioLEDProducer) updateLeds(db float64, startLed int, endLed int) {
-	segmentLen := endLed - startLed
 	reverse := false
-	if segmentLen <= 0 {
+	if startLed > endLed {
 		reverse = true
-		segmentLen = -segmentLen
 		startLed, endLed = endLed, startLed
 	}
+	segmentLen := endLed - startLed + 1
 
 	// Clamp dB value to the expected range
 	db = min(db, p.maxDB)
@@ -196,7 +195,7 @@ func (p *AudioLEDProducer) updateLeds(db float64, startLed int, endLed int) {
 	}
 	if reverse {
 		for i := 0; i < segmentLen/2; i++ {
-			p.leds[startLed+i], p.leds[endLed-i-1] = p.leds[endLed-i-1], p.leds[startLed+i]
+			p.leds[startLed+i], p.leds[endLed-i] = p.leds[endLed-i], p.leds[startLed+i]
 		}
 	}
 }
