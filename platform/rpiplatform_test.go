@@ -12,15 +12,15 @@ func TestWS2801Driver_Write(t *testing.T) {
 	displayConfig := config.DisplayConfig{
 		ColorCorrection: []float64{1.0, 1.0, 1.0},
 	}
-	driver := newWS2801Driver(displayConfig)
+	driver := newWs2801Driver(displayConfig)
 
-	segment := &Segment{
-		Leds: []producer.Led{
+	segment := &segment{
+		leds: []producer.Led{
 			{Red: 255, Green: 0, Blue: 0},
 			{Red: 0, Green: 255, Blue: 0},
 			{Red: 0, Green: 0, Blue: 255},
 		},
-		SpiMultiplex: "spi1",
+		spiMultiplex: "spi1",
 	}
 
 	var sentData []byte
@@ -29,7 +29,7 @@ func TestWS2801Driver_Write(t *testing.T) {
 		return data
 	}
 
-	err := driver.Write(segment, exchangeFunc)
+	err := driver.write(segment, exchangeFunc)
 	if err != nil {
 		t.Fatalf("Write failed: %v", err)
 	}
@@ -45,14 +45,14 @@ func TestAPA102Driver_Write(t *testing.T) {
 		ColorCorrection:   []float64{1.0, 1.0, 1.0},
 		APA102_Brightness: 31,
 	}
-	driver := newAPA102Driver(displayConfig)
+	driver := newApa102Driver(displayConfig)
 
-	segment := &Segment{
-		Leds: []producer.Led{
+	segment := &segment{
+		leds: []producer.Led{
 			{Red: 255, Green: 0, Blue: 0},
 			{Red: 0, Green: 255, Blue: 0},
 		},
-		SpiMultiplex: "spi1",
+		spiMultiplex: "spi1",
 	}
 
 	var sentData []byte
@@ -61,7 +61,7 @@ func TestAPA102Driver_Write(t *testing.T) {
 		return data
 	}
 
-	err := driver.Write(segment, exchangeFunc)
+	err := driver.write(segment, exchangeFunc)
 	if err != nil {
 		t.Fatalf("Write failed: %v", err)
 	}

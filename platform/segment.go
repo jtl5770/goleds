@@ -9,37 +9,37 @@ import (
 	p "lautenbacher.net/goleds/producer"
 )
 
-// DisplayManager manages the LED segments for a display.
-type DisplayManager struct {
-	Segments map[string][]*Segment
+// displayManager manages the LED segments for a display.
+type displayManager struct {
+	segments map[string][]*segment
 }
 
-// Segment represents a single LED segment.
-type Segment struct {
-	FirstLed     int
-	LastLed      int
-	Visible      bool
-	Reverse      bool
-	SpiMultiplex string
-	Leds         []p.Led
+// segment represents a single LED segment.
+type segment struct {
+	firstLed     int
+	lastLed      int
+	visible      bool
+	reverse      bool
+	spiMultiplex string
+	leds         []p.Led
 }
 
-func ParseDisplaySegments(displayConfig c.DisplayConfig) map[string][]*Segment {
-	Segments := make(map[string][]*Segment)
+func parseDisplaySegments(displayConfig c.DisplayConfig) map[string][]*segment {
+	segments := make(map[string][]*segment)
 
 	for name, segarray := range displayConfig.LedSegments {
 		for _, seg := range segarray {
-			Segments[name] = append(Segments[name], NewSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Reverse, true, displayConfig.LedsTotal))
+			segments[name] = append(segments[name], newSegment(seg.FirstLed, seg.LastLed, seg.SpiMultiplex, seg.Reverse, true, displayConfig.LedsTotal))
 		}
 	}
 
 	// This part handles the "invisible" segments to fill gaps,
 	// ensuring all LEDs are accounted for in each named group.
-	for name, segarray := range Segments {
+	for name, segarray := range segments {
 		all := make([]bool, displayConfig.LedsTotal)
 
 		for _, seg := range segarray {
-			for i := seg.FirstLed; i <= seg.LastLed; i++ {
+			for i := seg.firstLed; i <= seg.lastLed; i++ {
 				if all[i] {
 					panic(fmt.Sprintf("Overlapping display segments at index %d", i))
 				}
@@ -52,21 +52,21 @@ func ParseDisplaySegments(displayConfig c.DisplayConfig) map[string][]*Segment {
 			if start == -1 && !elem {
 				start = index
 			} else if start != -1 && elem {
-				Segments[name] = append(Segments[name], NewSegment(start, index-1, "__", false, false, displayConfig.LedsTotal))
+				segments[name] = append(segments[name], newSegment(start, index-1, "__", false, false, displayConfig.LedsTotal))
 				start = -1
 			}
 		}
 		if start != -1 {
-			Segments[name] = append(Segments[name], NewSegment(start, len(all)-1, "__", false, false, displayConfig.LedsTotal))
+			segments[name] = append(segments[name], newSegment(start, len(all)-1, "__", false, false, displayConfig.LedsTotal))
 		}
 
-		sort.Slice(Segments[name], func(i, j int) bool { return Segments[name][i].FirstLed < Segments[name][j].FirstLed })
+		sort.Slice(segments[name], func(i, j int) bool { return segments[name][i].firstLed < segments[name][j].firstLed })
 	}
-	return Segments
+	return segments
 }
 
-// NewSegment creates a new Segment instance.
-func NewSegment(firstled, lastled int, spimultiplex string, reverse bool, visible bool, ledsTotal int) *Segment {
+// newSegment creates a new segment instance.
+func newSegment(firstled, lastled int, spimultiplex string, reverse bool, visible bool, ledsTotal int) *segment {
 	if firstled > lastled {
 		log.Printf("First led index %d is bigger than last led index %d - reversing", firstled, lastled)
 		tmp := firstled
@@ -76,32 +76,32 @@ func NewSegment(firstled, lastled int, spimultiplex string, reverse bool, visibl
 	if !visible {
 		spimultiplex = "__" // Use a dummy multiplexer for invisible segments
 	}
-	inst := Segment{
-		FirstLed:     clamp(firstled, ledsTotal),
-		LastLed:      clamp(lastled, ledsTotal),
-		Visible:      visible,
-		Reverse:      reverse,
-		SpiMultiplex: spimultiplex,
+	inst := segment{
+		firstLed:     clamp(firstled, ledsTotal),
+		lastLed:      clamp(lastled, ledsTotal),
+		visible:      visible,
+		reverse:      reverse,
+		spiMultiplex: spimultiplex,
 	}
 	return &inst
 }
 
-// SetLeds sets the LEDs for the segment, applying reversal if configured.
-func (s *Segment) SetLeds(sumleds []p.Led) {
-	if s.Visible {
-		s.Leds = sumleds[s.FirstLed : s.LastLed+1]
-		if s.Reverse {
-			for i, j := 0, len(s.Leds)-1; i < j; i, j = i+1, j-1 {
-				s.Leds[i], s.Leds[j] = s.Leds[j], s.Leds[i]
+// setLeds sets the LEDs for the segment, applying reversal if configured.
+func (s *segment) setLeds(sumleds []p.Led) {
+	if s.visible {
+		s.leds = sumleds[s.firstLed : s.lastLed+1]
+		if s.reverse {
+			for i, j := 0, len(s.leds)-1; i < j; i, j = i+1, j-1 {
+				s.leds[i], s.leds[j] = s.leds[j], s.leds[i]
 			}
 		}
 	}
 }
 
-// GetLeds returns the LEDs for the segment if visible, otherwise nil.
-func (s *Segment) GetLeds() []p.Led {
-	if s.Visible {
-		return s.Leds
+// getLeds returns the LEDs for the segment if visible, otherwise nil.
+func (s *segment) getLeds() []p.Led {
+	if s.visible {
+		return s.leds
 	}
 	return nil
 }

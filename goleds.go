@@ -151,15 +151,16 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 		}
 		a.platform = rpiPlatform
 	} else {
-		a.platform = pl.NewTUIPlatform(conf, a.ossignal, a.stopsignal)
-	}
-
-	if err := a.platform.Start(); err != nil {
-		log.Fatalf("Failed to start platform: %v", err)
+		a.platform = pl.NewTUIPlatform(conf, a.ossignal)
 	}
 
 	ledReader := u.NewAtomicMapEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
+
+	if err := a.platform.Start(ledWriter); err != nil {
+		log.Fatalf("Failed to start platform: %v", err)
+	}
+
 	ledsTotal := a.platform.GetLedsTotal()
 
 	// These producers runs all the time and will be started right away here
@@ -220,12 +221,10 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 
 	// *FUTURE* init more types of ledproducers if needed/wanted
 
-	a.shutdownWg.Add(4)
+	a.shutdownWg.Add(2)
 
 	go a.combineAndUpdateDisplay(ledReader, ledWriter)
 	go a.fireController()
-	go a.platform.DisplayDriver(ledWriter, a.stopsignal, &a.shutdownWg)
-	go a.platform.SensorDriver(a.stopsignal, &a.shutdownWg)
 }
 
 func (a *App) shutdown() {
@@ -238,10 +237,10 @@ func (a *App) shutdown() {
 	log.Println("Stopping running go-routines... ")
 	close(a.stopsignal)
 
-	a.shutdownWg.Wait()
 	if a.platform != nil {
 		a.platform.Stop()
 	}
+	a.shutdownWg.Wait()
 }
 
 // This go-routine combines the LED values from all producers and writes them to the

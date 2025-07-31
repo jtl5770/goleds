@@ -7,7 +7,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -32,16 +31,16 @@ type TUIPlatform struct {
 	tuiTriggerValue int
 }
 
-func NewTUIPlatform(conf *config.Config, ossignalchan chan os.Signal, stopchan chan bool) *TUIPlatform {
+func NewTUIPlatform(conf *config.Config, ossignalchan chan os.Signal) *TUIPlatform {
 	inst := &TUIPlatform{
 		ossignalChan:    ossignalchan,
 		tuiTriggerValue: 200, // Default trigger value
 	}
-	inst.AbstractPlatform = NewAbstractPlatform(conf, inst.DisplayLeds)
+	inst.AbstractPlatform = newAbstractPlatform(conf, inst.DisplayLeds)
 	return inst
 }
 
-func (s *TUIPlatform) Start() error {
+func (s *TUIPlatform) Start(ledWriter chan []producer.Led) error {
 	s.initSensors(s.config.Hardware.Sensors)
 	s.initSimulationTUI(
 		s.ossignalChan,
@@ -49,33 +48,35 @@ func (s *TUIPlatform) Start() error {
 		len(s.config.Hardware.Display.LedSegments),
 		s.config.Hardware.Display.LedsTotal,
 	)
+
+	s.displayWg.Add(1)
+	go s.displayDriver(ledWriter)
+
 	return nil
 }
 
 func (s *TUIPlatform) Stop() {
+	// First, stop the TUI application to prevent UI deadlocks
 	if s.tviewapp != nil {
 		s.tviewapp.Stop()
 	}
+
+	// Now, signal the display driver to exit
+	close(s.displayStopChan)
+
+	// Wait for it to confirm it's done
+	s.displayWg.Wait()
 }
 
 func (s *TUIPlatform) DisplayLeds(leds []producer.Led) {
 	// Update the segments with the new LED data
-	for _, segarray := range s.Segments {
+	for _, segarray := range s.segments {
 		for _, seg := range segarray {
-			seg.SetLeds(leds)
+			seg.setLeds(leds)
 		}
 	}
 	// Now, schedule a redraw on the main TUI thread.
 	s.tviewapp.QueueUpdateDraw(s.simulateLedDisplay)
-}
-
-func (s *TUIPlatform) SensorDriver(stopchan chan bool, wg *sync.WaitGroup) {
-	defer wg.Done()
-	// In the TUI platform, sensor events are triggered by key presses,
-	// not by a continuous reading loop. This function is here to satisfy the
-	// platform.Platform interface, but it doesn't need to do anything.
-	<-stopchan
-	log.Println("Ending SensorDriver go-routine (TUI)")
 }
 
 // getIntroText generates the dynamic text for the top info pane.
@@ -133,6 +134,10 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 	// --- Input Handling ---
 	s.tviewapp.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
+		case tcell.KeyCtrlC:
+			s.tviewapp.Stop()
+			ossignal <- os.Interrupt
+			return nil
 		case tcell.KeyRune:
 			key := string(event.Rune())
 			if senuid, exist := s.chartosensor[key]; exist {
@@ -202,13 +207,13 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 // This function must be called on the main TUI thread via app.QueueUpdateDraw().
 func (s *TUIPlatform) simulateLedDisplay() {
 	var buf strings.Builder
-	groupNames := maps.Keys(s.Segments)
+	groupNames := maps.Keys(s.segments)
 	sort.Strings(groupNames)
 
 	for _, name := range groupNames {
-		segments := s.Segments[name]
+		segments := s.segments[name]
 		sort.Slice(segments, func(i, j int) bool {
-			return segments[i].FirstLed < segments[j].FirstLed
+			return segments[i].firstLed < segments[j].firstLed
 		})
 
 		tops := make([]string, len(segments))
@@ -228,13 +233,13 @@ func (s *TUIPlatform) simulateLedDisplay() {
 }
 
 // simulateLedSegment generates the two-line representation for a single segment.
-func (s *TUIPlatform) simulateLedSegment(segment *Segment) (string, string) {
-	if !segment.Visible {
-		length := segment.LastLed - segment.FirstLed + 1
+func (s *TUIPlatform) simulateLedSegment(segment *segment) (string, string) {
+	if !segment.visible {
+		length := segment.lastLed - segment.firstLed + 1
 		return strings.Repeat(" ", length), strings.Repeat("·", length)
 	}
 
-	values := segment.Leds
+	values := segment.leds
 	var buf1, buf2 strings.Builder
 	buf1.Grow(len(values) * (len("[-][#000000]") + 1))
 	buf2.Grow(len(values) * (len("[-][#000000]") + 1))

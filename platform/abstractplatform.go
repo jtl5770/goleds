@@ -11,20 +11,23 @@ import (
 )
 
 type AbstractPlatform struct {
-	config       *c.Config
-	sensorEvents chan *u.Trigger
-	sensors      map[string]*sensor
-	Segments     map[string][]*Segment
-	displayFunc  func([]p.Led)
+	config          *c.Config
+	sensorEvents    chan *u.Trigger
+	sensors         map[string]*sensor
+	segments        map[string][]*segment
+	displayFunc     func([]p.Led)
+	displayWg       sync.WaitGroup
+	displayStopChan chan bool
 }
 
-func NewAbstractPlatform(conf *c.Config, displayFunc func([]p.Led)) *AbstractPlatform {
+func newAbstractPlatform(conf *c.Config, displayFunc func([]p.Led)) *AbstractPlatform {
 	return &AbstractPlatform{
-		config:       conf,
-		sensorEvents: make(chan *u.Trigger),
-		sensors:      make(map[string]*sensor),
-		Segments:     ParseDisplaySegments(conf.Hardware.Display),
-		displayFunc:  displayFunc,
+		config:          conf,
+		sensorEvents:    make(chan *u.Trigger),
+		sensors:         make(map[string]*sensor),
+		segments:        parseDisplaySegments(conf.Hardware.Display),
+		displayFunc:     displayFunc,
+		displayStopChan: make(chan bool),
 	}
 }
 
@@ -48,11 +51,11 @@ func (s *AbstractPlatform) GetForceUpdateDelay() time.Duration {
 	return s.config.Hardware.Display.ForceUpdateDelay
 }
 
-func (s *AbstractPlatform) DisplayDriver(display chan []p.Led, stopSignal chan bool, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (s *AbstractPlatform) displayDriver(display chan []p.Led) {
+	defer s.displayWg.Done()
 	for {
 		select {
-		case <-stopSignal:
+		case <-s.displayStopChan:
 			log.Println("Ending DisplayDriver go-routine")
 			return
 		case sumLeds := <-display:

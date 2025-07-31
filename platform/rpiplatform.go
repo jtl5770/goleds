@@ -16,10 +16,12 @@ import (
 
 type RaspberryPiPlatform struct {
 	*AbstractPlatform
-	ledDriver       LEDDriver
+	ledDriver       ledDriver
 	spiMutex        sync.Mutex
 	spimultiplexcfg map[string]gpiocfg
 	sensorViewer    *SensorViewer
+	sensorWg        sync.WaitGroup
+	sensorStopChan  chan bool
 }
 
 type gpiocfg struct {
@@ -28,8 +30,10 @@ type gpiocfg struct {
 }
 
 func NewRaspberryPiPlatform(conf *config.Config) *RaspberryPiPlatform {
-	inst := &RaspberryPiPlatform{}
-	inst.AbstractPlatform = NewAbstractPlatform(conf, inst.DisplayLeds)
+	inst := &RaspberryPiPlatform{
+		sensorStopChan: make(chan bool),
+	}
+	inst.AbstractPlatform = newAbstractPlatform(conf, inst.DisplayLeds)
 	return inst
 }
 
@@ -38,7 +42,7 @@ func (s *RaspberryPiPlatform) SetSensorViewer(v *SensorViewer) {
 	s.sensorViewer = v
 }
 
-func (s *RaspberryPiPlatform) Start() error {
+func (s *RaspberryPiPlatform) Start(ledWriter chan []producer.Led) error {
 	log.Println("Initialise GPIO and Spi...")
 	if err := rpio.Open(); err != nil {
 		return fmt.Errorf("failed to open rpio: %w", err)
@@ -72,19 +76,34 @@ func (s *RaspberryPiPlatform) Start() error {
 
 	switch strings.ToUpper(s.config.Hardware.LEDType) {
 	case "APA102":
-		s.ledDriver = newAPA102Driver(s.config.Hardware.Display)
+		s.ledDriver = newApa102Driver(s.config.Hardware.Display)
 	case "WS2801":
-		s.ledDriver = newWS2801Driver(s.config.Hardware.Display)
+		s.ledDriver = newWs2801Driver(s.config.Hardware.Display)
 	default:
 		return fmt.Errorf("unknown LED type: %s", s.config.Hardware.LEDType)
 	}
 
 	s.initSensors(s.config.Hardware.Sensors)
 
+	s.displayWg.Add(1)
+	go s.displayDriver(ledWriter)
+
+	s.sensorWg.Add(1)
+	go s.sensorDriver()
+
 	return nil
 }
 
 func (s *RaspberryPiPlatform) Stop() {
+	// Signal goroutines to stop
+	close(s.displayStopChan)
+	close(s.sensorStopChan)
+
+	// Wait for them to finish
+	s.displayWg.Wait()
+	s.sensorWg.Wait()
+
+	// Now, safely close hardware
 	rpio.SpiEnd(rpio.Spi0)
 	if err := rpio.Close(); err != nil {
 		log.Printf("Error closing rpio: %v", err)
@@ -92,11 +111,11 @@ func (s *RaspberryPiPlatform) Stop() {
 }
 
 func (s *RaspberryPiPlatform) DisplayLeds(leds []producer.Led) {
-	for _, segarray := range s.Segments {
+	for _, segarray := range s.segments {
 		for _, seg := range segarray {
-			seg.SetLeds(leds)
-			if seg.Visible {
-				if err := s.ledDriver.Write(seg, s.spiExchangeMultiplex); err != nil {
+			seg.setLeds(leds)
+			if seg.visible {
+				if err := s.ledDriver.write(seg, s.spiExchangeMultiplex); err != nil {
 					log.Printf("Error writing to LED driver: %v", err)
 				}
 			}
@@ -124,40 +143,40 @@ func (s *RaspberryPiPlatform) spiExchangeMultiplex(index string, data []byte) []
 	return data
 }
 
-// LEDDriver interface and implementations
-type LEDDriver interface {
-	Write(segment *Segment, exchangeFunc func(string, []byte) []byte) error
+// ledDriver interface and implementations
+type ledDriver interface {
+	write(segment *segment, exchangeFunc func(string, []byte) []byte) error
 }
 
-type WS2801Driver struct {
+type ws2801Driver struct {
 	displayConfig config.DisplayConfig
 }
 
-func newWS2801Driver(displayConfig config.DisplayConfig) *WS2801Driver {
-	return &WS2801Driver{displayConfig: displayConfig}
+func newWs2801Driver(displayConfig config.DisplayConfig) *ws2801Driver {
+	return &ws2801Driver{displayConfig: displayConfig}
 }
 
-func (d *WS2801Driver) Write(segment *Segment, exchangeFunc func(string, []byte) []byte) error {
+func (d *ws2801Driver) write(segment *segment, exchangeFunc func(string, []byte) []byte) error {
 	var display []byte
-	display = make([]byte, 3*len(segment.Leds))
-	for idx := range segment.Leds {
-		display[3*idx] = byte(math.Min(float64(segment.Leds[idx].Red)*float64(d.displayConfig.ColorCorrection[0]), 255))
-		display[(3*idx)+1] = byte(math.Min(float64(segment.Leds[idx].Green)*float64(d.displayConfig.ColorCorrection[1]), 255))
-		display[(3*idx)+2] = byte(math.Min(float64(segment.Leds[idx].Blue)*float64(d.displayConfig.ColorCorrection[2]), 255))
+	display = make([]byte, 3*len(segment.leds))
+	for idx := range segment.leds {
+		display[3*idx] = byte(math.Min(float64(segment.leds[idx].Red)*float64(d.displayConfig.ColorCorrection[0]), 255))
+		display[(3*idx)+1] = byte(math.Min(float64(segment.leds[idx].Green)*float64(d.displayConfig.ColorCorrection[1]), 255))
+		display[(3*idx)+2] = byte(math.Min(float64(segment.leds[idx].Blue)*float64(d.displayConfig.ColorCorrection[2]), 255))
 	}
-	exchangeFunc(segment.SpiMultiplex, display)
+	exchangeFunc(segment.spiMultiplex, display)
 	return nil
 }
 
-type APA102Driver struct {
+type apa102Driver struct {
 	displayConfig config.DisplayConfig
 }
 
-func newAPA102Driver(displayConfig config.DisplayConfig) *APA102Driver {
-	return &APA102Driver{displayConfig: displayConfig}
+func newApa102Driver(displayConfig config.DisplayConfig) *apa102Driver {
+	return &apa102Driver{displayConfig: displayConfig}
 }
 
-func (d *APA102Driver) Write(segment *Segment, exchangeFunc func(string, []byte) []byte) error {
+func (d *apa102Driver) write(segment *segment, exchangeFunc func(string, []byte) []byte) error {
 	var display []byte
 
 	// frame start: 4 zero bytes
@@ -168,10 +187,10 @@ func (d *APA102Driver) Write(segment *Segment, exchangeFunc func(string, []byte)
 	brightness := byte(d.displayConfig.APA102_Brightness) | 0xE0
 
 	// LED data
-	for i := range segment.Leds {
-		red := byte(math.Min(float64(segment.Leds[i].Red)*float64(d.displayConfig.ColorCorrection[0]), 255))
-		green := byte(math.Min(float64(segment.Leds[i].Green)*float64(d.displayConfig.ColorCorrection[1]), 255))
-		blue := byte(math.Min(float64(segment.Leds[i].Blue)*float64(d.displayConfig.ColorCorrection[2]), 255))
+	for i := range segment.leds {
+		red := byte(math.Min(float64(segment.leds[i].Red)*float64(d.displayConfig.ColorCorrection[0]), 255))
+		green := byte(math.Min(float64(segment.leds[i].Green)*float64(d.displayConfig.ColorCorrection[1]), 255))
+		blue := byte(math.Min(float64(segment.leds[i].Blue)*float64(d.displayConfig.ColorCorrection[2]), 255))
 
 		// protocol: brightness byte
 		display = append(display, brightness, blue, green, red)
@@ -179,19 +198,19 @@ func (d *APA102Driver) Write(segment *Segment, exchangeFunc func(string, []byte)
 
 	// frame end: at least (len(values) / 2) + 1 bits of 0xFF
 	// using number of bytes here
-	frameEndLength := int(len(segment.Leds)/16) + 1
+	frameEndLength := int(len(segment.leds)/16) + 1
 	frameEnd := make([]byte, frameEndLength)
 	for i := range frameEnd {
 		frameEnd[i] = 0xFF
 	}
 	display = append(display, frameEnd...)
 
-	exchangeFunc(segment.SpiMultiplex, display)
+	exchangeFunc(segment.spiMultiplex, display)
 	return nil
 }
 
-func (s *RaspberryPiPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (s *RaspberryPiPlatform) sensorDriver() {
+	defer s.sensorWg.Done()
 	ticker := time.NewTicker(s.config.Hardware.Sensors.LoopDelay)
 	defer ticker.Stop()
 
@@ -199,7 +218,7 @@ func (s *RaspberryPiPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGr
 
 	for {
 		select {
-		case <-stopSignal:
+		case <-s.sensorStopChan:
 			log.Println("Ending SensorDriver go-routine (RPi)")
 			return
 		case <-ticker.C:

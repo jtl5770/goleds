@@ -1,7 +1,6 @@
 package platform
 
 import (
-	"sync"
 	"time"
 
 	p "lautenbacher.net/goleds/producer"
@@ -12,10 +11,10 @@ import (
 // hardware or the TUI simulation. The rest of the program should only
 // see this interface.
 type Platform interface {
-	// Start initializes the platform (e.g., opens GPIO/SPI, or starts the TUI).
-	Start() error
+	// Start initializes the platform and launches its internal goroutines.
+	Start(ledWriter chan []p.Led) error
 
-	// Stop cleans up all platform resources.
+	// Stop cleans up all platform resources and gracefully stops its goroutines.
 	Stop()
 
 	// DisplayLeds sends the complete state of all LEDs to the output device.
@@ -34,10 +33,4 @@ type Platform interface {
 
 	// ForceUpdateDelay returns the configured delay for forcing a display update.
 	GetForceUpdateDelay() time.Duration
-
-	// DisplayDriver runs the display update loop for the platform.
-	DisplayDriver(display chan []p.Led, stopSignal chan bool, wg *sync.WaitGroup)
-
-	// SensorDriver runs the sensor reading loop for the platform.
-	SensorDriver(stopSignal chan bool, wg *sync.WaitGroup)
 }

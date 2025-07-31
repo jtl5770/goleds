@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -30,27 +29,15 @@ func (m *MockPlatform) GetSensorLedIndices() map[string]int {
 	return indices
 }
 
-func (m *MockPlatform) Start() error {
+func (m *MockPlatform) Start(ledWriter chan []p.Led) error {
 	return nil
 }
 
 func (m *MockPlatform) Stop() {
 }
 
-func (m *MockPlatform) DisplayDriver(display chan []p.Led, stopSignal chan bool, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for {
-		select {
-		case <-stopSignal:
-			return
-		case <-display:
-		}
-	}
-}
-
-func (m *MockPlatform) SensorDriver(stopSignal chan bool, wg *sync.WaitGroup) {
-	defer wg.Done()
-	<-stopSignal
+func (m *MockPlatform) DisplayLeds(leds []p.Led) {
+	// do nothing in mock
 }
 
 func (m *MockPlatform) GetForceUpdateDelay() time.Duration {
