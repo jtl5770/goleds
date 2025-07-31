@@ -33,7 +33,8 @@ SensorLED:
 	}
 
 	// Call the function to be tested
-	conf := ReadConfig(configFile, true, false)
+	conf, err := ReadConfig(configFile, true, false)
+	assert.NoError(t, err, "ReadConfig should not return an error")
 
 	// Assertions
 	assert.True(t, conf.RealHW, "RealHW should be true")

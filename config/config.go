@@ -146,23 +146,23 @@ type Config struct {
 	Hardware     HardwareConfig     `yaml:"Hardware"`
 }
 
-func ReadConfig(cfile string, realhw bool, sensorshow bool) *Config {
+func ReadConfig(cfile string, realhw bool, sensorshow bool) (*Config, error) {
 	log.Printf("Reading config file %s...", cfile)
 	f, err := os.Open(cfile)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer f.Close()
 	decoder := yaml.NewDecoder(f)
 	var conf Config
 	err = decoder.Decode(&conf)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	conf.RealHW = realhw
 	conf.SensorShow = sensorshow
 	conf.Configfile = cfile
 	log.Printf("%+v\n", conf)
 
-	return &conf
+	return &conf, nil
 }

@@ -124,7 +124,10 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	a.stopsignal = make(chan bool)
 	a.ledproducers = make(map[string]p.LedProducer)
 
-	conf := c.ReadConfig(cfile, realp, sensp)
+	conf, err := c.ReadConfig(cfile, realp, sensp)
+	if err != nil {
+		log.Fatalf("Failed to read config: %v", err)
+	}
 
 	// Handle the special "-sensor-show development mode"
 	if !conf.RealHW && conf.SensorShow {
@@ -227,11 +230,9 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 
 func (a *App) shutdown() {
 	log.Println("Shutting down...")
-	if len(a.ledproducers) > 0 {
-		for _, prod := range a.ledproducers {
-			log.Println("Exiting producer: ", prod.GetUID())
-			prod.Exit()
-		}
+	for _, prod := range a.ledproducers {
+		log.Printf("Exiting producer: %s", prod.GetUID())
+		prod.Exit()
 	}
 
 	log.Println("Stopping running go-routines... ")

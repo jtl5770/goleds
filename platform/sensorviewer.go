@@ -202,9 +202,9 @@ func (sv *SensorViewer) prepareDisplayStrings() (string, string, string) {
 		var min, max float64
 		var mean, stdev float64
 
-		if ok && values.Len() > 0 {
+		if ok {
 			data := make([]int, values.Len())
-			for i := 0; i < values.Len(); i++ {
+			for i := range values.Len() {
 				data[i] = values.At(i)
 			}
 			stats := calculateStats(data)
