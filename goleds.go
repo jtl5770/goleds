@@ -397,6 +397,7 @@ func (a *App) permProdRunner(stop chan bool) {
 }
 
 // hashLeds computes a hash for the given LED state array.
+// This is used to detect changes in the LED state and avoid unnecessary updates.
 func hashLeds(leds []p.Led) uint64 {
 	h := fnv.New64a() // FNV-1a is a fast, non-cryptographic hash function.
 	for _, led := range leds {
