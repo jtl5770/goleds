@@ -108,14 +108,14 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 		SetTextAlign(tview.AlignCenter)
 	s.intro.SetText(s.getIntroText(numSensors)) // Set initial text
 	s.intro.SetBorder(true).SetTitle(" GOLEDS Simulation ").SetTitleColor(tcell.ColorLightBlue)
-	s.intro.SetBackgroundColor(tcell.NewRGBColor(0, 0, 0))
+	s.intro.SetBackgroundColor(tcell.NewRGBColor(20, 20, 20))
 
 	// --- LED Display Pane ---
 	s.ledDisplay = tview.NewTextView().
 		SetDynamicColors(true).
 		SetTextAlign(tview.AlignLeft)
 	s.ledDisplay.SetBorder(true)
-	s.ledDisplay.SetBackgroundColor(tcell.NewRGBColor(0, 0, 0))
+	s.ledDisplay.SetBackgroundColor(tcell.NewRGBColor(30, 30, 30))
 
 	// --- Log Pane ---
 	s.logView = tview.NewTextView().
@@ -126,7 +126,7 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 			s.tviewapp.Draw()
 		})
 	s.logView.SetBorder(true).SetTitle(" Logs ").SetTitleColor(tcell.ColorLightBlue)
-	s.logView.SetBackgroundColor(tcell.NewRGBColor(0, 0, 0))
+	s.logView.SetBackgroundColor(tcell.NewRGBColor(40, 40, 40))
 
 	// --- Layout ---
 	stripeHeight := 1 + (3 * numSegmentGroups) + 2 // 1 for sensor line, 3 per group, 2 for border
