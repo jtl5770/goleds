@@ -18,6 +18,7 @@ type AbstractPlatform struct {
 	displayFunc     func([]p.Led)
 	displayWg       sync.WaitGroup
 	displayStopChan chan bool
+	readyChan       chan bool
 }
 
 func newAbstractPlatform(conf *c.Config, displayFunc func([]p.Led)) *AbstractPlatform {

@@ -26,9 +26,10 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"hash/fnv"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -37,6 +38,7 @@ import (
 	"time"
 
 	c "lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/logging"
 	pl "lautenbacher.net/goleds/platform"
 	p "lautenbacher.net/goleds/producer"
 	u "lautenbacher.net/goleds/util"
@@ -93,6 +95,24 @@ func main() {
 		"* will be using random values if -real is not given - useful only for development of the viewer component itself")
 	flag.Parse()
 
+	// Initialize logging
+	if err := logging.Init(true, "INFO", "text", false, ""); err != nil {
+		slog.Error("Failed to initialize logging", "error", err)
+		os.Exit(1)
+	}
+	defer logging.Close()
+
+	// Redirect stderr to the logger
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	go func() {
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			slog.Error(scanner.Text())
+		}
+	}()
+
 	app := NewApp(ossignal)
 	app.initialise(*cfile, *realp, *sensp)
 
@@ -101,13 +121,12 @@ func main() {
 	for sig := range ossignal {
 		switch sig {
 		case os.Interrupt:
-			log.SetOutput(os.Stderr)
-			log.Println("Exiting...")
+			slog.Info("Exiting...")
 			app.shutdown()
 			os.Exit(0)
 		case syscall.SIGHUP:
-			log.SetOutput(os.Stderr)
-			log.Println("Resetting...")
+			logging.BufferOutput()
+			slog.Info("Resetting...")
 			app.shutdown()
 			app.initialise(*cfile, *realp, *sensp)
 		}
@@ -115,7 +134,7 @@ func main() {
 }
 
 func (a *App) initialise(cfile string, realp bool, sensp bool) {
-	log.Println("Initializing...")
+	slog.Info("Initializing...")
 
 	a.afterProdIsRunning = false
 	a.afterProd = make([]p.LedProducer, 0)
@@ -126,12 +145,13 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 
 	conf, err := c.ReadConfig(cfile, realp, sensp)
 	if err != nil {
-		log.Fatalf("Failed to read config: %v", err)
+		slog.Error("Failed to read config", "error", err)
+		os.Exit(1)
 	}
 
 	// Handle the special "-sensor-show development mode"
 	if !conf.RealHW && conf.SensorShow {
-		log.Println("Starting in Sensor Viewer development mode...")
+		slog.Info("Starting in Sensor Viewer development mode...")
 		viewer := pl.NewSensorViewer(conf.Hardware.Sensors.SensorCfg, a.ossignal, true)
 		a.shutdownWg.Add(2) // For viewer + generator
 		go viewer.Start(a.stopsignal, &a.shutdownWg)
@@ -158,8 +178,15 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	ledWriter := make(chan []p.Led, 1)
 
 	if err := a.platform.Start(ledWriter); err != nil {
-		log.Fatalf("Failed to start platform: %v", err)
+		slog.Error("Failed to start platform", "error", err)
+		os.Exit(1)
 	}
+
+	// Block until the platform signals it's ready. This is crucial for the TUI
+	// to prevent race conditions with libraries that interact with the terminal,
+	// like portaudio.
+	<-a.platform.Ready()
+	slog.Info("Platform is ready, starting producers...")
 
 	ledsTotal := a.platform.GetLedsTotal()
 
@@ -228,13 +255,13 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 }
 
 func (a *App) shutdown() {
-	log.Println("Shutting down...")
+	slog.Info("Shutting down...")
 	for _, prod := range a.ledproducers {
-		log.Printf("Exiting producer: %s", prod.GetUID())
+		slog.Info("Exiting producer", "uid", prod.GetUID())
 		prod.Exit()
 	}
 
-	log.Println("Stopping running go-routines... ")
+	slog.Info("Stopping running go-routines...")
 	close(a.stopsignal)
 
 	if a.platform != nil {
@@ -271,7 +298,7 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 				select {
 				case ledwriter <- sumLeds:
 				case <-a.stopsignal:
-					log.Println("Ending combineAndupdateDisplay go-routine")
+					slog.Info("Ending combineAndupdateDisplay go-routine")
 					return
 				}
 			}
@@ -284,11 +311,11 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 			select {
 			case ledwriter <- p.CombineLeds(allLedRanges, a.platform.GetLedsTotal()):
 			case <-a.stopsignal:
-				log.Println("Ending combineAndupdateDisplay go-routine")
+				slog.Info("Ending combineAndupdateDisplay go-routine")
 				return
 			}
 		case <-a.stopsignal:
-			log.Println("Ending combineAndupdateDisplay go-routine")
+			slog.Info("Ending combineAndupdateDisplay go-routine")
 			return
 		}
 	}
@@ -312,20 +339,20 @@ func (a *App) fireController() {
 				if !producer.GetIsRunning() {
 					for _, prod := range a.afterProd {
 						if prod.GetIsRunning() {
-							log.Printf("===> Stopping after Producer %s", prod.GetUID())
+							slog.Info("===> Stopping after Producer", "uid", prod.GetUID())
 							prod.Stop() // This will signal the go-routine to stop
 						}
 					}
 					for _, prod := range a.permProd {
 						if prod.GetIsRunning() {
-							log.Printf("===> Stopping perm Producer %s", prod.GetUID())
+							slog.Info("===> Stopping perm Producer", "uid", prod.GetUID())
 							prod.Stop() // This will signal the go-routine to stop
 						}
 					}
-					log.Printf("   ===> Starting SensorLedProducer %s", trigger.ID)
+					slog.Info("   ===> Starting SensorLedProducer", "uid", trigger.ID)
 					producer.Start()
 					if !a.afterProdIsRunning {
-						log.Printf("      ---> Starting afterprodRunner go-routine")
+						slog.Info("      ---> Starting afterprodRunner go-routine")
 						// we need to give the stop chan as a
 						// parameter to make sure the go routines use
 						// this and not a newly created inside the
@@ -337,29 +364,29 @@ func (a *App) fireController() {
 				producer.SendTrigger(trigger)
 				a.prodMutex.Unlock()
 			} else {
-				log.Printf("Unknown UID %s", trigger.ID)
+				slog.Warn("Unknown UID", "uid", trigger.ID)
 			}
 		case <-a.stopsignal:
-			log.Println("Ending fireController go-routine")
+			slog.Info("Ending fireController go-routine")
 			return
 		}
 	}
 }
 
 func (a *App) afterProdRunner(stop chan bool) {
-	log.Println("         --> In afterProdRunner go-routine... Blocking on WaitGroup sensorProdWg")
+	slog.Info("         --> In afterProdRunner go-routine... Blocking on WaitGroup sensorProdWg")
 	a.sensorProdWg.Wait()
-	log.Println("         <-- sensorProdWg unblocked - ending afterProdRunner go-routine")
+	slog.Info("         <-- sensorProdWg unblocked - ending afterProdRunner go-routine")
 	select {
 	case <-stop:
-		log.Println("*** afterProdRunner go-routine stopped by signal")
+		slog.Warn("*** afterProdRunner go-routine stopped by signal")
 		return
 	default:
 	}
 
 	a.prodMutex.Lock()
 	for _, prod := range a.afterProd {
-		log.Printf("===> Starting afterProd %s", prod.GetUID())
+		slog.Info("===> Starting afterProd", "uid", prod.GetUID())
 		prod.Start()
 	}
 	go a.permProdRunner(stop)
@@ -368,12 +395,12 @@ func (a *App) afterProdRunner(stop chan bool) {
 }
 
 func (a *App) permProdRunner(stop chan bool) {
-	log.Println("            --> In permProdRunner go-routine... Blocking on WaitGroup afterProdWg")
+	slog.Info("            --> In permProdRunner go-routine... Blocking on WaitGroup afterProdWg")
 	a.afterProdWg.Wait()
-	log.Println("            <-- afterProdWg unblocked - ending permProdRunner go-routine")
+	slog.Info("            <-- afterProdWg unblocked - ending permProdRunner go-routine")
 	select {
 	case <-stop:
-		log.Println("*** permProdRunner go-routine stopped by signal")
+		slog.Warn("*** permProdRunner go-routine stopped by signal")
 		return
 	default:
 	}
@@ -385,11 +412,11 @@ func (a *App) permProdRunner(stop chan bool) {
 	}
 	if !s_running {
 		for _, prod := range a.permProd {
-			log.Printf("===> Starting permProd %s", prod.GetUID())
+			slog.Info("===> Starting permProd", "uid", prod.GetUID())
 			prod.Start()
 		}
 	} else {
-		log.Println("===> Not starting permProd, because SensorLedProducers are running")
+		slog.Info("===> Not starting permProd, because SensorLedProducers are running")
 	}
 
 	a.permProdIsRunning = false

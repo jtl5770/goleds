@@ -31,6 +31,10 @@ type Platform interface {
 	// GetLedsTotal returns the total number of configured LEDs.
 	GetLedsTotal() int
 
-	// ForceUpdateDelay returns the configured delay for forcing a display update.
+	// GetForceUpdateDelay returns the configured delay for forcing a display update.
 	GetForceUpdateDelay() time.Duration
+
+	// Ready returns a channel that is closed when the platform is fully
+	// initialized and ready for producers to start.
+	Ready() <-chan bool
 }

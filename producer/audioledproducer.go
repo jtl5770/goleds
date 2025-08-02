@@ -3,6 +3,7 @@ package producer
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"math"
 	"strings"
 	"time"
@@ -64,18 +65,18 @@ func NewAudioLEDProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer],
 // runner is the main processing loop for the producer.
 func (p *AudioLEDProducer) runner() {
 	if err := portaudio.Initialize(); err != nil {
-		log.Printf("AudioLEDProducer (%s): failed to initialize portaudio: %v", p.uid, err)
+		slog.Error("AudioLEDProducer: failed to initialize portaudio", "uid", p.uid, "error", err)
 		return
 	}
 	defer portaudio.Terminate()
 
 	inDevice, err := p.findDevice()
 	if err != nil {
-		log.Printf("AudioLEDProducer (%s): %v", p.uid, err)
+		slog.Error("AudioLEDProducer: no device", "uid", p.GetUID(), "error", err)
 		return
 	}
 
-	log.Printf("AudioLEDProducer (%s): Using audio device: %s", p.uid, inDevice.Name)
+	slog.Info("AudioLEDProducer", "uid", p.GetUID(), "device", inDevice.Name, "sampleRate", p.sampleRate, "framesPerBuffer", p.framesPerBuffer)
 
 	buffer := make([]float32, p.framesPerBuffer*inDevice.MaxInputChannels)
 	streamParams := portaudio.StreamParameters{
@@ -90,13 +91,13 @@ func (p *AudioLEDProducer) runner() {
 
 	stream, err := portaudio.OpenStream(streamParams, buffer)
 	if err != nil {
-		log.Printf("AudioLEDProducer (%s): failed to open stream: %v", p.uid, err)
+		slog.Error("AudioLEDProducer: failed to open stream", "uid", p.uid, "error", err)
 		return
 	}
 	defer stream.Close()
 
 	if err := stream.Start(); err != nil {
-		log.Printf("AudioLEDProducer (%s): failed to start stream: %v", p.uid, err)
+		slog.Error("AudioLEDProducer: failed to start stream", "uid", p.uid, "error", err)
 		return
 	}
 	defer stream.Stop()

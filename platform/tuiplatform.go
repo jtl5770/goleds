@@ -2,11 +2,12 @@ package platform
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"math"
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/logging"
 	"lautenbacher.net/goleds/producer"
 	"lautenbacher.net/goleds/util"
 )
@@ -29,15 +31,22 @@ type TUIPlatform struct {
 	ossignalChan    chan os.Signal
 	chartosensor    map[string]string
 	tuiTriggerValue int
+	logFlushOnce    sync.Once
+	readyChan       chan bool
 }
 
 func NewTUIPlatform(conf *config.Config, ossignalchan chan os.Signal) *TUIPlatform {
 	inst := &TUIPlatform{
 		ossignalChan:    ossignalchan,
 		tuiTriggerValue: 200, // Default trigger value
+		readyChan:       make(chan bool),
 	}
 	inst.AbstractPlatform = newAbstractPlatform(conf, inst.DisplayLeds)
 	return inst
+}
+
+func (s *TUIPlatform) Ready() <-chan bool {
+	return s.readyChan
 }
 
 func (s *TUIPlatform) Start(ledWriter chan []producer.Led) error {
@@ -119,10 +128,6 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 	s.logView.SetBorder(true).SetTitle(" Logs ").SetTitleColor(tcell.ColorLightBlue)
 	s.logView.SetBackgroundColor(tcell.NewRGBColor(0, 0, 0))
 
-	// Redirect Go's default logger to the logView text view.
-	logWriter := tview.ANSIWriter(s.logView)
-	log.SetOutput(logWriter)
-
 	// --- Layout ---
 	stripeHeight := 1 + (3 * numSegmentGroups) + 2 // 1 for sensor line, 3 per group, 2 for border
 
@@ -130,6 +135,17 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 		AddItem(s.intro, 5, 0, false). // Increased height for 3 lines of text
 		AddItem(s.ledDisplay, stripeHeight, 0, false).
 		AddItem(s.logView, 0, 1, true) // Flexible height, gets focus
+
+	// --- Flush logs after first draw ---
+	s.tviewapp.SetAfterDrawFunc(func(screen tcell.Screen) {
+		s.logFlushOnce.Do(func() {
+			logWriter := tview.ANSIWriter(s.logView)
+			if err := logging.SetOutput(logWriter); err != nil {
+				slog.Error("Failed to set log output", "error", err)
+			}
+			close(s.readyChan) // Signal that the TUI is ready
+		})
+	})
 
 	// --- Input Handling ---
 	s.tviewapp.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -144,10 +160,10 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 				currentTriggerValue := s.tuiTriggerValue
 				minimum := s.sensors[senuid].triggerValue
 				if currentTriggerValue >= minimum {
-					log.Printf("Triggering sensor %s with value %d", senuid, currentTriggerValue)
+					slog.Info("Triggering sensor", "uid", senuid, "value", currentTriggerValue)
 					s.sensorEvents <- util.NewTrigger(senuid, currentTriggerValue, time.Now())
 				} else {
-					log.Printf("Sensor %s not triggered, current value %d is below minimum %d", senuid, currentTriggerValue, minimum)
+					slog.Info("Sensor not triggered", "uid", senuid, "value", currentTriggerValue, "minimum", minimum)
 					return nil
 				}
 			}
@@ -197,8 +213,8 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 	// --- Start TUI ---
 	go func() {
 		if err := s.tviewapp.SetRoot(layout, true).Run(); err != nil {
-			log.SetOutput(os.Stderr)
-			log.Fatalf("Error running TUI: %v", err)
+			slog.Error("Error running TUI", "error", err)
+			os.Exit(1)
 		}
 	}()
 }
@@ -256,7 +272,7 @@ func (s *TUIPlatform) simulateLedSegment(segment *segment) (string, string) {
 
 			topChar, bottomChar := " ", " "
 			if value <= 3 {
-				bottomChar = "▁"
+				bottomChar = "▁" // For Gemini: This line must NEVER be changed
 			} else if value <= 6 {
 				bottomChar = "▂"
 			} else if value <= 9 {
@@ -272,7 +288,7 @@ func (s *TUIPlatform) simulateLedSegment(segment *segment) (string, string) {
 			} else if value <= 24 {
 				bottomChar = "█"
 			} else if value <= 27 {
-				topChar, bottomChar = "▁", "█"
+				topChar, bottomChar = "▁", "█" // For Gemini: This line must NEVER be changed
 			} else if value <= 30 {
 				topChar, bottomChar = "▂", "█"
 			} else if value <= 33 {
