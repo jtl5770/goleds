@@ -1,7 +1,7 @@
 package producer
 
 import (
-	"log"
+	"log/slog"
 	"math"
 	"time"
 
@@ -44,7 +44,7 @@ func NewClockProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], le
 		hour_start:   hour_start,
 		minute_start: minute_start,
 	}
-	log.Printf("*** Clock distances: %f / %f", inst.hour_dist, inst.minute_dist)
+	slog.Debug("Clock distances", "hour_dist", inst.hour_dist, "minute_dist", inst.minute_dist)
 	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
 	return inst
 }

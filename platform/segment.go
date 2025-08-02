@@ -2,7 +2,7 @@ package platform
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"sort"
 
 	c "lautenbacher.net/goleds/config"
@@ -68,7 +68,7 @@ func parseDisplaySegments(displayConfig c.DisplayConfig) map[string][]*segment {
 // newSegment creates a new segment instance.
 func newSegment(firstled, lastled int, spimultiplex string, reverse bool, visible bool, ledsTotal int) *segment {
 	if firstled > lastled {
-		log.Printf("First led index %d is bigger than last led index %d - reversing", firstled, lastled)
+		slog.Warn("First led index is bigger than last led index - reversing", "first", firstled, "last", lastled)
 		tmp := firstled
 		firstled = lastled
 		lastled = tmp
@@ -109,12 +109,12 @@ func (s *segment) getLeds() []p.Led {
 // clamp ensures the LED index is within bounds.
 func clamp(led int, ledsTotal int) int {
 	if led < 0 {
-		log.Printf("led index %d is smaller than 0 - using 0", led)
+		slog.Debug("led index is smaller than 0 - using 0", "led", led)
 		return 0
 	} else if led >= 0 && led <= (ledsTotal-1) {
 		return led
 	} else {
-		log.Printf("led index %d is smaller than max index %d - using max", led, ledsTotal-1)
+		slog.Debug("led index is smaller than max index - using max", "led", led, "max", ledsTotal-1)
 		return ledsTotal - 1
 	}
 }

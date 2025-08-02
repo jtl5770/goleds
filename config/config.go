@@ -1,7 +1,7 @@
 package config
 
 import (
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -147,7 +147,7 @@ type Config struct {
 }
 
 func ReadConfig(cfile string, realhw bool, sensorshow bool) (*Config, error) {
-	log.Printf("Reading config file %s...", cfile)
+	slog.Info("Reading config file", "file", cfile)
 	f, err := os.Open(cfile)
 	if err != nil {
 		return nil, err
@@ -162,7 +162,7 @@ func ReadConfig(cfile string, realhw bool, sensorshow bool) (*Config, error) {
 	conf.RealHW = realhw
 	conf.SensorShow = sensorshow
 	conf.Configfile = cfile
-	log.Printf("%+v\n", conf)
+	slog.Debug("Read config", "config", conf)
 
 	return &conf, nil
 }

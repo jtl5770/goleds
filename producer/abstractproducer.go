@@ -1,7 +1,7 @@
 package producer
 
 import (
-	"log"
+	"log/slog"
 	"sync"
 	t "time"
 
@@ -70,9 +70,9 @@ func (s *AbstractProducer) Start() {
 		s.endWg.Add(1)
 		go s.runner()
 	} else if s.hasExited {
-		log.Println("Start() called on a Producer that has already exited: ", s.GetUID())
+		slog.Warn("Start() called on a Producer that has already exited", "uid", s.GetUID())
 	} else if s.isRunning {
-		log.Println("Start() called on a Producer that is already running: ", s.GetUID())
+		slog.Warn("Start() called on a Producer that is already running", "uid", s.GetUID())
 	}
 }
 
@@ -89,7 +89,7 @@ func (s *AbstractProducer) runner() {
 		if s.triggerEvent.HasPending() {
 			// A trigger was pending. Relaunch the runner to handle it.
 			// The pending notification remains in the channel for the new runner to consume.
-			log.Printf("Relaunching runner for %s due to late trigger", s.uid)
+			slog.Info("Relaunching runner due to late trigger", "uid", s.uid)
 			go s.runner()
 		} else {
 			// No trigger was pending, it's safe to stop.
@@ -118,8 +118,7 @@ func (s *AbstractProducer) Stop() {
 		select {
 		case s.stopchan <- true:
 		case <-t.After(5 * t.Second):
-			log.Println("Timeout reached in ", s.GetUID(),
-				": blocked sending stop signal")
+			slog.Warn("Timeout reached in while sending stop signal", "uid", s.GetUID())
 		}
 	}
 }

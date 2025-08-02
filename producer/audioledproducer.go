@@ -2,7 +2,6 @@ package producer
 
 import (
 	"fmt"
-	"log"
 	"log/slog"
 	"math"
 	"strings"
@@ -137,7 +136,7 @@ func (p *AudioLEDProducer) runner() {
 func (p *AudioLEDProducer) checkSilence(rmsL float64, rmsR float64, ticker *time.Ticker) {
 	if rmsL > 0 || rmsR > 0 {
 		if p.slowedDown {
-			log.Println("AudioLEDProducer: Audio input detected, back to full loop speed...")
+			slog.Info("AudioLEDProducer: Audio input detected, back to full loop speed...")
 			p.silenceStart = false
 			p.slowedDown = false
 			ticker.Reset(p.updateFreq)
@@ -151,7 +150,7 @@ func (p *AudioLEDProducer) checkSilence(rmsL float64, rmsR float64, ticker *time
 			p.silenceStartTime = time.Now()
 		} else {
 			if !p.slowedDown && time.Since(p.silenceStartTime) > 5*time.Second {
-				log.Println("AudioLEDProducer: No audio input detected for 5 seconds, slowing down loop...")
+				slog.Info("AudioLEDProducer: No audio input detected for 5 seconds, slowing down loop...")
 				ticker.Reset(2 * time.Second)
 				p.slowedDown = true
 			}

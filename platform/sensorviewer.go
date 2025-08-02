@@ -2,7 +2,7 @@ package platform
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"math"
 	"math/rand"
 	"os"
@@ -79,14 +79,15 @@ func (sv *SensorViewer) Start(stopSignal chan bool, wg *sync.WaitGroup) {
 	// Goroutine to handle shutdown
 	go func() {
 		<-stopSignal
-		log.Println("Stopping SensorViewer TUI...")
+		slog.Info("Stopping SensorViewer TUI...")
 		sv.tuiApp.Stop()
 	}()
 
 	if err := sv.tuiApp.Run(); err != nil {
-		log.Fatalf("Error running SensorViewer TUI: %v", err)
+		slog.Error("Error running SensorViewer TUI", "error", err)
+		os.Exit(1)
 	}
-	log.Println("SensorViewer TUI has stopped.")
+	slog.Info("SensorViewer TUI has stopped.")
 }
 
 // Update receives the latest sensor values, prepares the display strings,
@@ -127,7 +128,7 @@ func (sv *SensorViewer) RunSensorDataGenForDev(loopDelay time.Duration, stopSign
 	for {
 		select {
 		case <-stopSignal:
-			log.Println("Ending sensor data generator...")
+			slog.Info("Ending sensor data generator...")
 			return
 		case <-ticker.C:
 			for _, name := range sv.sensorNames {

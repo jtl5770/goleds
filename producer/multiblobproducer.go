@@ -1,7 +1,7 @@
 package producer
 
 import (
-	"log"
+	"log/slog"
 	"math"
 	"sync"
 	"time"
@@ -234,9 +234,7 @@ func detectBlobColl(blob_a *Blob, blob_b *Blob) bool {
 			// log.Println(fmt.Sprintf("Chasing R2L: %s - Direction %f  |  %s - Direction %f", left.uid, left.dir, right.uid, right.dir))
 			right.switchDirection()
 		} else if left.dir < 0 && right.dir > 0 {
-			log.Printf("%s - Direction %f  | %s - Direction %f\n", left.uid, left.dir, right.uid, right.dir)
-			log.Println("Caution: colliding blobs " + left.uid + " and " + right.uid +
-				" are already heading in opposite directions")
+			slog.Warn("Colliding blobs are already heading in opposite directions", "left_uid", left.uid, "left_dir", left.dir, "right_uid", right.uid, "right_dir", right.dir)
 		}
 	}
 	return collide

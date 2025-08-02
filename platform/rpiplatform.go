@@ -2,7 +2,7 @@ package platform
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"math"
 	"strings"
 	"sync"
@@ -51,7 +51,7 @@ func (s *RaspberryPiPlatform) SetSensorViewer(v *SensorViewer) {
 }
 
 func (s *RaspberryPiPlatform) Start(ledWriter chan []producer.Led) error {
-	log.Println("Initialise GPIO and Spi...")
+	slog.Info("Initialise GPIO and Spi...")
 	if err := rpio.Open(); err != nil {
 		return fmt.Errorf("failed to open rpio: %w", err)
 	}
@@ -114,7 +114,7 @@ func (s *RaspberryPiPlatform) Stop() {
 	// Now, safely close hardware
 	rpio.SpiEnd(rpio.Spi0)
 	if err := rpio.Close(); err != nil {
-		log.Printf("Error closing rpio: %v", err)
+		slog.Error("Error closing rpio", "error", err)
 	}
 }
 
@@ -124,7 +124,7 @@ func (s *RaspberryPiPlatform) DisplayLeds(leds []producer.Led) {
 			seg.setLeds(leds)
 			if seg.visible {
 				if err := s.ledDriver.write(seg, s.spiExchangeMultiplex); err != nil {
-					log.Printf("Error writing to LED driver: %v", err)
+					slog.Error("Error writing to LED driver", "error", err)
 				}
 			}
 		}
@@ -227,7 +227,7 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 	for {
 		select {
 		case <-s.sensorStopChan:
-			log.Println("Ending SensorDriver go-routine (RPi)")
+			slog.Info("Ending SensorDriver go-routine (RPi)")
 			return
 		case <-ticker.C:
 			for name, sensor := range s.sensors {

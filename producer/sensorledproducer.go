@@ -44,7 +44,7 @@
 package producer
 
 import (
-	"log"
+	"log/slog"
 	"sync"
 	t "time"
 
@@ -170,7 +170,7 @@ func (s *SensorLedProducer) holdPhase() (stopped bool) {
 // runLatchMode activates the high-intensity "latch" mode. It remains
 // active for latchTime unless another latch trigger toggles it off early.
 func (s *SensorLedProducer) runLatchMode() (stopped bool) {
-	log.Printf("   ===> Latch Mode Activated for %s", s.GetUID())
+	slog.Info("Latch Mode Activated", "uid", s.GetUID())
 	// Set all LEDs to the bright latch color
 	for i := range s.leds {
 		s.setLed(i, s.latchLed)
@@ -197,7 +197,7 @@ func (s *SensorLedProducer) runLatchMode() (stopped bool) {
 			return true // Stop requested by system
 		case <-latchTimer.C:
 			// Main latch time expired
-			log.Printf("   <=== Latch Mode Timed Out for %s", s.GetUID())
+			slog.Info("Latch Mode Timed Out", "uid", s.GetUID())
 			return false
 		case <-s.triggerEvent.Channel():
 			trigger := s.triggerEvent.Value()
@@ -209,7 +209,7 @@ func (s *SensorLedProducer) runLatchMode() (stopped bool) {
 				} else {
 					// Check if the latch-off delay has been met
 					if t.Since(latchOffStart) >= s.latchTriggerDelay {
-						log.Printf("   <=== Latch Mode Deactivated by toggle for %s", s.GetUID())
+						slog.Info("Latch Mode Deactivated by toggle", "uid", s.GetUID())
 						return false
 					}
 				}
@@ -266,7 +266,7 @@ func (s *SensorLedProducer) runDownPhase(left, right int) (nleft, nright int, sh
 // ending the go routine. All this is either guarded directly or
 // indirectly (by calls to s.getLastStart()) by s.updateMutex.
 func (s *SensorLedProducer) runner() {
-	defer log.Printf("   <=== Stopping SensorLedProducer %s", s.GetUID())
+	defer slog.Info("Stopping SensorLedProducer", "uid", s.GetUID())
 
 	select {
 	case <-s.triggerEvent.Channel():

@@ -1,7 +1,7 @@
 package platform
 
 import (
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -57,7 +57,7 @@ func (s *AbstractPlatform) displayDriver(display chan []p.Led) {
 	for {
 		select {
 		case <-s.displayStopChan:
-			log.Println("Ending DisplayDriver go-routine")
+			slog.Info("Ending DisplayDriver go-routine")
 			return
 		case sumLeds := <-display:
 			s.displayFunc(sumLeds)
