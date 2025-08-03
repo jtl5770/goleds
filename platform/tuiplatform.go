@@ -65,16 +65,16 @@ func (s *TUIPlatform) Start(ledWriter chan []producer.Led) error {
 }
 
 func (s *TUIPlatform) Stop() {
-	// First, stop the TUI application to prevent UI deadlocks
-	if s.tviewapp != nil {
-		s.tviewapp.Stop()
-	}
+	s.setInShutdown()
 
 	// Now, signal the display driver to exit
 	close(s.displayStopChan)
-
 	// Wait for it to confirm it's done
 	s.displayWg.Wait()
+
+	if s.tviewapp != nil {
+		s.tviewapp.Stop()
+	}
 }
 
 func (s *TUIPlatform) DisplayLeds(leds []producer.Led) {
@@ -84,7 +84,7 @@ func (s *TUIPlatform) DisplayLeds(leds []producer.Led) {
 			seg.setLeds(leds)
 		}
 	}
-	// Now, schedule a redraw on the main TUI thread.
+	// Queue the update to redraw the LED display pane
 	s.tviewapp.QueueUpdateDraw(s.simulateLedDisplay)
 }
 
@@ -169,11 +169,9 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 			}
 			switch key {
 			case "q", "Q":
-				s.tviewapp.Stop()
 				ossignal <- os.Interrupt
 				return nil
 			case "r", "R":
-				s.tviewapp.Stop()
 				ossignal <- syscall.SIGHUP
 				return nil
 			case "+":

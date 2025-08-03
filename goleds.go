@@ -95,11 +95,6 @@ func main() {
 		"* will be using random values if -real is not given - useful only for development of the viewer component itself")
 	flag.Parse()
 
-	// Initialize logging
-	if err := logging.Init(true, "INFO", "text", false, ""); err != nil {
-		slog.Error("Failed to initialize logging", "error", err)
-		os.Exit(1)
-	}
 	defer logging.Close()
 
 	// Redirect stderr to the logger
@@ -147,6 +142,22 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	if err != nil {
 		slog.Error("Failed to read config", "error", err)
 		os.Exit(1)
+	}
+
+	// Initialize logging with values from the config file.
+	var logConf c.SingleLoggingConfig
+	bufferLogs := false
+	if conf.RealHW {
+		logConf = conf.Logging.HW
+	} else {
+		logConf = conf.Logging.TUI
+		bufferLogs = true
+	}
+
+	logToFile := logConf.File != ""
+	if err := logging.Init(bufferLogs, logConf.Level, logConf.Format, logToFile, logConf.File); err != nil {
+		slog.Error("Failed to initialize logging with config values", "error", err)
+		// We don't exit here, as logging might still be partially functional.
 	}
 
 	// Handle the special "-sensor-show development mode"
@@ -263,11 +274,13 @@ func (a *App) shutdown() {
 
 	slog.Info("Stopping running go-routines...")
 	close(a.stopsignal)
+	a.shutdownWg.Wait()
+	slog.Info("Main go-routines from goleds.go successfully terminated")
 
+	slog.Info("Now stopping Platform...")
 	if a.platform != nil {
 		a.platform.Stop()
 	}
-	a.shutdownWg.Wait()
 }
 
 // This go-routine combines the LED values from all producers and writes them to the

@@ -103,6 +103,8 @@ func (s *RaspberryPiPlatform) Start(ledWriter chan []producer.Led) error {
 }
 
 func (s *RaspberryPiPlatform) Stop() {
+	s.setInShutdown()
+
 	// Signal goroutines to stop
 	close(s.displayStopChan)
 	close(s.sensorStopChan)

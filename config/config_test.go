@@ -26,6 +26,15 @@ SensorLED:
   RunDownDelay: 20ms
   HoldTime: 30s
   LedRGB: [255, 0, 0]
+Logging:
+  TUI:
+    Level: "DEBUG"
+    Format: "text"
+    File: "/tmp/goleds-tui.log"
+  HW:
+    Level: "WARN"
+    Format: "json"
+    File: "/var/log/goleds-hw.log"
 `
 	err = os.WriteFile(configFile, []byte(configData), 0644)
 	if err != nil {
@@ -46,4 +55,12 @@ SensorLED:
 	assert.Equal(t, 20*time.Millisecond, conf.SensorLED.RunDownDelay, "SensorLED.RunDownDelay should be 20ms")
 	assert.Equal(t, 30*time.Second, conf.SensorLED.HoldTime, "SensorLED.HoldTime should be 30s")
 	assert.Equal(t, []float64{255, 0, 0}, conf.SensorLED.LedRGB, "SensorLED.LedRGB should be [255, 0, 0]")
+
+	assert.Equal(t, "DEBUG", conf.Logging.TUI.Level, "Logging.TUI.Level should be DEBUG")
+	assert.Equal(t, "text", conf.Logging.TUI.Format, "Logging.TUI.Format should be text")
+	assert.Equal(t, "/tmp/goleds-tui.log", conf.Logging.TUI.File, "Logging.TUI.File should be /tmp/goleds-tui.log")
+
+	assert.Equal(t, "WARN", conf.Logging.HW.Level, "Logging.HW.Level should be WARN")
+	assert.Equal(t, "json", conf.Logging.HW.Format, "Logging.HW.Format should be json")
+	assert.Equal(t, "/var/log/goleds-hw.log", conf.Logging.HW.File, "Logging.HW.File should be /var/log/goleds-hw.log")
 }

@@ -19,6 +19,8 @@ type AbstractPlatform struct {
 	displayWg       sync.WaitGroup
 	displayStopChan chan bool
 	readyChan       chan bool
+	shutdownMutex   sync.RWMutex
+	isShuttingDown  bool
 }
 
 func newAbstractPlatform(conf *c.Config, displayFunc func([]p.Led)) *AbstractPlatform {
@@ -52,15 +54,25 @@ func (s *AbstractPlatform) GetForceUpdateDelay() time.Duration {
 	return s.config.Hardware.Display.ForceUpdateDelay
 }
 
+func (s *AbstractPlatform) setInShutdown() {
+	s.shutdownMutex.Lock()
+	s.isShuttingDown = true
+	s.shutdownMutex.Unlock()
+}
+
 func (s *AbstractPlatform) displayDriver(display chan []p.Led) {
 	defer s.displayWg.Done()
 	for {
 		select {
 		case <-s.displayStopChan:
-			slog.Info("Ending DisplayDriver go-routine")
+			slog.Info("Ending DisplayDriver go-routine...")
 			return
 		case sumLeds := <-display:
-			s.displayFunc(sumLeds)
+			s.shutdownMutex.RLock()
+			if !s.isShuttingDown {
+				s.displayFunc(sumLeds)
+			}
+			s.shutdownMutex.RUnlock()
 		}
 	}
 }

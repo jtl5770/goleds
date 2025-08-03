@@ -133,6 +133,17 @@ type SensorsConfig struct {
 	SensorCfg     map[string]SensorCfg `yaml:"SensorCfg"`
 }
 
+type SingleLoggingConfig struct {
+	Level  string `yaml:"Level"`
+	Format string `yaml:"Format"`
+	File   string `yaml:"File"`
+}
+
+type LoggingConfig struct {
+	TUI SingleLoggingConfig `yaml:"TUI"`
+	HW  SingleLoggingConfig `yaml:"HW"`
+}
+
 type Config struct {
 	RealHW       bool
 	SensorShow   bool
@@ -144,6 +155,7 @@ type Config struct {
 	CylonLED     CylonLEDConfig     `yaml:"CylonLED"`
 	MultiBlobLED MultiBlobLEDConfig `yaml:"MultiBlobLED"`
 	Hardware     HardwareConfig     `yaml:"Hardware"`
+	Logging      LoggingConfig      `yaml:"Logging"`
 }
 
 func ReadConfig(cfile string, realhw bool, sensorshow bool) (*Config, error) {

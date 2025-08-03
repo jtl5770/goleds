@@ -1,3 +1,20 @@
+# Logging configuration
+Logging:
+  TUI:
+    # Log level for TUI mode. Supported values: "DEBUG", "INFO", "WARN", "ERROR"
+    Level: "INFO"
+    # Log format for TUI mode. Supported values: "text" or "json"
+    Format: "text"
+    # Path to the log file. If empty, logging to a file is disabled.
+    File: "/tmp/goleds.log"
+  HW:
+    # Log level for Hardware mode. Supported values: "DEBUG", "INFO", "WARN", "ERROR"
+    Level: "WARN"
+    # Log format for Hardware mode. Supported values: "text" or "json"
+    Format: "json"
+    # Path to the log file. If empty, logging to a file is disabled.
+    File: "/var/log/goleds.log"
+
 # Hardware settings for the Go-LEDS system.
 Hardware:
   # Type of the LED strip. Supported values: "ws2801" or "apa102".
