@@ -3,6 +3,7 @@ package producer
 import (
 	"log/slog"
 	"math"
+	"math/rand/v2"
 	"sync"
 	"time"
 
@@ -204,8 +205,14 @@ func detectBlobColl(blob_a *Blob, blob_b *Blob) bool {
 	b1, b2 := blob_b.x, blob_b.last_x
 	b_start := math.Min(b1, b2)
 	b_end := math.Max(b1, b2)
+
 	collide := (a_start <= b_end) && (b_start <= a_end)
 	if collide {
+		// Generate a random value between 0 and 1 and if smaller
+		// than 0.2, just return as if no collision is detected.
+		if rand.Float64() < 0.33 {
+			return false
+		}
 		// log.Println("Collision detected between " + blob_a.uid + " and " + blob_b.uid)
 		var left *Blob
 		var right *Blob
