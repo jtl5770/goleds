@@ -266,7 +266,7 @@ func (s *SensorLedProducer) runDownPhase(left, right int) (nleft, nright int, sh
 // ending the go routine. All this is either guarded directly or
 // indirectly (by calls to s.getLastStart()) by s.updateMutex.
 func (s *SensorLedProducer) runner() {
-	defer slog.Info("Stopping SensorLedProducer", "uid", s.GetUID())
+	defer slog.Info("   <=== Stopping SensorLedProducer", "uid", s.GetUID())
 
 	select {
 	case <-s.triggerEvent.Channel():

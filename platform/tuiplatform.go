@@ -158,7 +158,7 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 				currentTriggerValue := s.tuiTriggerValue
 				minimum := s.sensors[senuid].triggerValue
 				if currentTriggerValue >= minimum {
-					slog.Info("Triggering sensor", "uid", senuid, "value", currentTriggerValue)
+					slog.Debug("Triggering sensor", "uid", senuid, "value", currentTriggerValue)
 					s.sensorEvents <- util.NewTrigger(senuid, currentTriggerValue, time.Now())
 				} else {
 					slog.Info("Sensor not triggered", "uid", senuid, "value", currentTriggerValue, "minimum", minimum)
