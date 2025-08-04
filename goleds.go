@@ -54,19 +54,16 @@ const (
 
 // App holds the global state of the application
 type App struct {
-	ledproducers       map[string]p.LedProducer
-	sensorProd         []p.LedProducer
-	stopsignal         chan bool
-	shutdownWg         sync.WaitGroup
-	ossignal           chan os.Signal
-	platform           pl.Platform
-	prodMutex          sync.RWMutex
-	sensorProdWg       sync.WaitGroup
-	afterProdIsRunning bool
-	afterProd          []p.LedProducer
-	afterProdWg        sync.WaitGroup
-	permProdIsRunning  bool
-	permProd           []p.LedProducer
+	ledproducers map[string]p.LedProducer
+	sensorProd   []p.LedProducer
+	afterProd    []p.LedProducer
+	permProd     []p.LedProducer
+	stopsignal   chan bool
+	shutdownWg   sync.WaitGroup
+	ossignal     chan os.Signal
+	platform     pl.Platform
+	sensorProdWg sync.WaitGroup
+	afterProdWg  sync.WaitGroup
 }
 
 // NewApp creates a new App instance
@@ -121,9 +118,7 @@ func main() {
 func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	slog.Info("Initializing...")
 
-	a.afterProdIsRunning = false
 	a.afterProd = make([]p.LedProducer, 0)
-	a.permProdIsRunning = false
 	a.permProd = make([]p.LedProducer, 0)
 	a.stopsignal = make(chan bool)
 	a.ledproducers = make(map[string]p.LedProducer)
@@ -253,7 +248,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	a.shutdownWg.Add(2)
 
 	go a.combineAndUpdateDisplay(ledReader, ledWriter)
-	go a.fireController()
+	go a.stateManager()
 }
 
 func (a *App) shutdown() {
@@ -325,106 +320,111 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 	}
 }
 
-// fireController listens for sensor events and starts/stops the
-// corresponding SensorLedProducers. Subsequent triggers for a running
-// SensorLedProducer are sent via SendTrigger().  It also manages the
-// afterProd producers, which are started after all running
-// SensorLedProducers have ended.  and which are stopped
-//
-// Before a new SensorLedProducer is started, all afterProd producers are stopped
-func (a *App) fireController() {
+// This go routine distributes sensor events and handles the
+// transition of the states the LED strip can be in
+func (a *App) stateManager() {
 	defer a.shutdownWg.Done()
+
+	type State int
+
+	const (
+		stateIdle      State = iota
+		stateSensor    State = iota
+		stateAfterProd State = iota
+	)
+
+	sensorProdDoneChan := make(chan struct{})
+	afterProdDoneChan := make(chan struct{})
+
+	// We are in idle State when starting
+	currentState := stateIdle
 
 	for {
 		select {
-		case trigger := <-a.platform.GetSensorEvents():
-			if producer, ok := a.ledproducers[trigger.ID]; ok {
-				a.prodMutex.Lock()
-				if !producer.GetIsRunning() {
-					for _, prod := range a.afterProd {
-						if prod.GetIsRunning() {
-							slog.Info("===> Stopping after Producer", "uid", prod.GetUID())
-							prod.Stop() // This will signal the go-routine to stop
-						}
-					}
-					for _, prod := range a.permProd {
-						if prod.GetIsRunning() {
-							slog.Info("===> Stopping perm Producer", "uid", prod.GetUID())
-							prod.Stop() // This will signal the go-routine to stop
-						}
-					}
-					slog.Info("   ===> Starting SensorLedProducer", "uid", trigger.ID)
-					producer.Start()
-					if !a.afterProdIsRunning {
-						slog.Info("      ---> Starting afterprodRunner go-routine")
-						// we need to give the stop chan as a
-						// parameter to make sure the go routines use
-						// this and not a newly created inside the
-						// still existing App struct after reset...
-						go a.afterProdRunner(a.stopsignal)
-						a.afterProdIsRunning = true
+		case event := <-a.platform.GetSensorEvents():
+			switch currentState {
+			case stateIdle:
+				slog.Info("Sensor event received in idle state", "uid", event.ID)
+				for _, prod := range a.permProd {
+					if prod.GetIsRunning() {
+						slog.Info("<=== Stopping perm Producer", "uid", prod.GetUID())
+						prod.Stop()
 					}
 				}
-				producer.SendTrigger(trigger)
-				a.prodMutex.Unlock()
-			} else {
-				slog.Warn("Unknown UID", "uid", trigger.ID)
+				producer, _ := a.ledproducers[event.ID]
+				slog.Info("   ===> Starting SensorLedProducer", "uid", event.ID)
+				currentState = stateSensor
+				producer.Start()
+				producer.SendTrigger(event)
+				go func() {
+					a.sensorProdWg.Wait()
+					slog.Info("   All SensorLedProducer(s) finished, signalling event")
+					sensorProdDoneChan <- struct{}{}
+				}()
+
+			case stateSensor:
+				// we are still in the sensor state but we have a new event to process
+				slog.Info("   Additional sensor event received in sensor state", "uid", event.ID)
+				producer, _ := a.ledproducers[event.ID]
+				if producer.GetIsRunning() {
+					slog.Info("   ===> Sending trigger to running SensorLedProducer", "uid", event.ID)
+					producer.SendTrigger(event)
+				} else {
+					slog.Warn("   ===> Starting SensorLedProducer", "uid", event.ID)
+					producer.Start()
+					producer.SendTrigger(event)
+				}
+				// no new waiter go routine is started, we are still in the sensor state
+
+			case stateAfterProd:
+				slog.Info("      Sensor event received in afterProd state", "uid", event.ID)
+				for _, prod := range a.afterProd {
+					if prod.GetIsRunning() {
+						slog.Info("      <=== Stopping afterProd Producer", "uid", prod.GetUID())
+						prod.Stop()
+					}
+				}
+				producer, _ := a.ledproducers[event.ID]
+				slog.Info("   ===> Starting SensorLedProducer", "uid", event.ID)
+				currentState = stateSensor
+				producer.Start()
+				producer.SendTrigger(event)
+				go func() {
+					a.sensorProdWg.Wait()
+					slog.Info("   All SensorLedProducer(s) finished, signalling event")
+					sensorProdDoneChan <- struct{}{}
+				}()
 			}
+		case <-sensorProdDoneChan:
+			slog.Info("   Received [SensorLedProducer(s) finished] event, switching to afterProd state")
+			currentState = stateAfterProd
+			for _, prod := range a.afterProd {
+				slog.Info("      ===> Starting afterProd Producer", "uid", prod.GetUID())
+				prod.Start()
+			}
+			go func() {
+				a.afterProdWg.Wait()
+				slog.Info("      All AfterProdProducer(s) finished, signalling event")
+				afterProdDoneChan <- struct{}{}
+			}()
+
+		case <-afterProdDoneChan:
+			if currentState == stateAfterProd {
+				slog.Info("      Received [AfterProdProducer(s) finished] event, switching to idle state")
+				currentState = stateIdle
+				for _, prod := range a.permProd {
+					slog.Info("===> Starting permProd Producer", "uid", prod.GetUID())
+					prod.Start()
+				}
+			} else {
+				slog.Info("      Received [AfterProdProducer(s) finished] event, but not in afterProd state, ignoring")
+			}
+
 		case <-a.stopsignal:
-			slog.Info("Ending fireController go-routine")
+			slog.Info("Ending stateManager go-routine")
 			return
 		}
 	}
-}
-
-func (a *App) afterProdRunner(stop chan bool) {
-	slog.Info("         --> In afterProdRunner go-routine... Blocking on WaitGroup sensorProdWg")
-	a.sensorProdWg.Wait()
-	slog.Info("         <-- sensorProdWg unblocked - ending afterProdRunner go-routine")
-	select {
-	case <-stop:
-		slog.Warn("*** afterProdRunner go-routine stopped by signal")
-		return
-	default:
-	}
-
-	a.prodMutex.Lock()
-	for _, prod := range a.afterProd {
-		slog.Info("===> Starting afterProd", "uid", prod.GetUID())
-		prod.Start()
-	}
-	go a.permProdRunner(stop)
-	a.afterProdIsRunning = false
-	a.prodMutex.Unlock()
-}
-
-func (a *App) permProdRunner(stop chan bool) {
-	slog.Info("            --> In permProdRunner go-routine... Blocking on WaitGroup afterProdWg")
-	a.afterProdWg.Wait()
-	slog.Info("            <-- afterProdWg unblocked - ending permProdRunner go-routine")
-	select {
-	case <-stop:
-		slog.Warn("*** permProdRunner go-routine stopped by signal")
-		return
-	default:
-	}
-
-	a.prodMutex.Lock()
-	s_running := false
-	for _, prod := range a.sensorProd {
-		s_running = s_running || prod.GetIsRunning()
-	}
-	if !s_running {
-		for _, prod := range a.permProd {
-			slog.Info("===> Starting permProd", "uid", prod.GetUID())
-			prod.Start()
-		}
-	} else {
-		slog.Info("===> Not starting permProd, because SensorLedProducers are running")
-	}
-
-	a.permProdIsRunning = false
-	a.prodMutex.Unlock()
 }
 
 // hashLeds computes a hash for the given LED state array.

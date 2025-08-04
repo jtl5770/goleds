@@ -111,7 +111,8 @@ func TestFireController(t *testing.T) {
 
 	app.stopsignal = make(chan bool)
 	app.shutdownWg.Add(1)
-	go app.fireController()
+	// go app.fireController()
+	go app.stateManager()
 	t.Cleanup(func() {
 		close(app.stopsignal)
 		app.shutdownWg.Wait()
