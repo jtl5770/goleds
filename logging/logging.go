@@ -3,66 +3,127 @@ package logging
 import (
 	"bytes"
 	"io"
+	"log"
 	"log/slog"
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 )
 
-// bufferingTeeWriter is a thread-safe writer that can buffer output and later
-// flush it to a new destination. It can also tee output to a file.
-type bufferingTeeWriter struct {
-	mu          sync.Mutex
-	buffer      *bytes.Buffer
-	target      io.Writer
-	file        *os.File
-	isBuffering bool
-}
+// logWriter is a thread-safe writer that only writes to the central log buffer.
+type logWriter struct{}
 
-func (w *bufferingTeeWriter) Write(p []byte) (n int, err error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+// Write handles writing bytes to the central logBuffer.
+func (w *logWriter) Write(p []byte) (n int, err error) {
+	logBufferMutex.Lock()
+	n, err = logBuffer.Write(p)
+	logBufferMutex.Unlock()
 
-	var firstErr error
-
-	// When buffering, we write to the buffer. bytes.Buffer.Write always returns a nil error.
-	if w.isBuffering {
-		w.buffer.Write(p)
-	} else if w.target != nil {
-		// When not buffering, write directly to the target.
-		if _, err := w.target.Write(p); err != nil {
-			firstErr = err
+	// Signal the flusher only if we are not in buffering mode.
+	if !isBuffering {
+		select {
+		case dataAvailableCh <- struct{}{}: // Signal that there is data
+		default: // Do not block if the channel is full
 		}
 	}
 
-	// Always write to the file if it's configured.
-	if w.file != nil {
-		if _, err := w.file.Write(p); err != nil && firstErr == nil {
-			firstErr = err
-		}
-	}
-
-	return len(p), firstErr
+	return
 }
 
 var (
-	defaultLogger *slog.Logger
-	writer        *bufferingTeeWriter
+	logBuffer       bytes.Buffer // Unified buffer
+	logBufferMutex  sync.Mutex   // Mutex for logBuffer
+	originalStdout  int          = -1
+	originalStderr  int          = -1
+	initOnce        sync.Once
+	captureOnce     sync.Once
+	flusherStopCh   chan struct{} // Channel to stop the flusher goroutine
+	fileOutput      *os.File      // The file to write logs to
+	isBuffering     bool          // Global buffering flag
+	tuiOutput       io.Writer     // The TUI writer
+	dataAvailableCh chan struct{} // Channel to signal new data
 )
 
-// Init initializes the logging system.
-func Init(bufferOutput bool, levelStr, formatStr string, logToFile bool, logFilePath string) error {
-	writer = &bufferingTeeWriter{
-		buffer:      &bytes.Buffer{},
-		isBuffering: bufferOutput,
+// InitialSetup redirects the default stdout and stderr to an internal pipe.
+func InitialSetup() {
+	captureOnce.Do(func() {
+		var err error
+		originalStdout, err = syscall.Dup(int(os.Stdout.Fd()))
+		if err != nil {
+			log.Fatalf("Failed to duplicate stdout: %v", err)
+		}
+		originalStderr, err = syscall.Dup(int(os.Stderr.Fd()))
+		if err != nil {
+			log.Fatalf("Failed to duplicate stderr: %v", err)
+		}
+
+		r, w, err := os.Pipe()
+		if err != nil {
+			log.Fatalf("Failed to create pipe: %v", err)
+		}
+
+		if err := syscall.Dup2(int(w.Fd()), int(os.Stdout.Fd())); err != nil {
+			log.Fatalf("Failed to redirect stdout: %v", err)
+		}
+		if err := syscall.Dup2(int(w.Fd()), int(os.Stderr.Fd())); err != nil {
+			log.Fatalf("Failed to redirect stderr: %v", err)
+		}
+
+		go func() {
+			buf := make([]byte, 1024)
+			for {
+				n, err := r.Read(buf)
+				if n > 0 {
+					logBufferMutex.Lock()
+					logBuffer.Write(buf[:n])
+					logBufferMutex.Unlock()
+
+					// Signal the flusher only if we are not in buffering mode.
+					if !isBuffering {
+						select {
+						case dataAvailableCh <- struct{}{}:
+						default:
+						}
+					}
+				}
+				if err != nil {
+					return
+				}
+			}
+		}()
+	})
+}
+
+// Configure initializes the logging system.
+func Configure(bufferOutput bool, levelStr, formatStr string, logToFile bool, logFilePath string) error {
+	initOnce.Do(func() {
+		dataAvailableCh = make(chan struct{}, 1) // Buffer of 1 is important
+		flusherStopCh = make(chan struct{})
+		go startFlusher()
+	})
+
+	logBufferMutex.Lock()
+	defer logBufferMutex.Unlock()
+
+	isBuffering = bufferOutput
+
+	if !bufferOutput {
+		tuiOutput = os.NewFile(uintptr(originalStdout), "/dev/stdout")
+	} else {
+		tuiOutput = nil
 	}
 
+	if fileOutput != nil {
+		fileOutput.Close()
+		fileOutput = nil
+	}
 	if logToFile {
 		file, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
 		if err != nil {
 			return err
 		}
-		writer.file = file
+		fileOutput = file
 	}
 
 	var level slog.Level
@@ -79,77 +140,116 @@ func Init(bufferOutput bool, levelStr, formatStr string, logToFile bool, logFile
 		level = slog.LevelInfo
 	}
 
-	opts := &slog.HandlerOptions{
-		Level: level,
-	}
-
+	opts := &slog.HandlerOptions{Level: level}
 	var handler slog.Handler
 	if strings.ToLower(formatStr) == "json" {
-		handler = slog.NewJSONHandler(writer, opts)
+		handler = slog.NewJSONHandler(&logWriter{}, opts)
 	} else {
-		handler = slog.NewTextHandler(writer, opts)
+		handler = slog.NewTextHandler(&logWriter{}, opts)
 	}
 
-	defaultLogger = slog.New(handler)
-	slog.SetDefault(defaultLogger)
+	slog.SetDefault(slog.New(handler))
 
 	return nil
 }
 
-// SetOutput flushes the buffer to the new writer and starts live logging.
-func SetOutput(newTarget io.Writer) error {
-	writer.mu.Lock()
-	defer writer.mu.Unlock()
+// SetOutput sets the TUI writer and disables buffering mode.
+func SetOutput(newTarget io.Writer) {
+	logBufferMutex.Lock()
+	defer logBufferMutex.Unlock()
+	tuiOutput = newTarget
+	isBuffering = false
 
-	if writer.buffer.Len() > 0 {
-		if _, err := newTarget.Write(writer.buffer.Bytes()); err != nil {
-			return err // Return the error if flushing fails
-		}
-		writer.buffer.Reset()
+	// Kickstart the flusher to process any buffered logs.
+	select {
+	case dataAvailableCh <- struct{}{}:
+	default:
 	}
-
-	writer.target = newTarget
-	writer.isBuffering = false
-	return nil
 }
 
-// BufferOutput stops live logging and starts buffering.
+// BufferOutput clears the TUI writer and enables buffering mode.
 func BufferOutput() {
-	writer.mu.Lock()
-	defer writer.mu.Unlock()
-
-	writer.target = nil
-	writer.isBuffering = true
+	logBufferMutex.Lock()
+	defer logBufferMutex.Unlock()
+	tuiOutput = nil
+	isBuffering = true
 }
 
-// Close flushes any remaining logs and closes resources.
+// Close stops the flusher, performs a final flush, and restores stdout/stderr.
 func Close() error {
-	writer.mu.Lock()
-	defer writer.mu.Unlock()
+	// Stop the periodic flusher
+	if flusherStopCh != nil {
+		close(flusherStopCh)
+		flusherStopCh = nil
+	}
 
-	var firstErr error
+	logBufferMutex.Lock()
+	defer logBufferMutex.Unlock()
 
-	// If there's a file, ensure the buffer is flushed to it.
-	if writer.file != nil {
-		if writer.buffer.Len() > 0 {
-			if _, err := writer.file.Write(writer.buffer.Bytes()); err != nil {
-				firstErr = err
-			}
+	// Restore stdio first, so the final flush goes to the console.
+	if originalStdout != -1 {
+		syscall.Dup2(originalStdout, int(os.Stdout.Fd()))
+		syscall.Close(originalStdout)
+		originalStdout = -1
+	}
+	if originalStderr != -1 {
+		syscall.Dup2(originalStderr, int(os.Stderr.Fd()))
+		syscall.Close(originalStderr)
+		originalStderr = -1
+	}
+
+	// Perform one final, unconditional flush to the console and/or file.
+	if logBuffer.Len() > 0 {
+		bytes := logBuffer.Bytes()
+		// Write to the restored os.Stdout
+		os.Stdout.Write(bytes)
+
+		if fileOutput != nil {
+			fileOutput.Write(bytes)
 		}
-		if err := writer.file.Close(); err != nil && firstErr == nil {
+		logBuffer.Reset()
+	}
+
+	// Close the file handle
+	var firstErr error
+	if fileOutput != nil {
+		if err := fileOutput.Close(); err != nil {
 			firstErr = err
 		}
-	} else if writer.target == nil {
-		// If there's no file and no other target,
-		// flush the buffer to stderr as a last resort.
-		if writer.buffer.Len() > 0 {
-			if _, err := os.Stderr.Write(writer.buffer.Bytes()); err != nil {
-				firstErr = err
-			}
-		}
+		fileOutput = nil // prevent re-closing
 	}
 
-	// Clear the buffer after flushing.
-	writer.buffer.Reset()
 	return firstErr
+}
+
+// startFlusher starts a goroutine that periodically flushes the log buffer.
+func startFlusher() {
+	for {
+		select {
+		case <-dataAvailableCh:
+			flushBuffer()
+		case <-flusherStopCh:
+			return
+		}
+	}
+}
+
+// flushBuffer writes the buffer content to the target(s) if not buffering.
+func flushBuffer() {
+	logBufferMutex.Lock()
+	defer logBufferMutex.Unlock()
+
+	if isBuffering || logBuffer.Len() == 0 {
+		return
+	}
+
+	bytes := logBuffer.Bytes()
+	if tuiOutput != nil {
+		tuiOutput.Write(bytes)
+	}
+	if fileOutput != nil {
+		fileOutput.Write(bytes)
+	}
+
+	logBuffer.Reset()
 }

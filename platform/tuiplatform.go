@@ -140,9 +140,7 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 	s.tviewapp.SetAfterDrawFunc(func(screen tcell.Screen) {
 		s.logFlushOnce.Do(func() {
 			logWriter := tview.ANSIWriter(s.logView)
-			if err := logging.SetOutput(logWriter); err != nil {
-				slog.Error("Failed to set log output", "error", err)
-			}
+			logging.SetOutput(logWriter)
 			close(s.readyChan) // Signal that the TUI is ready
 		})
 	})

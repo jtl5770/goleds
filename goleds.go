@@ -26,7 +26,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"hash/fnv"
 	"log/slog"
@@ -95,18 +94,7 @@ func main() {
 		"* will be using random values if -real is not given - useful only for development of the viewer component itself")
 	flag.Parse()
 
-	defer logging.Close()
-
-	// Redirect stderr to the logger
-	r, w, _ := os.Pipe()
-	os.Stderr = w
-
-	go func() {
-		scanner := bufio.NewScanner(r)
-		for scanner.Scan() {
-			slog.Error(scanner.Text())
-		}
-	}()
+	logging.InitialSetup()
 
 	app := NewApp(ossignal)
 	app.initialise(*cfile, *realp, *sensp)
@@ -116,8 +104,10 @@ func main() {
 	for sig := range ossignal {
 		switch sig {
 		case os.Interrupt:
+			logging.BufferOutput() // Start capturing all shutdown logs
 			slog.Info("Exiting...")
 			app.shutdown()
+			logging.Close() // Final flush to console/file
 			os.Exit(0)
 		case syscall.SIGHUP:
 			logging.BufferOutput()
@@ -144,7 +134,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 		os.Exit(1)
 	}
 
-	// Initialize logging with values from the config file.
+	// Configure logging with values from the config file.
 	var logConf c.SingleLoggingConfig
 	bufferLogs := false
 	if conf.RealHW {
@@ -155,8 +145,9 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	}
 
 	logToFile := logConf.File != ""
-	if err := logging.Init(bufferLogs, logConf.Level, logConf.Format, logToFile, logConf.File); err != nil {
-		slog.Error("Failed to initialize logging with config values", "error", err)
+
+	if err := logging.Configure(bufferLogs, logConf.Level, logConf.Format, logToFile, logConf.File); err != nil {
+		slog.Error("Failed to configure logging with config values", "error", err)
 		// We don't exit here, as logging might still be partially functional.
 	}
 
