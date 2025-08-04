@@ -37,7 +37,7 @@ import (
 	"time"
 
 	c "lautenbacher.net/goleds/config"
-	"lautenbacher.net/goleds/logging"
+	l "lautenbacher.net/goleds/logging"
 	pl "lautenbacher.net/goleds/platform"
 	p "lautenbacher.net/goleds/producer"
 	u "lautenbacher.net/goleds/util"
@@ -94,7 +94,7 @@ func main() {
 		"* will be using random values if -real is not given - useful only for development of the viewer component itself")
 	flag.Parse()
 
-	logging.InitialSetup()
+	l.InitialSetup()
 
 	app := NewApp(ossignal)
 	app.initialise(*cfile, *realp, *sensp)
@@ -104,13 +104,13 @@ func main() {
 	for sig := range ossignal {
 		switch sig {
 		case os.Interrupt:
-			logging.BufferOutput() // Start capturing all shutdown logs
+			l.BufferOutput() // Start capturing all shutdown logs
 			slog.Info("Exiting...")
 			app.shutdown()
-			logging.Close() // Final flush to console/file
+			l.Close() // Final flush to console/file
 			os.Exit(0)
 		case syscall.SIGHUP:
-			logging.BufferOutput()
+			l.BufferOutput()
 			slog.Info("Resetting...")
 			app.shutdown()
 			app.initialise(*cfile, *realp, *sensp)
@@ -146,7 +146,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 
 	logToFile := logConf.File != ""
 
-	if err := logging.Configure(bufferLogs, logConf.Level, logConf.Format, logToFile, logConf.File); err != nil {
+	if err := l.Configure(bufferLogs, logConf.Level, logConf.Format, logToFile, logConf.File); err != nil {
 		slog.Error("Failed to configure logging with config values", "error", err)
 		// We don't exit here, as logging might still be partially functional.
 	}
