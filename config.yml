@@ -155,7 +155,7 @@ NightLED:
 MultiBlobLED:
   Enabled: true
   # How long the effect runs before stopping.
-  Duration: 120s
+  Duration: 100s
   # Delay between animation steps. Smaller values result in faster movement.
   Delay: 120ms
   # Configuration for each individual blob.
@@ -217,9 +217,9 @@ AudioLED:
 # inspired by Battlestar Galactica's Cylons. A good starting point for
 # creating your own custom producers.
 CylonLED:
-  Enabled: false
+  Enabled: true
   # How long the effect runs before stopping.
-  Duration: 30s
+  Duration: 50s
   # Delay between animation steps.
   Delay: 20ms
   # Distance (in LEDs) to move each step. Can be a float.

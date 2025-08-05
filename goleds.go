@@ -364,7 +364,7 @@ func (a *App) stateManager() {
 
 			case stateSensor:
 				// we are still in the sensor state but we have a new event to process
-				slog.Info("   Additional sensor event received in sensor state", "uid", event.ID)
+				slog.Info("        Additional sensor event received in sensor state", "uid", event.ID)
 				producer, _ := a.ledproducers[event.ID]
 				if producer.GetIsRunning() {
 					slog.Info("   ===> Sending trigger to running SensorLedProducer", "uid", event.ID)
