@@ -106,11 +106,11 @@ func (s *sensor) smoothedValue(value int) int {
 func (s *AbstractPlatform) initSensors(sensorConfig c.SensorsConfig) {
 	s.sensors = make(map[string]*sensor, len(sensorConfig.SensorCfg))
 	for uid, cfg := range sensorConfig.SensorCfg {
-		s.sensors[uid] = s.newSensor(uid, cfg.LedIndex, cfg.SpiMultiplex, cfg.AdcChannel, cfg.TriggerValue, sensorConfig.SmoothingSize)
+		s.sensors[uid] = newSensor(uid, cfg.LedIndex, cfg.SpiMultiplex, cfg.AdcChannel, cfg.TriggerValue, sensorConfig.SmoothingSize)
 	}
 }
 
-func (s *AbstractPlatform) newSensor(uid string, ledIndex int, spimultiplex string, adcChannel byte, triggerValue int, smoothing int) *sensor {
+func newSensor(uid string, ledIndex int, spimultiplex string, adcChannel byte, triggerValue int, smoothing int) *sensor {
 	return &sensor{
 		uid:          uid,
 		LedIndex:     ledIndex,
