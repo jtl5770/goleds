@@ -83,7 +83,7 @@ func TestConcurrency(t *testing.T) {
 
 	// Writer goroutine
 	go func() {
-		for i := 0; i < 1000; i++ {
+		for i := range 1000 {
 			ae.Send(i)
 		}
 		close(done)
@@ -188,10 +188,10 @@ func TestAtomicMapEvent_Concurrency(t *testing.T) {
 	const numWritesPerGoRoutine = 100
 
 	wg.Add(numGoroutines)
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		go func(goroutineID int) {
 			defer wg.Done()
-			for j := 0; j < numWritesPerGoRoutine; j++ {
+			for j := range numWritesPerGoRoutine {
 				key := fmt.Sprintf("g%d-k%d", goroutineID, j)
 				ae.Send(key, j)
 			}
@@ -265,10 +265,10 @@ func TestAtomicMapEvent_ConcurrentReadWrite(t *testing.T) {
 	}()
 
 	writerWg.Add(numWriters)
-	for i := 0; i < numWriters; i++ {
+	for i := range numWriters {
 		go func(writerID int) {
 			defer writerWg.Done()
-			for j := 0; j < numWritesPerWriter; j++ {
+			for j := range numWritesPerWriter {
 				key := fmt.Sprintf("w%d-k%d", writerID, j)
 				ae.Send(key, j)
 			}
