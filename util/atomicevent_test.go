@@ -187,8 +187,8 @@ func TestAtomicMapEvent_Concurrency(t *testing.T) {
 	const numGoroutines = 10
 	const numWritesPerGoRoutine = 100
 
+	wg.Add(numGoroutines)
 	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
 		go func(goroutineID int) {
 			defer wg.Done()
 			for j := 0; j < numWritesPerGoRoutine; j++ {
@@ -208,4 +208,78 @@ func TestAtomicMapEvent_Concurrency(t *testing.T) {
 
 	// After consuming, should be empty
 	assert.Len(t, ae.ConsumeValues(), 0)
+}
+
+func TestAtomicMapEvent_ConcurrentReadWrite(t *testing.T) {
+	ae := NewAtomicMapEvent[int]()
+	var writerWg sync.WaitGroup
+	var consumerWg sync.WaitGroup
+	const numWriters = 10
+	const numWritesPerWriter = 100
+	totalWrites := numWriters * numWritesPerWriter
+
+	consumedValues := make(map[string]int)
+	var consumedMutex sync.Mutex
+
+	// Helper to process a map of consumed values safely from multiple goroutines
+	processConsumed := func(consumed map[string]int) {
+		if len(consumed) == 0 {
+			return
+		}
+		consumedMutex.Lock()
+		defer consumedMutex.Unlock()
+		for k, v := range consumed {
+			if _, exists := consumedValues[k]; exists {
+				t.Errorf("key %s was consumed twice", k)
+			}
+			consumedValues[k] = v
+		}
+	}
+
+	consumerDone := make(chan struct{})
+
+	consumerWg.Add(1)
+	go func() {
+		defer consumerWg.Done()
+		for {
+			select {
+			case <-ae.Channel():
+				processConsumed(ae.ConsumeValues())
+			case <-consumerDone:
+				// Writers are done. Perform a final drain.
+			finalDrainLoop:
+				for {
+					select {
+					case <-ae.Channel():
+						processConsumed(ae.ConsumeValues())
+					default:
+						// No more notifications.
+						break finalDrainLoop
+					}
+				}
+				// One final check to be absolutely sure no values were missed.
+				processConsumed(ae.ConsumeValues())
+				return
+			}
+		}
+	}()
+
+	writerWg.Add(numWriters)
+	for i := 0; i < numWriters; i++ {
+		go func(writerID int) {
+			defer writerWg.Done()
+			for j := 0; j < numWritesPerWriter; j++ {
+				key := fmt.Sprintf("w%d-k%d", writerID, j)
+				ae.Send(key, j)
+			}
+		}(i)
+	}
+
+	writerWg.Wait()     // Wait for all writers to finish
+	close(consumerDone) // Signal consumer to stop
+	consumerWg.Wait()   // Wait for consumer to finish processing
+
+	consumedMutex.Lock()
+	defer consumedMutex.Unlock()
+	assert.Len(t, consumedValues, totalWrites, "all written values should have been consumed exactly once")
 }
