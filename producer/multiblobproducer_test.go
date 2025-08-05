@@ -47,7 +47,10 @@ func TestNewMultiBlobProducer(t *testing.T) {
 	assert.Equal(t, 0.2, blob2.delta)
 	assert.Equal(t, float64(-1), blob2.dir)
 
-	assert.False(t, p.GetIsRunning())
+	// Initially, all LEDs should be off.
+	for _, led := range p.GetLeds() {
+		assert.True(t, led.IsEmpty())
+	}
 }
 
 func TestBlob_getBlobLeds(t *testing.T) {

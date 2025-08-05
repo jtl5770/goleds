@@ -8,7 +8,6 @@ type LedProducer interface {
 	GetUID() string
 	Start()
 	SendTrigger(trigger *u.Trigger)
-	Stop()
+	TryStop() (bool, error)
 	Exit()
-	GetIsRunning() bool
 }

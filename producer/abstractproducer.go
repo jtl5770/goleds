@@ -1,12 +1,15 @@
 package producer
 
 import (
+	"errors"
 	"log/slog"
 	"sync"
 	t "time"
 
 	u "lautenbacher.net/goleds/util"
 )
+
+var errTimeout = errors.New("timeout reached while sending stop signal")
 
 // Implementation of common and shared functionality between the
 // concrete Implementations of the ledproducer interface
@@ -60,15 +63,20 @@ func (s *AbstractProducer) GetUID() string {
 	return s.uid
 }
 
+// startLocked is the internal, non-locking version of Start.
+// It MUST be called with updateMutex held.
+func (s *AbstractProducer) startLocked() {
+	s.isRunning = true
+	s.endWg.Add(1)
+	go s.runner()
+}
+
 // Start is the main entry point to begin the producer's execution.
 func (s *AbstractProducer) Start() {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
-
 	if !s.isRunning && !s.hasExited {
-		s.isRunning = true
-		s.endWg.Add(1)
-		go s.runner()
+		s.startLocked()
 	} else if s.hasExited {
 		slog.Warn("Start() called on a Producer that has already exited", "uid", s.GetUID())
 	} else if s.isRunning {
@@ -101,25 +109,40 @@ func (s *AbstractProducer) runner() {
 	s.runfunc()
 }
 
+// SendTrigger ensures the producer is running and then sends it a trigger event.
+// This operation is atomic, preventing a race between starting and triggering.
 func (s *AbstractProducer) SendTrigger(trigger *u.Trigger) {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 
-	if s.isRunning && !s.hasExited {
+	if !s.hasExited {
+		// Ensure the producer is running before sending the trigger.
+		if !s.isRunning {
+			s.startLocked()
+		}
 		s.triggerEvent.Send(trigger)
 	}
 }
 
-// Stop method to signal the worker go routine on the stop channel.
-func (s *AbstractProducer) Stop() {
+// TryStop attempts to signal the worker goroutine to stop.
+// It returns (true, nil) if the signal was sent successfully.
+// It returns (false, nil) if the producer was not running.
+// It returns (false, err) if a timeout occurs.
+func (s *AbstractProducer) TryStop() (bool, error) {
 	s.updateMutex.RLock()
 	defer s.updateMutex.RUnlock()
-	if s.isRunning && !s.hasExited {
-		select {
-		case s.stopchan <- true:
-		case <-t.After(5 * t.Second):
-			slog.Warn("Timeout reached while sending stop signal", "uid", s.GetUID())
-		}
+
+	if !s.isRunning || s.hasExited {
+		slog.Debug("TryStop called on a producer that was not running", "uid", s.GetUID())
+		return false, nil
+	}
+
+	select {
+	case s.stopchan <- true:
+		return true, nil
+	case <-t.After(5 * t.Second):
+		slog.Warn("Timeout reached while sending stop signal", "uid", s.GetUID())
+		return false, errTimeout
 	}
 }
 
@@ -130,10 +153,4 @@ func (s *AbstractProducer) Exit() {
 	close(s.stopchan)
 	s.isRunning = false
 	s.hasExited = true
-}
-
-func (s *AbstractProducer) GetIsRunning() bool {
-	s.updateMutex.RLock()
-	defer s.updateMutex.RUnlock()
-	return s.isRunning
 }

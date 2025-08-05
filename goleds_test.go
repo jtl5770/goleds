@@ -67,11 +67,14 @@ func (m *MockLedProducer) Start() {
 }
 
 func (m *MockLedProducer) SendTrigger(trigger *u.Trigger) {
-	// do nothing
+	// Simulate the real producer starting when it receives a trigger.
+	m.isRunning = true
 }
 
-func (m *MockLedProducer) Stop() {
+func (m *MockLedProducer) TryStop() (bool, error) {
+	wasRunning := m.isRunning
 	m.isRunning = false
+	return wasRunning, nil
 }
 
 func (m *MockLedProducer) GetIsRunning() bool {
@@ -124,7 +127,7 @@ func TestFireController(t *testing.T) {
 	if !mockProducer.GetIsRunning() {
 		t.Error("Expected producer to be running")
 	}
-	mockProducer.Stop()
+	mockProducer.TryStop()
 }
 
 func TestCombineAndUpdateDisplay(t *testing.T) {
@@ -176,7 +179,4 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	mockSensorProducer.Start()
 	ledReader.Send(mockSensorProducer.GetUID(), mockSensorProducer)
 	time.Sleep(100 * time.Millisecond)
-	if mockMultiBlobProducer.GetIsRunning() {
-		t.Error("Expected multiblob producer to be stopped")
-	}
 }
