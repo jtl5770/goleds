@@ -88,7 +88,6 @@ type sensor struct {
 	values       []int
 	index        int
 	sum          int
-	count        int
 	capacity     int
 }
 
@@ -97,10 +96,7 @@ func (s *sensor) smoothedValue(value int) int {
 	s.sum = s.sum - oldValue + value
 	s.values[s.index] = value
 	s.index = (s.index + 1) % s.capacity
-	if s.count < s.capacity {
-		s.count++
-	}
-	return int(math.Round(float64(s.sum) / float64(s.count)))
+	return int(math.Round(float64(s.sum) / float64(s.capacity)))
 }
 
 func (s *AbstractPlatform) initSensors(sensorConfig c.SensorsConfig) {
