@@ -58,7 +58,7 @@ type App struct {
 	sensorProd   []p.LedProducer
 	afterProd    []p.LedProducer
 	permProd     []p.LedProducer
-	stopsignal   chan bool
+	stopsignal   chan struct{}
 	shutdownWg   sync.WaitGroup
 	ossignal     chan os.Signal
 	platform     pl.Platform
@@ -120,7 +120,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 
 	a.afterProd = make([]p.LedProducer, 0)
 	a.permProd = make([]p.LedProducer, 0)
-	a.stopsignal = make(chan bool)
+	a.stopsignal = make(chan struct{})
 	a.ledproducers = make(map[string]p.LedProducer)
 
 	conf, err := c.ReadConfig(cfile, realp, sensp)
@@ -370,7 +370,7 @@ func (a *App) stateManager() {
 					slog.Info("   ===> Sending trigger to running SensorLedProducer", "uid", event.ID)
 					producer.SendTrigger(event)
 				} else {
-					slog.Warn("   ===> Starting SensorLedProducer", "uid", event.ID)
+					slog.Info("   ===> Starting SensorLedProducer", "uid", event.ID)
 					producer.Start()
 					producer.SendTrigger(event)
 				}

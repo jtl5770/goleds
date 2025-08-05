@@ -109,7 +109,7 @@ func TestFireController(t *testing.T) {
 	mockProducer := NewMockLedProducer("test")
 	app.ledproducers["test"] = mockProducer
 
-	app.stopsignal = make(chan bool)
+	app.stopsignal = make(chan struct{})
 	app.shutdownWg.Add(1)
 	// go app.fireController()
 	go app.stateManager()
@@ -145,7 +145,7 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 
 	ledReader := u.NewAtomicMapEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
-	app.stopsignal = make(chan bool)
+	app.stopsignal = make(chan struct{})
 
 	app.shutdownWg.Add(1)
 	go app.combineAndUpdateDisplay(ledReader, ledWriter)

@@ -71,7 +71,7 @@ func NewSensorViewer(sensorCfgs map[string]c.SensorCfg, ossignal chan os.Signal,
 }
 
 // Start initializes and runs the TUI. It should be called as a goroutine.
-func (sv *SensorViewer) Start(stopSignal chan bool, wg *sync.WaitGroup) {
+func (sv *SensorViewer) Start(stopSignal chan struct{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	sv.setupUI()
@@ -118,7 +118,7 @@ func (sv *SensorViewer) Update(latestValues map[string]int) {
 // runSensorDataGenerator is used only during development of this
 // component to feed random data to the SensorViewer without the need
 // for real hardware.
-func (sv *SensorViewer) RunSensorDataGenForDev(loopDelay time.Duration, stopSignal chan bool, wg *sync.WaitGroup) {
+func (sv *SensorViewer) RunSensorDataGenForDev(loopDelay time.Duration, stopSignal chan struct{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 	ticker := time.NewTicker(loopDelay)
 	defer ticker.Stop()
