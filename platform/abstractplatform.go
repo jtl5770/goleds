@@ -2,6 +2,7 @@ package platform
 
 import (
 	"log/slog"
+	"math"
 	"sync"
 	"time"
 
@@ -85,18 +86,21 @@ type sensor struct {
 	adcChannel   byte
 	triggerValue int
 	values       []int
-	smoothing    int
+	index        int
+	sum          int
+	count        int
+	capacity     int
 }
 
-func (s *sensor) smoothValue(val int) int {
-	var ret int
-	newValues := make([]int, s.smoothing, s.smoothing+1)
-	for index, curr := range append(s.values, val)[1:] {
-		newValues[index] = curr
-		ret += curr
+func (s *sensor) smoothedValue(value int) int {
+	oldValue := s.values[s.index]
+	s.sum = s.sum - oldValue + value
+	s.values[s.index] = value
+	s.index = (s.index + 1) % s.capacity
+	if s.count < s.capacity {
+		s.count++
 	}
-	s.values = newValues
-	return ret / s.smoothing
+	return int(math.Round(float64(s.sum) / float64(s.count)))
 }
 
 func (s *AbstractPlatform) initSensors(sensorConfig c.SensorsConfig) {
@@ -113,7 +117,7 @@ func (s *AbstractPlatform) newSensor(uid string, ledIndex int, spimultiplex stri
 		spimultiplex: spimultiplex,
 		adcChannel:   adcChannel,
 		triggerValue: triggerValue,
-		values:       make([]int, smoothing, smoothing+1),
-		smoothing:    smoothing,
+		values:       make([]int, smoothing),
+		capacity:     smoothing,
 	}
 }

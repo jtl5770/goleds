@@ -233,7 +233,7 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 			return
 		case <-ticker.C:
 			for name, sensor := range s.sensors {
-				value := sensor.smoothValue(s.readAdc(sensor.spimultiplex, sensor.adcChannel))
+				value := sensor.smoothedValue(s.readAdc(sensor.spimultiplex, sensor.adcChannel))
 				latestValues[name] = value
 				if value > sensor.triggerValue {
 					s.sensorEvents <- util.NewTrigger(name, value, time.Now())
