@@ -333,8 +333,14 @@ func (a *App) stateManager() {
 		stateAfterProd State = iota
 	)
 
-	sensorProdDoneChan := make(chan struct{})
+	// This channel signals that all sensor producers are done. It carries a
+	// generation number to prevent race conditions where a "done" signal from a
+	// previous generation is received after a new sensor event has already
+	// started a new generation of producers.
+	sensorProdDoneChan := make(chan uint64)
 	afterProdDoneChan := make(chan struct{})
+
+	var sensorRun uint64 // The generation counter for sensor producer runs.
 
 	// We are in idle State when starting
 	currentState := stateIdle
@@ -354,17 +360,28 @@ func (a *App) stateManager() {
 				producer, _ := a.ledproducers[event.ID]
 				slog.Info("   ===> Starting SensorLedProducer", "uid", event.ID)
 				currentState = stateSensor
+				sensorRun++ // Start a new generation.
 				producer.Start()
 				producer.SendTrigger(event)
-				go func() {
+				// Start a waiter that will signal when this generation is complete.
+				go func(run uint64) {
 					a.sensorProdWg.Wait()
-					slog.Info("   All SensorLedProducer(s) finished, signalling event")
-					sensorProdDoneChan <- struct{}{}
-				}()
+					slog.Info("   All SensorLedProducer(s) finished, signalling event", "run", run)
+					sensorProdDoneChan <- run
+				}(sensorRun)
 
 			case stateSensor:
-				// we are still in the sensor state but we have a new event to process
+				// A new event arrived while in the sensor state, extending the active phase.
+				// We must handle a race condition where the waiter for the *previous*
+				// generation of producers might signal completion just as we process this
+				// new event, which would cause a premature and incorrect state transition.
+				//
+				// To solve this, we increment `sensorRun` to create a new generation,
+				// effectively invalidating any signal from the previous one. A new waiter
+				// goroutine is then launched unconditionally to wait for the completion of
+				// this new, extended generation of producers.
 				slog.Info("        Additional sensor event received in sensor state", "uid", event.ID)
+				sensorRun++ // Invalidate in-flight "done" signals by incrementing the generation.
 				producer, _ := a.ledproducers[event.ID]
 				if producer.GetIsRunning() {
 					slog.Info("   ===> Sending trigger to running SensorLedProducer", "uid", event.ID)
@@ -374,7 +391,16 @@ func (a *App) stateManager() {
 					producer.Start()
 					producer.SendTrigger(event)
 				}
-				// no new waiter go routine is started, we are still in the sensor state
+				// The existing waiter goroutine will send a
+				// completion signal that will carry the old,
+				// now-invalid generation number. We need a new waiter
+				// with the new generation number, which is also
+				// guaranteed to wait for the just started producer.
+				go func(run uint64) {
+					a.sensorProdWg.Wait()
+					slog.Info("   All SensorLedProducer(s) finished, signalling event", "run", run)
+					sensorProdDoneChan <- run
+				}(sensorRun)
 
 			case stateAfterProd:
 				slog.Info("      Sensor event received in afterProd state", "uid", event.ID)
@@ -387,16 +413,24 @@ func (a *App) stateManager() {
 				producer, _ := a.ledproducers[event.ID]
 				slog.Info("   ===> Starting SensorLedProducer", "uid", event.ID)
 				currentState = stateSensor
+				sensorRun++ // Start a new generation.
 				producer.Start()
 				producer.SendTrigger(event)
-				go func() {
+				// Start a waiter for the new generation.
+				go func(run uint64) {
 					a.sensorProdWg.Wait()
-					slog.Info("   All SensorLedProducer(s) finished, signalling event")
-					sensorProdDoneChan <- struct{}{}
-				}()
+					slog.Info("   All SensorLedProducer(s) finished, signalling event", "run", run)
+					sensorProdDoneChan <- run
+				}(sensorRun)
 			}
-		case <-sensorProdDoneChan:
-			slog.Info("   Received [SensorLedProducer(s) finished] event, switching to afterProd state")
+		case recvdRun := <-sensorProdDoneChan:
+			// Only process the "done" signal if it matches the current generation.
+			if recvdRun != sensorRun {
+				slog.Info("      Received stale [SensorLedProducer(s) finished] event, ignoring", "received_run", recvdRun, "current_run", sensorRun)
+				continue
+			}
+
+			slog.Info("      Received valid [SensorLedProducer(s) finished] event, switching to afterProd state", "run", recvdRun)
 			currentState = stateAfterProd
 			for _, prod := range a.afterProd {
 				slog.Info("      ===> Starting afterProd Producer", "uid", prod.GetUID())
