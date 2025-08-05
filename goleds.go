@@ -328,9 +328,9 @@ func (a *App) stateManager() {
 	type State int
 
 	const (
-		stateIdle      State = iota
-		stateSensor    State = iota
-		stateAfterProd State = iota
+		stateIdle State = iota
+		stateSensor
+		stateAfterProd
 	)
 
 	// This channel signals that all sensor producers are done. It carries a
