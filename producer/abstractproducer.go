@@ -118,7 +118,7 @@ func (s *AbstractProducer) Stop() {
 		select {
 		case s.stopchan <- true:
 		case <-t.After(5 * t.Second):
-			slog.Warn("Timeout reached in while sending stop signal", "uid", s.GetUID())
+			slog.Warn("Timeout reached while sending stop signal", "uid", s.GetUID())
 		}
 	}
 }
