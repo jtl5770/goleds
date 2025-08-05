@@ -27,7 +27,7 @@ func TestLed_Max(t *testing.T) {
 
 func TestCombineLeds(t *testing.T) {
 	ledsTotal := 5
-
+	combinedLeds := make([]Led, ledsTotal)
 	ledRanges := map[string][]Led{
 		"range1": {
 			{Red: 10, Green: 0, Blue: 0},
@@ -39,21 +39,21 @@ func TestCombineLeds(t *testing.T) {
 		},
 	}
 
-	sumLeds := CombineLeds(ledRanges, ledsTotal)
+	CombineLeds(ledRanges, combinedLeds)
 
-	assert.Len(t, sumLeds, 5)
+	assert.Len(t, combinedLeds, 5)
 
 	// Check combined values
-	assert.Equal(t, float64(10), sumLeds[0].Red)
-	assert.Equal(t, float64(0), sumLeds[0].Green)
-	assert.Equal(t, float64(20), sumLeds[0].Blue)
+	assert.Equal(t, float64(10), combinedLeds[0].Red)
+	assert.Equal(t, float64(0), combinedLeds[0].Green)
+	assert.Equal(t, float64(20), combinedLeds[0].Blue)
 
-	assert.Equal(t, float64(5), sumLeds[1].Red)
-	assert.Equal(t, float64(10), sumLeds[1].Green)
-	assert.Equal(t, float64(5), sumLeds[1].Blue)
+	assert.Equal(t, float64(5), combinedLeds[1].Red)
+	assert.Equal(t, float64(10), combinedLeds[1].Green)
+	assert.Equal(t, float64(5), combinedLeds[1].Blue)
 
 	// Check that the rest are zero
-	assert.True(t, sumLeds[2].IsEmpty())
-	assert.True(t, sumLeds[3].IsEmpty())
-	assert.True(t, sumLeds[4].IsEmpty())
+	assert.True(t, combinedLeds[2].IsEmpty())
+	assert.True(t, combinedLeds[3].IsEmpty())
+	assert.True(t, combinedLeds[4].IsEmpty())
 }

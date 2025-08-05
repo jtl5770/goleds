@@ -278,6 +278,7 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 	var oldLedsHash uint64
 	forceupdatedelay := a.platform.GetForceUpdateDelay()
 	allLedRanges := make(map[string][]p.Led)
+	combinedLeds := make([]p.Led, a.platform.GetLedsTotal())
 	var ticker *time.Ticker
 	if forceupdatedelay > 0 {
 		ticker = time.NewTicker(forceupdatedelay)
@@ -291,11 +292,13 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 			for key, prod := range pmap {
 				allLedRanges[key] = prod.GetLeds()
 			}
-			sumLeds := p.CombineLeds(allLedRanges, a.platform.GetLedsTotal())
-			newLedshash := hashLeds(sumLeds)
+			p.CombineLeds(allLedRanges, combinedLeds)
+			newLedshash := hashLeds(combinedLeds)
 			if newLedshash != oldLedsHash {
+				ledsCopy := make([]p.Led, len(combinedLeds))
+				copy(ledsCopy, combinedLeds)
 				select {
-				case ledwriter <- sumLeds:
+				case ledwriter <- ledsCopy:
 				case <-a.stopsignal:
 					slog.Info("Ending combineAndupdateDisplay go-routine")
 					return
@@ -307,8 +310,10 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 			// artifacts on the led stripe from - maybe/somehow -
 			// electrical distortions or cross talk so we make sure to
 			// regularly force an update of the Led stripe
+			ledsCopy := make([]p.Led, len(combinedLeds))
+			copy(ledsCopy, combinedLeds)
 			select {
-			case ledwriter <- p.CombineLeds(allLedRanges, a.platform.GetLedsTotal()):
+			case ledwriter <- ledsCopy:
 			case <-a.stopsignal:
 				slog.Info("Ending combineAndupdateDisplay go-routine")
 				return

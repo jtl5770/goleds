@@ -26,12 +26,15 @@ func (s *Led) Max(in Led) Led {
 	return in
 }
 
-func CombineLeds(allLedRanges map[string][]Led, ledsTotal int) []Led {
-	sumLeds := make([]Led, ledsTotal)
+func CombineLeds(allLedRanges map[string][]Led, target []Led) {
+	// clear slice
+	for i := range target {
+		target[i] = Led{}
+	}
+
 	for _, currleds := range allLedRanges {
-		for j := range currleds {
-			sumLeds[j] = currleds[j].Max(sumLeds[j])
+		for j, led := range currleds {
+			target[j] = led.Max(target[j])
 		}
 	}
-	return sumLeds
 }
