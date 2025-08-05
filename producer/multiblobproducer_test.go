@@ -53,11 +53,12 @@ func TestNewMultiBlobProducer(t *testing.T) {
 	}
 }
 
-func TestBlob_getBlobLeds(t *testing.T) {
+func TestBlob_applyTo(t *testing.T) {
 	blob := NewBlob("test_blob", []float64{255, 0, 0}, 5.0, 1.0, 0.0)
 	ledsTotal := 10
+	leds := make([]Led, ledsTotal)
 
-	leds := blob.getBlobLeds(ledsTotal)
+	blob.applyTo(leds)
 
 	assert.Len(t, leds, ledsTotal)
 
@@ -70,8 +71,14 @@ func TestBlob_getBlobLeds(t *testing.T) {
 	assert.InDelta(t, 255.0*math.Exp(-1.0), leds[4].Red, 0.001) // exp(-1*(4-5)^2/1) = exp(-1)
 	assert.InDelta(t, 255.0*math.Exp(-1.0), leds[6].Red, 0.001)
 
-	// Check a point far away (e.g., x=0.0)
-	assert.InDelta(t, 255.0*math.Exp(-25.0), leds[0].Red, 0.001)
+	// Check a point far away (e.g., x=0.0) which should be untouched due to optimization
+	assert.True(t, leds[0].IsEmpty())
+
+	// Check that Max() logic works
+	leds = make([]Led, ledsTotal)
+	leds[5] = Led{Red: 300.0}
+	blob.applyTo(leds)
+	assert.InDelta(t, 300.0, leds[5].Red, 0.001, "existing higher value should be kept")
 }
 
 func TestBlob_switchDirection(t *testing.T) {
