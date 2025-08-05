@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 
@@ -121,4 +122,90 @@ func TestConcurrency(t *testing.T) {
 	readerWg.Wait()
 
 	assert.Equal(t, 999, ae.Value(), "Final value should be 999")
+}
+
+func TestNewAtomicMapEvent(t *testing.T) {
+	ae := NewAtomicMapEvent[any]()
+	assert.NotNil(t, ae, "NewAtomicMapEvent should not return nil")
+	assert.NotNil(t, ae.notify, "notify channel should be initialized")
+	assert.NotNil(t, ae.value, "value map should be initialized")
+}
+
+func TestAtomicMapEvent_SendAndConsumeValues(t *testing.T) {
+	ae := NewAtomicMapEvent[int]()
+
+	ae.Send("one", 1)
+	ae.Send("two", 2)
+
+	assert.True(t, ae.HasPending(), "should have pending notification")
+	select {
+	case <-ae.Channel():
+		// Good, notification received
+	default:
+		t.Fatal("should have received a notification")
+	}
+
+	values := ae.ConsumeValues()
+	assert.Len(t, values, 2, "should have two values")
+	assert.Equal(t, 1, values["one"])
+	assert.Equal(t, 2, values["two"])
+
+	// After consuming, the internal map should be empty and no notification should be pending
+	// (unless another Send happens)
+	assert.False(t, ae.HasPending(), "should not have pending notification after consume")
+	select {
+	case <-ae.Channel():
+		t.Fatal("channel should be empty after consume")
+	default:
+		// Good
+	}
+
+	// Consuming again should yield an empty map
+	values = ae.ConsumeValues()
+	assert.Len(t, values, 0, "should have zero values after consuming")
+
+	// Send again to ensure it still works
+	ae.Send("three", 3)
+	values = ae.ConsumeValues()
+	assert.Len(t, values, 1)
+	assert.Equal(t, 3, values["three"])
+}
+
+func TestAtomicMapEvent_SendOverwrites(t *testing.T) {
+	ae := NewAtomicMapEvent[string]()
+	ae.Send("key1", "initial")
+	ae.Send("key1", "overwrite")
+
+	values := ae.ConsumeValues()
+	assert.Len(t, values, 1)
+	assert.Equal(t, "overwrite", values["key1"])
+}
+
+func TestAtomicMapEvent_Concurrency(t *testing.T) {
+	ae := NewAtomicMapEvent[int]()
+	var wg sync.WaitGroup
+	const numGoroutines = 10
+	const numWritesPerGoRoutine = 100
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(goroutineID int) {
+			defer wg.Done()
+			for j := 0; j < numWritesPerGoRoutine; j++ {
+				key := fmt.Sprintf("g%d-k%d", goroutineID, j)
+				ae.Send(key, j)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Wait for notification
+	<-ae.Channel()
+
+	values := ae.ConsumeValues()
+	assert.Len(t, values, numGoroutines*numWritesPerGoRoutine)
+
+	// After consuming, should be empty
+	assert.Len(t, ae.ConsumeValues(), 0)
 }

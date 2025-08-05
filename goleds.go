@@ -287,7 +287,7 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 	for {
 		select {
 		case <-ledreader.Channel():
-			pmap := ledreader.Value()
+			pmap := ledreader.ConsumeValues()
 			for key, prod := range pmap {
 				allLedRanges[key] = prod.GetLeds()
 			}

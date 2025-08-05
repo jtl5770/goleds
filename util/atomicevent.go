@@ -89,8 +89,9 @@ func (ae *AtomicMapEvent[T]) Channel() <-chan struct{} {
 	return ae.notify
 }
 
-// Value returns the current latest event.
-func (ae *AtomicMapEvent[T]) Value() map[string]T {
+// ConsumeValues returns a clone of the current event map and clears the internal map.
+// This is a destructive read.
+func (ae *AtomicMapEvent[T]) ConsumeValues() map[string]T {
 	ae.mu.Lock()
 	defer func() {
 		clear(ae.value)
