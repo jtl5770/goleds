@@ -43,14 +43,32 @@ func NewBlob(uid string, ledRGB []float64, x, width, deltaX float64) *Blob {
 	return &inst
 }
 
-func (s *Blob) getBlobLeds(ledsTotal int) []Led {
-	leds := make([]Led, ledsTotal)
-
-	for i := range ledsTotal {
-		y := math.Exp(-1 * (math.Pow(float64(i)-s.x, 2) / s.width))
-		leds[i] = Led{s.led.Red * y, s.led.Green * y, s.led.Blue * y}
+// applyTo calculates the blob's contribution and adds it to an existing LED slice
+// using a Max function to blend.
+func (s *Blob) applyTo(leds []Led) {
+	ledsTotal := len(leds)
+	// Optimization: only calculate for LEDs that will be visibly affected.
+	// The intensity of the blob is based on a Gaussian function. We can determine
+	// a bounding box outside of which the light intensity is negligible.
+	// `y = exp(-distance_squared / s.width)`. If we say `y < 0.01` is negligible,
+	// this corresponds to `distance_squared / s.width > 4.6`.
+	// We use `5.0` for a rounder number and to be safe.
+	bound := int(math.Ceil(math.Sqrt(5.0 * s.width)))
+	start := int(math.Floor(s.x)) - bound
+	if start < 0 {
+		start = 0
 	}
-	return leds
+	end := int(math.Ceil(s.x)) + bound
+	if end >= ledsTotal {
+		end = ledsTotal
+	}
+
+	for i := start; i < end; i++ {
+		y := math.Exp(-1 * (math.Pow(float64(i)-s.x, 2) / s.width))
+		// No need to check for small y here, the loop bounds already handle it.
+		blobLed := Led{s.led.Red * y, s.led.Green * y, s.led.Blue * y}
+		leds[i] = leds[i].Max(blobLed)
+	}
 }
 
 func (s *Blob) switchDirection() {
@@ -85,7 +103,9 @@ func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer]
 func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {
 	intervals := 20
 	delay := 20 * time.Millisecond
-	currentleds := s.GetLeds()
+	// The pattern to be faded is in s.leds, but GetLeds returns a copy to avoid race conditions.
+	baseLeds := s.GetLeds()
+
 	for counter := 0; counter <= intervals; counter++ {
 		var step int
 		if fadein {
@@ -96,10 +116,15 @@ func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {
 
 		factor := float64(step) / float64(intervals)
 
-		for i, led := range currentleds {
-			s.setLed(i, Led{led.Red * factor, led.Green * factor, led.Blue * factor})
+		s.ledsMutex.Lock()
+		for i, led := range baseLeds {
+			// Directly manipulate s.leds to avoid overhead of setLed
+			if i < len(s.leds) {
+				s.leds[i] = Led{led.Red * factor, led.Green * factor, led.Blue * factor}
+			}
 		}
-		s.ledsChanged.Send(s.GetUID(), s)
+		s.ledsMutex.Unlock()
+		s.ledsChanged.Send(s.GetUID(), s) // Send one notification per fade step
 		time.Sleep(delay)
 	}
 }
@@ -133,14 +158,16 @@ func (s *MultiBlobProducer) runner() {
 			detectAndHandleCollisions(s.allblobs, len(s.leds))
 
 			// push update event for Leds
-			tmp := make(map[string][]Led)
+			s.ledsMutex.Lock()
+			// clear slice
+			for i := range s.leds {
+				s.leds[i] = Led{}
+			}
+			// combine blobs by applying each one to the producer's led slice
 			for _, blob := range s.allblobs {
-				tmp[blob.uid] = blob.getBlobLeds(len(s.leds))
+				blob.applyTo(s.leds)
 			}
-			combined := CombineLeds(tmp, len(s.leds))
-			for i := 0; i < len(s.leds); i++ {
-				s.setLed(i, combined[i])
-			}
+			s.ledsMutex.Unlock()
 
 			if countup_run {
 				s.ledsChanged.Send(s.GetUID(), s)
