@@ -32,7 +32,6 @@ type gpiocfg struct {
 
 func NewRaspberryPiPlatform(conf *config.Config) *RaspberryPiPlatform {
 	readyChan := make(chan bool)
-	close(readyChan) // For RPi, we are ready immediately.
 	inst := &RaspberryPiPlatform{
 		sensorStopChan: make(chan bool),
 		readyChan:      readyChan,
@@ -91,6 +90,10 @@ func (s *RaspberryPiPlatform) Start(ledWriter chan []producer.Led) error {
 		return fmt.Errorf("unknown LED type: %s", s.config.Hardware.LEDType)
 	}
 
+	if s.sensorViewer != nil {
+		go s.sensorViewer.Start()
+	}
+
 	s.initSensors(s.config.Hardware.Sensors)
 
 	s.displayWg.Add(1)
@@ -99,6 +102,7 @@ func (s *RaspberryPiPlatform) Start(ledWriter chan []producer.Led) error {
 	s.sensorWg.Add(1)
 	go s.sensorDriver()
 
+	close(s.readyChan) // For RPi, we are ready immediately.
 	return nil
 }
 
@@ -117,6 +121,11 @@ func (s *RaspberryPiPlatform) Stop() {
 	rpio.SpiEnd(rpio.Spi0)
 	if err := rpio.Close(); err != nil {
 		slog.Error("Error closing rpio", "error", err)
+	}
+
+	// If there is a SensorViewer TUI, close it.
+	if s.sensorViewer != nil {
+		s.sensorViewer.Stop()
 	}
 }
 

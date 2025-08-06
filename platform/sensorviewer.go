@@ -26,14 +26,16 @@ const (
 
 // SensorViewer is a TUI component for displaying real-time sensor data.
 type SensorViewer struct {
-	tuiApp       *tview.Application
-	view         *tview.TextView
-	sensorValues map[string]*deque.Deque[int]
-	sensorCfgs   map[string]c.SensorCfg
-	sensorNames  []string
-	mu           sync.Mutex
-	ossignal     chan os.Signal
-	devMode      bool
+	tuiApp        *tview.Application
+	view          *tview.TextView
+	sensorValues  map[string]*deque.Deque[int]
+	sensorCfgs    map[string]c.SensorCfg
+	sensorNames   []string
+	mu            sync.Mutex
+	ossignal      chan os.Signal
+	devMode       bool
+	loopDelay     time.Duration
+	generatorStop chan struct{}
 }
 
 type sensorStats struct {
@@ -45,17 +47,19 @@ type sensorStats struct {
 }
 
 // NewSensorViewer creates and initializes a new SensorViewer.
-func NewSensorViewer(sensorCfgs map[string]c.SensorCfg, ossignal chan os.Signal, devMode bool) *SensorViewer {
+func NewSensorViewer(config c.SensorsConfig, ossignal chan os.Signal, devMode bool) *SensorViewer {
 	sv := &SensorViewer{
-		tuiApp:       tview.NewApplication(),
-		sensorValues: make(map[string]*deque.Deque[int]),
-		sensorCfgs:   sensorCfgs,
-		sensorNames:  make([]string, 0, len(sensorCfgs)),
-		ossignal:     ossignal,
-		devMode:      devMode,
+		tuiApp:        tview.NewApplication(),
+		sensorValues:  make(map[string]*deque.Deque[int]),
+		sensorCfgs:    config.SensorCfg,
+		sensorNames:   make([]string, 0, len(config.SensorCfg)),
+		ossignal:      ossignal,
+		devMode:       devMode,
+		loopDelay:     config.LoopDelay,
+		generatorStop: make(chan struct{}),
 	}
 
-	for name := range sensorCfgs {
+	for name := range config.SensorCfg {
 		sv.sensorNames = append(sv.sensorNames, name)
 		sv.sensorValues[name] = new(deque.Deque[int])
 		sv.sensorValues[name].Grow(maxSensorHistory)
@@ -71,23 +75,40 @@ func NewSensorViewer(sensorCfgs map[string]c.SensorCfg, ossignal chan os.Signal,
 }
 
 // Start initializes and runs the TUI. It should be called as a goroutine.
-func (sv *SensorViewer) Start(stopSignal chan struct{}, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func (sv *SensorViewer) Start() {
 	sv.setupUI()
 
-	// Goroutine to handle shutdown
-	go func() {
-		<-stopSignal
-		slog.Info("Stopping SensorViewer TUI...")
-		sv.tuiApp.Stop()
-	}()
+	if sv.devMode {
+		slog.Info("Starting synthetic sensor data generator...")
+		go sv.RunSensorDataGenForDev(sv.generatorStop)
+	}
 
+	slog.Info("Starting SensorViewer TUI")
 	if err := sv.tuiApp.Run(); err != nil {
 		slog.Error("Error running SensorViewer TUI", "error", err)
 		os.Exit(1)
 	}
-	slog.Info("SensorViewer TUI has stopped.")
+}
+
+// implement a function to safely stop the TUI
+// Stop safely stops the TUI application. This should be called when the application is shutting down.
+func (sv *SensorViewer) Stop() {
+	sv.mu.Lock()
+	defer sv.mu.Unlock()
+
+	if sv.devMode {
+		slog.Info("Stopping sensor data generator...")
+		sv.generatorStop <- struct{}{}
+	}
+
+	if sv.tuiApp != nil {
+		slog.Info("Stopping SensorViewer TUI...")
+		sv.tuiApp.Stop()
+		sv.tuiApp = nil // Prevent further updates after stopping
+		slog.Info("SensorViewer TUI has stopped.")
+	} else {
+		slog.Warn("SensorViewer TUI was already stopped or not initialized.")
+	}
 }
 
 // Update receives the latest sensor values, prepares the display strings,
@@ -118,9 +139,8 @@ func (sv *SensorViewer) Update(latestValues map[string]int) {
 // runSensorDataGenerator is used only during development of this
 // component to feed random data to the SensorViewer without the need
 // for real hardware.
-func (sv *SensorViewer) RunSensorDataGenForDev(loopDelay time.Duration, stopSignal chan struct{}, wg *sync.WaitGroup) {
-	defer wg.Done()
-	ticker := time.NewTicker(loopDelay)
+func (sv *SensorViewer) RunSensorDataGenForDev(stopSignal chan struct{}) {
+	ticker := time.NewTicker(sv.loopDelay)
 	defer ticker.Stop()
 
 	latestValues := make(map[string]int)
@@ -176,10 +196,14 @@ func (sv *SensorViewer) setupUI() {
 		key := string(event.Rune())
 		switch key {
 		case "q", "Q":
-			sv.tuiApp.Stop()
+			if sv.devMode {
+				sv.Stop()
+			}
 			sv.ossignal <- os.Interrupt
 		case "r", "R":
-			sv.tuiApp.Stop()
+			if sv.devMode {
+				sv.Stop()
+			}
 			sv.ossignal <- syscall.SIGHUP
 		}
 		return event

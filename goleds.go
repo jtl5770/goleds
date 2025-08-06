@@ -27,6 +27,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"hash/fnv"
 	"log/slog"
 	"os"
@@ -149,10 +150,8 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	// Handle the special "-sensor-show development mode"
 	if !conf.RealHW && conf.SensorShow {
 		slog.Info("Starting in Sensor Viewer development mode...")
-		viewer := pl.NewSensorViewer(conf.Hardware.Sensors.SensorCfg, a.ossignal, true)
-		a.shutdownWg.Add(2) // For viewer + generator
-		go viewer.Start(a.stopsignal, &a.shutdownWg)
-		go viewer.RunSensorDataGenForDev(conf.Hardware.Sensors.LoopDelay, a.stopsignal, &a.shutdownWg)
+		viewer := pl.NewSensorViewer(conf.Hardware.Sensors, a.ossignal, true)
+		go viewer.Start()
 		// In this mode, we don't need any platforms or producers, so we exit early.
 		return
 	}
@@ -161,10 +160,8 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	if conf.RealHW {
 		rpiPlatform := pl.NewRaspberryPiPlatform(conf)
 		if conf.SensorShow {
-			viewer := pl.NewSensorViewer(conf.Hardware.Sensors.SensorCfg, a.ossignal, false)
+			viewer := pl.NewSensorViewer(conf.Hardware.Sensors, a.ossignal, false)
 			rpiPlatform.SetSensorViewer(viewer)
-			a.shutdownWg.Add(1)
-			go viewer.Start(a.stopsignal, &a.shutdownWg)
 		}
 		a.platform = rpiPlatform
 	} else {
@@ -263,8 +260,8 @@ func (a *App) shutdown() {
 	a.shutdownWg.Wait()
 	slog.Info("Main go-routines from goleds.go successfully terminated")
 
-	slog.Info("Now stopping Platform...")
 	if a.platform != nil {
+		slog.Info("Stopping main platform...", "class", fmt.Sprintf("%T", a.platform))
 		a.platform.Stop()
 	}
 }
