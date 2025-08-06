@@ -22,6 +22,7 @@ type AbstractPlatform struct {
 	readyChan       chan bool
 	shutdownMutex   sync.RWMutex
 	isShuttingDown  bool
+	ledBufferPool   *sync.Pool
 }
 
 func newAbstractPlatform(conf *c.Config, displayFunc func([]p.Led)) *AbstractPlatform {
@@ -74,6 +75,8 @@ func (s *AbstractPlatform) displayDriver(display chan []p.Led) {
 				s.displayFunc(sumLeds)
 			}
 			s.shutdownMutex.RUnlock()
+			// Return the buffer to the pool for reuse.
+			s.ledBufferPool.Put(sumLeds)
 		}
 	}
 }

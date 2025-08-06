@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"sync"
 	"time"
 
 	p "lautenbacher.net/goleds/producer"
@@ -12,7 +13,7 @@ import (
 // see this interface.
 type Platform interface {
 	// Start initializes the platform and launches its internal goroutines.
-	Start(ledWriter chan []p.Led) error
+	Start(ledWriter chan []p.Led, pool *sync.Pool) error
 
 	// Stop cleans up all platform resources and gracefully stops its goroutines.
 	Stop()

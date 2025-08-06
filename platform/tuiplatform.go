@@ -49,7 +49,8 @@ func (s *TUIPlatform) Ready() <-chan bool {
 	return s.readyChan
 }
 
-func (s *TUIPlatform) Start(ledWriter chan []producer.Led) error {
+func (s *TUIPlatform) Start(ledWriter chan []producer.Led, pool *sync.Pool) error {
+	s.ledBufferPool = pool
 	s.initSensors(s.config.Hardware.Sensors)
 	s.initSimulationTUI(
 		s.ossignalChan,

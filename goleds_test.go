@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,7 +30,7 @@ func (m *MockPlatform) GetSensorLedIndices() map[string]int {
 	return indices
 }
 
-func (m *MockPlatform) Start(ledWriter chan []p.Led) error {
+func (m *MockPlatform) Start(ledWriter chan []p.Led, pool *sync.Pool) error {
 	return nil
 }
 
@@ -149,9 +150,14 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	ledReader := u.NewAtomicMapEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
 	app.stopsignal = make(chan struct{})
+	ledBufferPool := &sync.Pool{
+		New: func() any {
+			return make([]p.Led, 10)
+		},
+	}
 
 	app.shutdownWg.Add(1)
-	go app.combineAndUpdateDisplay(ledReader, ledWriter)
+	go app.combineAndUpdateDisplay(ledReader, ledWriter, ledBufferPool)
 	t.Cleanup(func() {
 		close(app.stopsignal)
 		app.shutdownWg.Wait()

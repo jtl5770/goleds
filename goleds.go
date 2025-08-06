@@ -87,9 +87,7 @@ func main() {
 	exPath := filepath.Dir(ex)
 	cfile := flag.String("config", exPath+"/"+c.CONFILE, "Config file to use")
 	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
-	sensp := flag.Bool("show-sensors", false, "Set to true if program should only display sensor values.\n"+
-		"* will be using live data from the sensor hardware if -real is given - useful for calibrating the sensors' trigger values\n"+
-		"* will be using random values if -real is not given - useful only for development of the viewer component itself")
+	sensp := flag.Bool("show-sensors", false, "Set to true if program should only display sensor values.\n* will be using live data from the sensor hardware if -real is given - useful for calibrating the sensors' trigger values\n* will be using random values if -real is not given - useful only for development of the viewer component itself")
 	flag.Parse()
 
 	l.InitialSetup()
@@ -168,10 +166,17 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 		a.platform = pl.NewTUIPlatform(conf, a.ossignal)
 	}
 
+	ledsTotal := a.platform.GetLedsTotal()
+	ledBufferPool := &sync.Pool{
+		New: func() any {
+			return make([]p.Led, ledsTotal)
+		},
+	}
+
 	ledReader := u.NewAtomicMapEvent[p.LedProducer]()
 	ledWriter := make(chan []p.Led, 1)
 
-	if err := a.platform.Start(ledWriter); err != nil {
+	if err := a.platform.Start(ledWriter, ledBufferPool); err != nil {
 		slog.Error("Failed to start platform", "error", err)
 		os.Exit(1)
 	}
@@ -181,8 +186,6 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	// like portaudio.
 	<-a.platform.Ready()
 	slog.Info("Platform is ready, starting producers...")
-
-	ledsTotal := a.platform.GetLedsTotal()
 
 	// These producers runs all the time and will be started right away here
 	if conf.NightLED.Enabled {
@@ -244,7 +247,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 
 	a.shutdownWg.Add(2)
 
-	go a.combineAndUpdateDisplay(ledReader, ledWriter)
+	go a.combineAndUpdateDisplay(ledReader, ledWriter, ledBufferPool)
 	go a.stateManager()
 }
 
@@ -269,13 +272,14 @@ func (a *App) shutdown() {
 // This go-routine combines the LED values from all producers and writes them to the
 // ledWriter channel.
 // It also forces an update of the LED stripe at regular intervals to avoid artifacts.
-func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer], ledwriter chan []p.Led) {
+func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer], ledwriter chan []p.Led, ledBufferPool *sync.Pool) {
 	defer a.shutdownWg.Done()
 
 	var oldLedsHash uint64
 	forceupdatedelay := a.platform.GetForceUpdateDelay()
 	allLedRanges := make(map[string][]p.Led)
-	combinedLeds := make([]p.Led, a.platform.GetLedsTotal())
+	ledsTotal := a.platform.GetLedsTotal()
+	combinedLeds := make([]p.Led, ledsTotal)
 	var ticker *time.Ticker
 	if forceupdatedelay > 0 {
 		ticker = time.NewTicker(forceupdatedelay)
@@ -292,11 +296,13 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 			p.CombineLeds(allLedRanges, combinedLeds)
 			newLedshash := hashLeds(combinedLeds)
 			if newLedshash != oldLedsHash {
-				ledsCopy := make([]p.Led, len(combinedLeds))
-				copy(ledsCopy, combinedLeds)
+				ledsToSend := ledBufferPool.Get().([]p.Led)
+				copy(ledsToSend, combinedLeds)
 				select {
-				case ledwriter <- ledsCopy:
+				case ledwriter <- ledsToSend:
 				case <-a.stopsignal:
+					// Must return the buffer to the pool if we don't send it.
+					ledBufferPool.Put(ledsToSend)
 					slog.Info("Ending combineAndupdateDisplay go-routine")
 					return
 				}
@@ -307,13 +313,15 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 			// artifacts on the led stripe from - maybe/somehow -
 			// electrical distortions or cross talk so we make sure to
 			// regularly force an update of the Led stripe
-			ledsCopy := make([]p.Led, len(combinedLeds))
-			copy(ledsCopy, combinedLeds)
+			ledsToSend := ledBufferPool.Get().([]p.Led)
+			copy(ledsToSend, combinedLeds)
 			select {
-			case ledwriter <- ledsCopy:
-			case <-a.stopsignal:
-				slog.Info("Ending combineAndupdateDisplay go-routine")
-				return
+			case ledwriter <- ledsToSend:
+				case <-a.stopsignal:
+					// Must return the buffer to the pool if we don't send it.
+					ledBufferPool.Put(ledsToSend)
+					slog.Info("Ending combineAndupdateDisplay go-routine")
+					return
 			}
 		case <-a.stopsignal:
 			slog.Info("Ending combineAndupdateDisplay go-routine")
