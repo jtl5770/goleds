@@ -90,7 +90,7 @@ Hardware:
         # `-show-sensors` flag to calibrate this value.
         TriggerValue: 130
       S1: { LedIndex: 69, SpiMultiplex: ADC1, AdcChannel: 7, TriggerValue: 130 }
-      S2: { LedIndex: 111, SpiMultiplex: ADC2, AdcChannel: 0, TriggerValue: 180 }
+      S2: { LedIndex: 111, SpiMultiplex: ADC2, AdcChannel: 0, TriggerValue: 150 }
       S3: { LedIndex: 164, SpiMultiplex: ADC2, AdcChannel: 5, TriggerValue: 150 }
 
   # Defines the GPIO pin settings required to activate a specific SPI device.
