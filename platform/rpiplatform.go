@@ -169,15 +169,22 @@ type ledDriver interface {
 
 type ws2801Driver struct {
 	displayConfig config.DisplayConfig
+	buffer        []byte
 }
 
 func newWs2801Driver(displayConfig config.DisplayConfig) *ws2801Driver {
-	return &ws2801Driver{displayConfig: displayConfig}
+	// Pre-allocate buffer to the maximum possible size.
+	maxSize := 3 * displayConfig.LedsTotal
+	return &ws2801Driver{
+		displayConfig: displayConfig,
+		buffer:        make([]byte, maxSize),
+	}
 }
 
 func (d *ws2801Driver) write(segment *segment, exchangeFunc func(string, []byte) []byte) error {
-	var display []byte
-	display = make([]byte, 3*len(segment.leds))
+	requiredSize := 3 * len(segment.leds)
+	display := d.buffer[:requiredSize]
+
 	for idx := range segment.leds {
 		display[3*idx] = byte(math.Min(float64(segment.leds[idx].Red)*float64(d.displayConfig.ColorCorrection[0]), 255))
 		display[(3*idx)+1] = byte(math.Min(float64(segment.leds[idx].Green)*float64(d.displayConfig.ColorCorrection[1]), 255))
@@ -189,40 +196,50 @@ func (d *ws2801Driver) write(segment *segment, exchangeFunc func(string, []byte)
 
 type apa102Driver struct {
 	displayConfig config.DisplayConfig
+	buffer        []byte
 }
 
 func newApa102Driver(displayConfig config.DisplayConfig) *apa102Driver {
-	return &apa102Driver{displayConfig: displayConfig}
+	// Pre-allocate buffer to the maximum possible size.
+	frameEndLength := (displayConfig.LedsTotal / 16) + 1
+	maxSize := 4 + (4 * displayConfig.LedsTotal) + frameEndLength
+	return &apa102Driver{
+		displayConfig: displayConfig,
+		buffer:        make([]byte, maxSize),
+	}
 }
 
 func (d *apa102Driver) write(segment *segment, exchangeFunc func(string, []byte) []byte) error {
-	var display []byte
+	// Calculate required size for the current segment
+	frameEndLength := (len(segment.leds) / 16) + 1
+	requiredSize := 4 + (4 * len(segment.leds)) + frameEndLength
+	display := d.buffer[:requiredSize]
 
-	// frame start: 4 zero bytes
-	frameStart := []byte{0x00, 0x00, 0x00, 0x00}
-	display = append(display, frameStart...)
+	// Frame start: 4 zero bytes
+	copy(display[0:4], []byte{0x00, 0x00, 0x00, 0x00})
 
 	// Fixed general brightness
 	brightness := byte(d.displayConfig.APA102_Brightness) | 0xE0
 
 	// LED data
+	offset := 4
 	for i := range segment.leds {
 		red := byte(math.Min(float64(segment.leds[i].Red)*float64(d.displayConfig.ColorCorrection[0]), 255))
 		green := byte(math.Min(float64(segment.leds[i].Green)*float64(d.displayConfig.ColorCorrection[1]), 255))
 		blue := byte(math.Min(float64(segment.leds[i].Blue)*float64(d.displayConfig.ColorCorrection[2]), 255))
 
-		// protocol: brightness byte
-		display = append(display, brightness, blue, green, red)
+		// protocol: brightness byte, blue, green, red
+		display[offset] = brightness
+		display[offset+1] = blue
+		display[offset+2] = green
+		display[offset+3] = red
+		offset += 4
 	}
 
-	// frame end: at least (len(values) / 2) + 1 bits of 0xFF
-	// using number of bytes here
-	frameEndLength := int(len(segment.leds)/16) + 1
-	frameEnd := make([]byte, frameEndLength)
-	for i := range frameEnd {
-		frameEnd[i] = 0xFF
+	// Frame end: fill the rest of the slice with 0xFF
+	for i := offset; i < requiredSize; i++ {
+		display[i] = 0xFF
 	}
-	display = append(display, frameEnd...)
 
 	exchangeFunc(segment.spiMultiplex, display)
 	return nil

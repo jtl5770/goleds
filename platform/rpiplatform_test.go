@@ -11,6 +11,7 @@ import (
 func TestWS2801Driver_Write(t *testing.T) {
 	displayConfig := config.DisplayConfig{
 		ColorCorrection: []float64{1.0, 1.0, 1.0},
+		LedsTotal:       10, // Set a realistic total for buffer allocation
 	}
 	driver := newWs2801Driver(displayConfig)
 
@@ -44,6 +45,7 @@ func TestAPA102Driver_Write(t *testing.T) {
 	displayConfig := config.DisplayConfig{
 		ColorCorrection:   []float64{1.0, 1.0, 1.0},
 		APA102_Brightness: 31,
+		LedsTotal:         10, // Set a realistic total for buffer allocation
 	}
 	driver := newApa102Driver(displayConfig)
 
