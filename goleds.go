@@ -277,6 +277,7 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 
 	var oldLedsHash uint64
 	forceupdatedelay := a.platform.GetForceUpdateDelay()
+	ledsTotal := a.platform.GetLedsTotal()
 	allLedRanges := make(map[string][]p.Led)
 	var ticker *time.Ticker
 	if forceupdatedelay > 0 {
@@ -289,7 +290,12 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 		case <-ledreader.Channel():
 			pmap := ledreader.ConsumeValues()
 			for key, prod := range pmap {
-				allLedRanges[key] = prod.GetLeds()
+				// Ensure a buffer exists for this producer.
+				if _, ok := allLedRanges[key]; !ok {
+					allLedRanges[key] = make([]p.Led, ledsTotal)
+				}
+				// Fill the buffer with the producer's data.
+				prod.GetLeds(allLedRanges[key])
 			}
 			ledsToSend := ledBufferPool.Get().([]p.Led)
 			p.CombineLeds(allLedRanges, ledsToSend)

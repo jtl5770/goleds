@@ -82,8 +82,8 @@ func (m *MockLedProducer) GetIsRunning() bool {
 	return m.isRunning
 }
 
-func (m *MockLedProducer) GetLeds() []p.Led {
-	return m.leds
+func (m *MockLedProducer) GetLeds(buffer []p.Led) {
+	copy(buffer, m.leds)
 }
 
 func (m *MockLedProducer) Exit() {

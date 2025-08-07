@@ -49,13 +49,11 @@ func (s *AbstractProducer) setLed(index int, value Led) {
 	s.ledsChanged.Send(s.GetUID(), s)
 }
 
-// Returns a slice with the current values of all the LEDs.
-func (s *AbstractProducer) GetLeds() []Led {
+// GetLeds copies the current LED state into the provided buffer.
+func (s *AbstractProducer) GetLeds(buffer []Led) {
 	s.ledsMutex.RLock()
 	defer s.ledsMutex.RUnlock()
-	ret := make([]Led, len(s.leds))
-	copy(ret, s.leds)
-	return ret
+	copy(buffer, s.leds)
 }
 
 // The UID of the controller. Must be globally unique

@@ -48,9 +48,11 @@ func TestNewMultiBlobProducer(t *testing.T) {
 	assert.Equal(t, float64(-1), blob2.dir)
 
 	// Initially, all LEDs should be off.
-	for _, led := range p.GetLeds() {
+	p.ledsMutex.RLock()
+	for _, led := range p.leds {
 		assert.True(t, led.IsEmpty())
 	}
+	p.ledsMutex.RUnlock()
 }
 
 func TestBlob_applyTo(t *testing.T) {

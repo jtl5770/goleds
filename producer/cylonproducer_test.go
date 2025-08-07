@@ -21,7 +21,9 @@ func TestNewCylonProducer(t *testing.T) {
 	assert.Equal(t, Led{Red: 1, Green: 2, Blue: 3}, p.color)
 
 	// Initially, all LEDs should be off.
-	for _, led := range p.GetLeds() {
+	leds := make([]Led, 10)
+	p.GetLeds(leds)
+	for _, led := range leds {
 		assert.True(t, led.IsEmpty())
 	}
 }
@@ -33,7 +35,8 @@ func TestCylonProducer_Runner(t *testing.T) {
 	p.Start()
 	time.Sleep(15 * time.Millisecond) // Allow one step to run
 
-	leds := p.GetLeds()
+	leds := make([]Led, 20)
+	p.GetLeds(leds)
 
 	// After one step (x=1), the blob should be centered around index 1.
 	// Radius is 2, so it affects indices from -1 to 3.
@@ -45,7 +48,7 @@ func TestCylonProducer_Runner(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond) // Wait for duration to expire
 
-	leds = p.GetLeds()
+	p.GetLeds(leds)
 	for _, led := range leds {
 		assert.True(t, led.IsEmpty())
 	}
@@ -58,13 +61,15 @@ func TestCylonProducer_Stop(t *testing.T) {
 	p.Start()
 	time.Sleep(15 * time.Millisecond)
 	// Check that some LEDs are on
-	assert.False(t, p.GetLeds()[1].IsEmpty())
+	leds := make([]Led, 20)
+	p.GetLeds(leds)
+	assert.False(t, leds[1].IsEmpty())
 
 	p.TryStop()
 	time.Sleep(15 * time.Millisecond) // Give time for the stop to be processed
 
 	// All LEDs should be off now
-	leds := p.GetLeds()
+	p.GetLeds(leds)
 	for _, led := range leds {
 		assert.True(t, led.IsEmpty())
 	}

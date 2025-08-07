@@ -103,8 +103,12 @@ func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer]
 func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {
 	intervals := 20
 	delay := 20 * time.Millisecond
-	// The pattern to be faded is in s.leds, but GetLeds returns a copy to avoid race conditions.
-	baseLeds := s.GetLeds()
+	// The pattern to be faded is in s.leds, but we want a stable base
+	// status at the beginning of the animation
+	s.ledsMutex.RLock()
+	baseLeds := make([]Led, len(s.leds))
+	copy(baseLeds, s.leds)
+	s.ledsMutex.RUnlock()
 
 	for counter := 0; counter <= intervals; counter++ {
 		var step int
