@@ -278,8 +278,6 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 	var oldLedsHash uint64
 	forceupdatedelay := a.platform.GetForceUpdateDelay()
 	allLedRanges := make(map[string][]p.Led)
-	ledsTotal := a.platform.GetLedsTotal()
-	combinedLeds := make([]p.Led, ledsTotal)
 	var ticker *time.Ticker
 	if forceupdatedelay > 0 {
 		ticker = time.NewTicker(forceupdatedelay)
@@ -293,11 +291,10 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 			for key, prod := range pmap {
 				allLedRanges[key] = prod.GetLeds()
 			}
-			p.CombineLeds(allLedRanges, combinedLeds)
-			newLedshash := hashLeds(combinedLeds)
+			ledsToSend := ledBufferPool.Get().([]p.Led)
+			p.CombineLeds(allLedRanges, ledsToSend)
+			newLedshash := hashLeds(ledsToSend)
 			if newLedshash != oldLedsHash {
-				ledsToSend := ledBufferPool.Get().([]p.Led)
-				copy(ledsToSend, combinedLeds)
 				select {
 				case ledwriter <- ledsToSend:
 				case <-a.stopsignal:
@@ -306,6 +303,9 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 					slog.Info("Ending combineAndupdateDisplay go-routine")
 					return
 				}
+			} else {
+				// Must return the buffer to the pool if we don't send it.
+				ledBufferPool.Put(ledsToSend)
 			}
 			oldLedsHash = newLedshash
 		case <-ticker.C:
@@ -314,14 +314,14 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 			// electrical distortions or cross talk so we make sure to
 			// regularly force an update of the Led stripe
 			ledsToSend := ledBufferPool.Get().([]p.Led)
-			copy(ledsToSend, combinedLeds)
+			p.CombineLeds(allLedRanges, ledsToSend)
 			select {
 			case ledwriter <- ledsToSend:
-				case <-a.stopsignal:
-					// Must return the buffer to the pool if we don't send it.
-					ledBufferPool.Put(ledsToSend)
-					slog.Info("Ending combineAndupdateDisplay go-routine")
-					return
+			case <-a.stopsignal:
+				// Must return the buffer to the pool if we don't send it.
+				ledBufferPool.Put(ledsToSend)
+				slog.Info("Ending combineAndupdateDisplay go-routine")
+				return
 			}
 		case <-a.stopsignal:
 			slog.Info("Ending combineAndupdateDisplay go-routine")
