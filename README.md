@@ -194,13 +194,13 @@ https://github.com/jtl5770/goleds/assets/24967370/865c70b6-cc20-4b60-899c-8e9182
 
 ## Future Ideas
 
-I would like to add a sound-reactive producer. The idea is to run
+~~I would like to add a sound-reactive producer. The idea is to run
 e.g. `squeezelite` (a software client for the Logitech Media Server) on the
 Raspberry Pi and have Go-LEDS read the audio data from its
 output. This would allow for effects like a VU meter that could be
 synchronized with other Squeezebox players in the house. The main
 challenge is finding a well-maintained Go audio library to easily
-access the PCM data.
+access the PCM data.~~ **Done**
 
 <!-- Local Variables: -->
 <!-- eval: (auto-fill-mode t) -->
