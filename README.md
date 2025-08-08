@@ -175,20 +175,26 @@ light can also affect the sensor readings.
 ## Available Producers
 
 *   **SensorLedProducer**: The core producer. Creates a
-    grow-stay-shrink light effect that radiates from a triggered
-    sensor. Can be toggled to produce a continous bright light for a
-    configurable time ("latch mode").
+    grow-stay-shrink light effect that radiates outwards from a
+    triggered sensor. It can also be toggled into a "latch mode" to
+    provide continuous bright light for a configurable duration.
 *   **MultiBlobProducer**: Generates multiple, slowly moving blobs of
-    color that bounce off each other and the ends of the strip. Starts
-    automatically after a `SensorLedProducer` cycle finishes (if
-    enabled).
-*   **CylonProducer**: A simple, moving red "eye" reminiscent of the
-    Battlestar Galactica Cylons. A great starting point for creating
-    new custom animations. Starts automatically after a
-    SensorLedProducer cycle finishes (if enabled).
-*   **NightLightProducer**: Provides a constant, gentle glow during
+    color that bounce off each other and the ends of the strip. It is
+    typically configured to start after a `SensorLedProducer` cycle
+    finishes.
+*   **CylonProducer**: A classic moving red "eye" reminiscent of the
+    Battlestar Galactica Cylons.
+*   **NightlightProducer**: Provides a constant, gentle glow during
     the night. The color can be configured to change at different
-    times between sunset and sunrise.
+    times between sunset and sunrise, calculated based on your geographic
+    location.
+*   **ClockProducer**: Displays the current time using two LEDs—one
+    for the hour and one for the minute—on a designated segment of the
+    strip.
+*   **AudioLEDProducer**: Implements a real-time stereo VU meter. It
+    captures audio from a specified input device (e.g., a `squeezelite`
+    output) and displays the volume levels on two separate segments of
+    the LED strip.
 
 https://github.com/jtl5770/goleds/assets/24967370/865c70b6-cc20-4b60-899c-8e9182680e21
 
