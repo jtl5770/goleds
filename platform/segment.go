@@ -9,11 +9,6 @@ import (
 	p "lautenbacher.net/goleds/producer"
 )
 
-// displayManager manages the LED segments for a display.
-type displayManager struct {
-	segments map[string][]*segment
-}
-
 // segment represents a single LED segment.
 type segment struct {
 	firstLed     int
