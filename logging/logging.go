@@ -2,8 +2,8 @@ package logging
 
 import (
 	"bytes"
+	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"os"
 	"strings"
@@ -37,7 +37,6 @@ var (
 	originalStdout  int          = -1
 	originalStderr  int          = -1
 	initOnce        sync.Once
-	captureOnce     sync.Once
 	flusherStopCh   chan struct{} // Channel to stop the flusher goroutine
 	fileOutput      *os.File      // The file to write logs to
 	isBuffering     bool          // Global buffering flag
@@ -46,53 +45,52 @@ var (
 )
 
 // InitialSetup redirects the default stdout and stderr to an internal pipe.
-func InitialSetup() {
-	captureOnce.Do(func() {
-		var err error
-		originalStdout, err = syscall.Dup(int(os.Stdout.Fd()))
-		if err != nil {
-			log.Fatalf("Failed to duplicate stdout: %v", err)
-		}
-		originalStderr, err = syscall.Dup(int(os.Stderr.Fd()))
-		if err != nil {
-			log.Fatalf("Failed to duplicate stderr: %v", err)
-		}
+func InitialSetup() error {
+	var err error
+	originalStdout, err = syscall.Dup(int(os.Stdout.Fd()))
+	if err != nil {
+		return fmt.Errorf("failed to duplicate stdout: %w", err)
+	}
+	originalStderr, err = syscall.Dup(int(os.Stderr.Fd()))
+	if err != nil {
+		return fmt.Errorf("failed to duplicate stderr: %w", err)
+	}
 
-		r, w, err := os.Pipe()
-		if err != nil {
-			log.Fatalf("Failed to create pipe: %v", err)
-		}
+	r, w, err := os.Pipe()
+	if err != nil {
+		return fmt.Errorf("failed to create pipe: %w", err)
+	}
 
-		if err := syscall.Dup2(int(w.Fd()), int(os.Stdout.Fd())); err != nil {
-			log.Fatalf("Failed to redirect stdout: %v", err)
-		}
-		if err := syscall.Dup2(int(w.Fd()), int(os.Stderr.Fd())); err != nil {
-			log.Fatalf("Failed to redirect stderr: %v", err)
-		}
+	if err := syscall.Dup2(int(w.Fd()), int(os.Stdout.Fd())); err != nil {
+		return fmt.Errorf("failed to redirect stdout: %w", err)
+	}
+	if err := syscall.Dup2(int(w.Fd()), int(os.Stderr.Fd())); err != nil {
+		return fmt.Errorf("failed to redirect stderr: %w", err)
+	}
 
-		go func() {
-			buf := make([]byte, 1024)
-			for {
-				n, err := r.Read(buf)
-				if n > 0 {
-					logBufferMutex.Lock()
-					logBuffer.Write(buf[:n])
-					logBufferMutex.Unlock()
+	go func() {
+		buf := make([]byte, 1024)
+		for {
+			n, err := r.Read(buf)
+			if n > 0 {
+				logBufferMutex.Lock()
+				logBuffer.Write(buf[:n])
+				logBufferMutex.Unlock()
 
-					// Signal the flusher only if we are not in buffering mode.
-					if !isBuffering {
-						select {
-						case dataAvailableCh <- struct{}{}:
-						default:
-						}
+				// Signal the flusher only if we are not in buffering mode.
+				if !isBuffering {
+					select {
+					case dataAvailableCh <- struct{}{}:
+					default:
 					}
 				}
-				if err != nil {
-					return
-				}
 			}
-		}()
-	})
+			if err != nil {
+				return
+			}
+		}
+	}()
+	return nil
 }
 
 // Configure initializes the logging system.

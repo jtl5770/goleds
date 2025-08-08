@@ -51,6 +51,13 @@ func (s *RaspberryPiPlatform) SetSensorViewer(v *SensorViewer) {
 
 func (s *RaspberryPiPlatform) Start(ledWriter chan []producer.Led, pool *sync.Pool) error {
 	s.ledBufferPool = pool
+
+	segments, err := parseDisplaySegments(s.config.Hardware.Display)
+	if err != nil {
+		return err
+	}
+	s.segments = segments
+
 	slog.Info("Initialise GPIO and Spi...")
 	if err := rpio.Open(); err != nil {
 		return fmt.Errorf("failed to open rpio: %w", err)

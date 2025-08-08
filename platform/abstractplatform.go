@@ -30,7 +30,6 @@ func newAbstractPlatform(conf *c.Config, displayFunc func([]p.Led)) *AbstractPla
 		config:          conf,
 		sensorEvents:    make(chan *u.Trigger),
 		sensors:         make(map[string]*sensor),
-		segments:        parseDisplaySegments(conf.Hardware.Display),
 		displayFunc:     displayFunc,
 		displayStopChan: make(chan bool),
 	}

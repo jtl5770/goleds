@@ -37,8 +37,6 @@ func resetGlobalState() {
 
 	// Reset sync.Once variables
 	initOnce = sync.Once{}
-	captureOnce = sync.Once{}
-	captureOnce = sync.Once{}
 
 	// Restore original stdio if they were captured
 	if originalStdout != -1 {

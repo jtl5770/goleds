@@ -86,7 +86,7 @@ func (sv *SensorViewer) Start() {
 	slog.Info("Starting SensorViewer TUI")
 	if err := sv.tuiApp.Run(); err != nil {
 		slog.Error("Error running SensorViewer TUI", "error", err)
-		os.Exit(1)
+		sv.ossignal <- os.Interrupt
 	}
 }
 

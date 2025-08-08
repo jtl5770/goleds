@@ -51,6 +51,13 @@ func (s *TUIPlatform) Ready() <-chan bool {
 
 func (s *TUIPlatform) Start(ledWriter chan []producer.Led, pool *sync.Pool) error {
 	s.ledBufferPool = pool
+
+	segments, err := parseDisplaySegments(s.config.Hardware.Display)
+	if err != nil {
+		return err
+	}
+	s.segments = segments
+
 	s.initSensors(s.config.Hardware.Sensors)
 	s.initSimulationTUI(
 		s.ossignalChan,
@@ -211,7 +218,7 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 	go func() {
 		if err := s.tviewapp.SetRoot(layout, true).Run(); err != nil {
 			slog.Error("Error running TUI", "error", err)
-			os.Exit(1)
+			s.ossignalChan <- os.Interrupt
 		}
 	}()
 }
