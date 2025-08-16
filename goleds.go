@@ -97,7 +97,14 @@ func main() {
 	}
 
 	app := NewApp(ossignal)
-	app.initialise(*cfile, *realp, *sensp)
+	if err := app.initialise(*cfile, *realp, *sensp); err != nil {
+		// The logging system might have been partially initialized (e.g., stdio
+		// redirected). Closing it ensures we restore the original console
+		// output before printing the final fatal error.
+		l.Close()
+		fmt.Fprintf(os.Stderr, "Error: Failed to initialize application: %v\n", err)
+		os.Exit(1)
+	}
 
 	signal.Notify(ossignal, os.Interrupt, syscall.SIGHUP)
 
@@ -113,12 +120,16 @@ func main() {
 			l.BufferOutput()
 			slog.Info("Resetting...")
 			app.shutdown()
-			app.initialise(*cfile, *realp, *sensp)
+			if err := app.initialise(*cfile, *realp, *sensp); err != nil {
+				l.Close()
+				fmt.Fprintf(os.Stderr, "Error: Failed to re-initialize application: %v\n", err)
+				os.Exit(1)
+			}
 		}
 	}
 }
 
-func (a *App) initialise(cfile string, realp bool, sensp bool) {
+func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	slog.Info("Initializing...")
 
 	a.afterProd = make([]p.LedProducer, 0)
@@ -128,8 +139,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 
 	conf, err := c.ReadConfig(cfile, realp, sensp)
 	if err != nil {
-		slog.Error("Failed to read config", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to read or validate config: %w", err)
 	}
 
 	// Configure logging with values from the config file.
@@ -155,7 +165,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 		viewer := pl.NewSensorViewer(conf.Hardware.Sensors, a.ossignal, true)
 		go viewer.Start()
 		// In this mode, we don't need any platforms or producers, so we exit early.
-		return
+		return nil
 	}
 
 	// Standard platform setup
@@ -181,8 +191,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 	ledWriter := make(chan []p.Led, 1)
 
 	if err := a.platform.Start(ledWriter, ledBufferPool); err != nil {
-		slog.Error("Failed to start platform", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to start platform: %w", err)
 	}
 
 	// Block until the platform signals it's ready. This is crucial for the TUI
@@ -253,7 +262,9 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) {
 
 	go a.combineAndUpdateDisplay(ledReader, ledWriter, ledBufferPool)
 	go a.stateManager()
+	return nil
 }
+
 
 func (a *App) shutdown() {
 	slog.Info("Shutting down...")

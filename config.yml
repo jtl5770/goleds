@@ -192,9 +192,9 @@ ClockLED:
 AudioLED:
   Enabled: true
   # Which LED to use as the "start" of the left channel VU meter.
-  StartLedLeft: 69
+  StartLedLeft: 0
   # Which LED to use as the "end" of the left VU meter.
-  EndLedLeft: 0
+  EndLedLeft: 69
   # Which LED to use as the "start" of the right channel VU meter.
   StartLedRight: 111
   # Which LED to use as the "end" of the right channel VU meter.
