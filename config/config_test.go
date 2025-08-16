@@ -20,6 +20,9 @@ func TestReadConfig(t *testing.T) {
 	// Create a dummy config file
 	configFile := filepath.Join(tempDir, "config.yml")
 	configData := `
+Hardware:
+  Display:
+    LedsTotal: 10
 SensorLED:
   Enabled: true
   RunUpDelay: 10ms
@@ -63,4 +66,76 @@ Logging:
 	assert.Equal(t, "WARN", conf.Logging.HW.Level, "Logging.HW.Level should be WARN")
 	assert.Equal(t, "json", conf.Logging.HW.Format, "Logging.HW.Format should be json")
 	assert.Equal(t, "/var/log/goleds-hw.log", conf.Logging.HW.File, "Logging.HW.File should be /var/log/goleds-hw.log")
+}
+
+func TestReadConfig_NoProducersEnabled(t *testing.T) {
+	// Create a temporary directory for the test
+	tempDir, err := os.MkdirTemp("", "goleds-test-no-producers")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create a dummy config file with no producers enabled
+	configFile := filepath.Join(tempDir, "config.yml")
+	configData := `
+Hardware:
+  Display:
+    LedsTotal: 10
+SensorLED:
+  Enabled: false
+NightLED:
+  Enabled: false
+ClockLED:
+  Enabled: false
+AudioLED:
+  Enabled: false
+CylonLED:
+  Enabled: false
+MultiBlobLED:
+  Enabled: false
+`
+	err = os.WriteFile(configFile, []byte(configData), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write dummy config file: %v", err)
+	}
+
+	// Call the function to be tested
+	_, err = ReadConfig(configFile, false, false)
+
+	// Assertions
+	assert.Error(t, err, "ReadConfig should return an error")
+	assert.Contains(t, err.Error(), "at least one producer must be enabled", "Error message should indicate that no producers are enabled")
+}
+
+func TestReadConfig_AfterProducersWithoutSensorLED(t *testing.T) {
+	// Create a temporary directory for the test
+	tempDir, err := os.MkdirTemp("", "goleds-test-after-producers")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create a dummy config file with after-producers but no sensor producer
+	configFile := filepath.Join(tempDir, "config.yml")
+	configData := `
+Hardware:
+  Display:
+    LedsTotal: 10
+SensorLED:
+  Enabled: false
+CylonLED:
+  Enabled: true
+`
+	err = os.WriteFile(configFile, []byte(configData), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write dummy config file: %v", err)
+	}
+
+	// Call the function to be tested
+	_, err = ReadConfig(configFile, false, false)
+
+	// Assertions
+	assert.Error(t, err, "ReadConfig should return an error")
+	assert.Contains(t, err.Error(), "require the SensorLED producer to be enabled", "Error message should indicate dependency on SensorLED")
 }

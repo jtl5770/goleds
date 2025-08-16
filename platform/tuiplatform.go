@@ -52,11 +52,7 @@ func (s *TUIPlatform) Ready() <-chan bool {
 func (s *TUIPlatform) Start(ledWriter chan []producer.Led, pool *sync.Pool) error {
 	s.ledBufferPool = pool
 
-	segments, err := parseDisplaySegments(s.config.Hardware.Display)
-	if err != nil {
-		return err
-	}
-	s.segments = segments
+	s.segments = parseDisplaySegments(s.config.Hardware.Display)
 
 	s.initSensors(s.config.Hardware.Sensors)
 	s.initSimulationTUI(

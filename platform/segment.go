@@ -1,7 +1,6 @@
 package platform
 
 import (
-	"fmt"
 	"log/slog"
 	"sort"
 
@@ -19,7 +18,7 @@ type segment struct {
 	leds         []p.Led
 }
 
-func parseDisplaySegments(displayConfig c.DisplayConfig) (map[string][]*segment, error) {
+func parseDisplaySegments(displayConfig c.DisplayConfig) map[string][]*segment {
 	segments := make(map[string][]*segment)
 
 	for name, segarray := range displayConfig.LedSegments {
@@ -35,9 +34,6 @@ func parseDisplaySegments(displayConfig c.DisplayConfig) (map[string][]*segment,
 
 		for _, seg := range segarray {
 			for i := seg.firstLed; i <= seg.lastLed; i++ {
-				if all[i] {
-					return nil, fmt.Errorf("overlapping display segments at index %d", i)
-				}
 				all[i] = true
 			}
 		}
@@ -57,7 +53,7 @@ func parseDisplaySegments(displayConfig c.DisplayConfig) (map[string][]*segment,
 
 		sort.Slice(segments[name], func(i, j int) bool { return segments[name][i].firstLed < segments[name][j].firstLed })
 	}
-	return segments, nil
+	return segments
 }
 
 // newSegment creates a new segment instance.

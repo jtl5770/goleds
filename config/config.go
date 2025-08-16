@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -158,6 +159,96 @@ type Config struct {
 	Logging      LoggingConfig      `yaml:"Logging"`
 }
 
+// Validate performs a comprehensive sanity check of the configuration.
+func (c *Config) Validate() error {
+	// General validation for LED indices
+	ledsTotal := c.Hardware.Display.LedsTotal
+	if ledsTotal <= 0 {
+		return fmt.Errorf("LedsTotal must be a positive number")
+	}
+
+	// Helper function to check if an index is within the valid range
+	isValidIndex := func(index int) bool {
+		return index >= 0 && index < ledsTotal
+	}
+
+	// 1. SPI Multiplexer Validation (only in hardware mode)
+	if c.RealHW {
+		// Check sensors
+		for name, sensorCfg := range c.Hardware.Sensors.SensorCfg {
+			if _, ok := c.Hardware.SpiMultiplexGPIO[sensorCfg.SpiMultiplex]; !ok {
+				return fmt.Errorf("sensor '%s' uses undefined SpiMultiplex key: '%s'", name, sensorCfg.SpiMultiplex)
+			}
+		}
+		// Check LED segments
+		for groupName, segments := range c.Hardware.Display.LedSegments {
+			for i, segmentCfg := range segments {
+				if _, ok := c.Hardware.SpiMultiplexGPIO[segmentCfg.SpiMultiplex]; !ok {
+					return fmt.Errorf("LED segment %d in group '%s' uses undefined SpiMultiplex key: '%s'", i, groupName, segmentCfg.SpiMultiplex)
+				}
+			}
+		}
+	}
+
+	// 2. LED Segment Validation
+	for name, segArray := range c.Hardware.Display.LedSegments {
+		allLeds := make([]bool, ledsTotal)
+		for _, seg := range segArray {
+			if !isValidIndex(seg.FirstLed) || !isValidIndex(seg.LastLed) {
+				return fmt.Errorf("segment in group '%s' has out-of-bounds indices: FirstLed=%d, LastLed=%d (LedsTotal=%d)", name, seg.FirstLed, seg.LastLed, ledsTotal)
+			}
+			if seg.FirstLed > seg.LastLed {
+				return fmt.Errorf("segment in group '%s' has FirstLed > LastLed", name)
+			}
+			for i := seg.FirstLed; i <= seg.LastLed; i++ {
+				if allLeds[i] {
+					return fmt.Errorf("overlapping display segments in group '%s' at index %d", name, i)
+				}
+				allLeds[i] = true
+			}
+		}
+	}
+
+	// 3. Sensor Configuration Validation
+	for name, sensorCfg := range c.Hardware.Sensors.SensorCfg {
+		if !isValidIndex(sensorCfg.LedIndex) {
+			return fmt.Errorf("sensor '%s' has an out-of-bounds LedIndex: %d (LedsTotal=%d)", name, sensorCfg.LedIndex, ledsTotal)
+		}
+	}
+
+	// 4. Producer-Specific Validations
+	if c.ClockLED.Enabled {
+		clk := c.ClockLED
+		if !isValidIndex(clk.StartLedHour) || !isValidIndex(clk.EndLedHour) || !isValidIndex(clk.StartLedMinute) || !isValidIndex(clk.EndLedMinute) {
+			return fmt.Errorf("ClockLED configuration has out-of-bounds LED indices")
+		}
+		if clk.StartLedHour > clk.EndLedHour || clk.StartLedMinute > clk.EndLedMinute {
+			return fmt.Errorf("ClockLED configuration has start index greater than end index")
+		}
+	}
+
+	if c.AudioLED.Enabled {
+		aud := c.AudioLED
+		if !isValidIndex(aud.StartLedLeft) || !isValidIndex(aud.EndLedLeft) || !isValidIndex(aud.StartLedRight) || !isValidIndex(aud.EndLedRight) {
+			return fmt.Errorf("AudioLED configuration has out-of-bounds LED indices")
+		}
+		if aud.StartLedLeft > aud.EndLedLeft || aud.StartLedRight > aud.EndLedRight {
+			return fmt.Errorf("AudioLED configuration has start index greater than end index")
+		}
+	}
+
+	// 5. Producer Enabled Validation
+	if !c.SensorLED.Enabled && !c.NightLED.Enabled && !c.ClockLED.Enabled && !c.AudioLED.Enabled && !c.CylonLED.Enabled && !c.MultiBlobLED.Enabled {
+		return fmt.Errorf("at least one producer must be enabled in the configuration")
+	}
+
+	if !c.SensorLED.Enabled && (c.MultiBlobLED.Enabled || c.CylonLED.Enabled) {
+		return fmt.Errorf("MultiBlobLED and CylonLED producers require the SensorLED producer to be enabled")
+	}
+
+	return nil
+}
+
 func ReadConfig(cfile string, realhw bool, sensorshow bool) (*Config, error) {
 	slog.Info("Reading config file", "file", cfile)
 	f, err := os.Open(cfile)
@@ -174,6 +265,11 @@ func ReadConfig(cfile string, realhw bool, sensorshow bool) (*Config, error) {
 	conf.RealHW = realhw
 	conf.SensorShow = sensorshow
 	conf.Configfile = cfile
+
+	if err := conf.Validate(); err != nil {
+		return nil, fmt.Errorf("configuration validation failed: %w", err)
+	}
+
 	slog.Debug("Read config", "config", conf)
 	return &conf, nil
 }

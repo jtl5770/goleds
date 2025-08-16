@@ -52,11 +52,7 @@ func (s *RaspberryPiPlatform) SetSensorViewer(v *SensorViewer) {
 func (s *RaspberryPiPlatform) Start(ledWriter chan []producer.Led, pool *sync.Pool) error {
 	s.ledBufferPool = pool
 
-	segments, err := parseDisplaySegments(s.config.Hardware.Display)
-	if err != nil {
-		return err
-	}
-	s.segments = segments
+	s.segments = parseDisplaySegments(s.config.Hardware.Display)
 
 	slog.Info("Initialise GPIO and Spi...")
 	if err := rpio.Open(); err != nil {
@@ -154,16 +150,13 @@ func (s *RaspberryPiPlatform) spiExchangeMultiplex(index string, data []byte) []
 	s.spiMutex.Lock()
 	defer s.spiMutex.Unlock()
 
-	cfg, found := s.spimultiplexcfg[index]
-	if !found {
-		panic("No SPI multiplexe device configuration with index " + index + " found in config file")
-	} else {
-		for _, pin := range cfg.low {
-			pin.Low()
-		}
-		for _, pin := range cfg.high {
-			pin.High()
-		}
+	// The existence of the key is guaranteed by the config validation at startup.
+	cfg := s.spimultiplexcfg[index]
+	for _, pin := range cfg.low {
+		pin.Low()
+	}
+	for _, pin := range cfg.high {
+		pin.High()
 	}
 
 	rpio.SpiExchange(data)
