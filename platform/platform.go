@@ -18,9 +18,9 @@ type Platform interface {
 	// Stop cleans up all platform resources and gracefully stops its goroutines.
 	Stop()
 
-	// GetLedWriter returns a write-only channel for the application to send
-	// LED data to the platform.
-	GetLedWriter() chan<- []p.Led
+	// SetLeds provides a non-blocking way for the application to send the
+	// latest LED data to the platform.
+	SetLeds(leds []p.Led)
 
 	// GetSensorEvents returns a channel that the application can read from
 	// to receive sensor trigger events.

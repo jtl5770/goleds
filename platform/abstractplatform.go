@@ -13,7 +13,7 @@ import (
 
 type AbstractPlatform struct {
 	config          *c.Config
-	ledWriter       chan []p.Led
+	ledsEvent       *u.AtomicEvent[[]p.Led]
 	sensorEvents    chan *u.Trigger
 	sensors         map[string]*sensor
 	segments        map[string][]*segment
@@ -29,7 +29,7 @@ type AbstractPlatform struct {
 func newAbstractPlatform(conf *c.Config, displayFunc func([]p.Led)) *AbstractPlatform {
 	return &AbstractPlatform{
 		config:          conf,
-		ledWriter:       make(chan []p.Led, 1),
+		ledsEvent:       u.NewAtomicEvent[[]p.Led](),
 		sensorEvents:    make(chan *u.Trigger),
 		sensors:         make(map[string]*sensor),
 		displayFunc:     displayFunc,
@@ -37,8 +37,8 @@ func newAbstractPlatform(conf *c.Config, displayFunc func([]p.Led)) *AbstractPla
 	}
 }
 
-func (s *AbstractPlatform) GetLedWriter() chan<- []p.Led {
-	return s.ledWriter
+func (s *AbstractPlatform) SetLeds(leds []p.Led) {
+	s.ledsEvent.Send(leds)
 }
 
 func (s *AbstractPlatform) GetSensorEvents() <-chan *u.Trigger {
@@ -74,7 +74,8 @@ func (s *AbstractPlatform) displayDriver() {
 		case <-s.displayStopChan:
 			slog.Info("Ending DisplayDriver go-routine...")
 			return
-		case sumLeds := <-s.ledWriter:
+		case <-s.ledsEvent.Channel():
+			sumLeds := s.ledsEvent.Value()
 			s.shutdownMutex.RLock()
 			if !s.isShuttingDown {
 				s.displayFunc(sumLeds)

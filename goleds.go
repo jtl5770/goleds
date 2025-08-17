@@ -289,7 +289,6 @@ func (a *App) shutdown() {
 func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer], ledBufferPool *sync.Pool) {
 	defer a.shutdownWg.Done()
 
-	ledwriter := a.platform.GetLedWriter()
 	var oldLedsHash uint64
 	forceupdatedelay := a.platform.GetForceUpdateDelay()
 	ledsTotal := a.platform.GetLedsTotal()
@@ -316,14 +315,7 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 			p.CombineLeds(allLedRanges, ledsToSend)
 			newLedshash := hashLeds(ledsToSend)
 			if newLedshash != oldLedsHash {
-				select {
-				case ledwriter <- ledsToSend:
-				case <-a.stopsignal:
-					// Must return the buffer to the pool if we don't send it.
-					ledBufferPool.Put(ledsToSend)
-					slog.Info("Ending combineAndupdateDisplay go-routine")
-					return
-				}
+				a.platform.SetLeds(ledsToSend)
 			} else {
 				// Must return the buffer to the pool if we don't send it.
 				ledBufferPool.Put(ledsToSend)
@@ -336,14 +328,7 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 			// regularly force an update of the Led stripe
 			ledsToSend := ledBufferPool.Get().([]p.Led)
 			p.CombineLeds(allLedRanges, ledsToSend)
-			select {
-			case ledwriter <- ledsToSend:
-			case <-a.stopsignal:
-				// Must return the buffer to the pool if we don't send it.
-				ledBufferPool.Put(ledsToSend)
-				slog.Info("Ending combineAndupdateDisplay go-routine")
-				return
-			}
+			a.platform.SetLeds(ledsToSend)
 		case <-a.stopsignal:
 			slog.Info("Ending combineAndupdateDisplay go-routine")
 			return

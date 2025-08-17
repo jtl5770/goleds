@@ -14,7 +14,6 @@ import (
 
 type MockPlatform struct {
 	pl.Platform
-	ledWriter    chan []p.Led
 	sensorEvents chan *u.Trigger
 	sensors      map[string]c.SensorCfg
 	lastLeds     [][]p.Led
@@ -22,8 +21,13 @@ type MockPlatform struct {
 	stopChan     chan struct{}
 }
 
-func (m *MockPlatform) GetLedWriter() chan<- []p.Led {
-	return m.ledWriter
+func (m *MockPlatform) SetLeds(leds []p.Led) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// Make a copy of the slice to avoid data races
+	ledsCopy := make([]p.Led, len(leds))
+	copy(ledsCopy, leds)
+	m.lastLeds = append(m.lastLeds, ledsCopy)
 }
 
 func (m *MockPlatform) GetSensorEvents() <-chan *u.Trigger {
@@ -39,21 +43,7 @@ func (m *MockPlatform) GetSensorLedIndices() map[string]int {
 }
 
 func (m *MockPlatform) Start(pool *sync.Pool) error {
-	go func() {
-		for {
-			select {
-			case leds := <-m.ledWriter:
-				m.mu.Lock()
-				// Make a copy of the slice to avoid data races
-				ledsCopy := make([]p.Led, len(leds))
-				copy(ledsCopy, leds)
-				m.lastLeds = append(m.lastLeds, ledsCopy)
-				m.mu.Unlock()
-			case <-m.stopChan:
-				return
-			}
-		}
-	}()
+	// The new platform interface doesn't require a goroutine here for the mock.
 	return nil
 }
 
@@ -95,7 +85,6 @@ func (m *MockPlatform) ClearLastLeds() {
 
 func NewMockPlatform() *MockPlatform {
 	return &MockPlatform{
-		ledWriter:    make(chan []p.Led, 1),
 		sensorEvents: make(chan *u.Trigger),
 		sensors:      make(map[string]c.SensorCfg),
 		lastLeds:     make([][]p.Led, 0),
