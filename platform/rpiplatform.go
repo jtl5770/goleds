@@ -36,7 +36,7 @@ func NewRaspberryPiPlatform(conf *config.Config) *RaspberryPiPlatform {
 		sensorStopChan: make(chan bool),
 		readyChan:      readyChan,
 	}
-	inst.AbstractPlatform = newAbstractPlatform(conf, inst.DisplayLeds)
+	inst.AbstractPlatform = newAbstractPlatform(conf, inst.rpiDisplayFunc)
 	return inst
 }
 
@@ -49,7 +49,7 @@ func (s *RaspberryPiPlatform) SetSensorViewer(v *SensorViewer) {
 	s.sensorViewer = v
 }
 
-func (s *RaspberryPiPlatform) Start(ledWriter chan []producer.Led, pool *sync.Pool) error {
+func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 	s.ledBufferPool = pool
 
 	s.segments = parseDisplaySegments(s.config.Hardware.Display)
@@ -101,7 +101,7 @@ func (s *RaspberryPiPlatform) Start(ledWriter chan []producer.Led, pool *sync.Po
 	s.initSensors(s.config.Hardware.Sensors)
 
 	s.displayWg.Add(1)
-	go s.displayDriver(ledWriter)
+	go s.displayDriver()
 
 	s.sensorWg.Add(1)
 	go s.sensorDriver()
@@ -133,7 +133,7 @@ func (s *RaspberryPiPlatform) Stop() {
 	}
 }
 
-func (s *RaspberryPiPlatform) DisplayLeds(leds []producer.Led) {
+func (s *RaspberryPiPlatform) rpiDisplayFunc(leds []producer.Led) {
 	for _, segarray := range s.segments {
 		for _, seg := range segarray {
 			seg.setLeds(leds)

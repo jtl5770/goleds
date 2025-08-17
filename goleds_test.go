@@ -14,8 +14,16 @@ import (
 
 type MockPlatform struct {
 	pl.Platform
+	ledWriter    chan []p.Led
 	sensorEvents chan *u.Trigger
 	sensors      map[string]c.SensorCfg
+	lastLeds     [][]p.Led
+	mu           sync.Mutex
+	stopChan     chan struct{}
+}
+
+func (m *MockPlatform) GetLedWriter() chan<- []p.Led {
+	return m.ledWriter
 }
 
 func (m *MockPlatform) GetSensorEvents() <-chan *u.Trigger {
@@ -30,15 +38,27 @@ func (m *MockPlatform) GetSensorLedIndices() map[string]int {
 	return indices
 }
 
-func (m *MockPlatform) Start(ledWriter chan []p.Led, pool *sync.Pool) error {
+func (m *MockPlatform) Start(pool *sync.Pool) error {
+	go func() {
+		for {
+			select {
+			case leds := <-m.ledWriter:
+				m.mu.Lock()
+				// Make a copy of the slice to avoid data races
+				ledsCopy := make([]p.Led, len(leds))
+				copy(ledsCopy, leds)
+				m.lastLeds = append(m.lastLeds, ledsCopy)
+				m.mu.Unlock()
+			case <-m.stopChan:
+				return
+			}
+		}
+	}()
 	return nil
 }
 
 func (m *MockPlatform) Stop() {
-}
-
-func (m *MockPlatform) DisplayLeds(leds []p.Led) {
-	// do nothing in mock
+	close(m.stopChan)
 }
 
 func (m *MockPlatform) GetForceUpdateDelay() time.Duration {
@@ -49,10 +69,37 @@ func (m *MockPlatform) GetLedsTotal() int {
 	return 10
 }
 
+func (m *MockPlatform) Ready() <-chan bool {
+	readyChan := make(chan bool)
+	close(readyChan)
+	return readyChan
+}
+
+func (m *MockPlatform) GetLastLeds() [][]p.Led {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// Return a copy to avoid race conditions
+	ret := make([][]p.Led, len(m.lastLeds))
+	for i, leds := range m.lastLeds {
+		ret[i] = make([]p.Led, len(leds))
+		copy(ret[i], leds)
+	}
+	return ret
+}
+
+func (m *MockPlatform) ClearLastLeds() {
+	m.mu.Lock()
+	m.lastLeds = nil
+	m.mu.Unlock()
+}
+
 func NewMockPlatform() *MockPlatform {
 	return &MockPlatform{
+		ledWriter:    make(chan []p.Led, 1),
 		sensorEvents: make(chan *u.Trigger),
 		sensors:      make(map[string]c.SensorCfg),
+		lastLeds:     make([][]p.Led, 0),
+		stopChan:     make(chan struct{}),
 	}
 }
 
@@ -102,7 +149,7 @@ func NewMockLedProducer(uid string) *MockLedProducer {
 	}
 }
 
-func TestFireController(t *testing.T) {
+func TestStateManager(t *testing.T) {
 	ossignal := make(chan os.Signal, 1)
 	app := NewApp(ossignal)
 	app.ledproducers = make(map[string]p.LedProducer)
@@ -115,7 +162,6 @@ func TestFireController(t *testing.T) {
 
 	app.stopsignal = make(chan struct{})
 	app.shutdownWg.Add(1)
-	// go app.fireController()
 	go app.stateManager()
 	t.Cleanup(func() {
 		close(app.stopsignal)
@@ -138,6 +184,9 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 
 	mockPlatform := NewMockPlatform()
 	app.platform = mockPlatform
+	// Start the mock platform to begin capturing LED data
+	mockPlatform.Start(nil)
+	t.Cleanup(mockPlatform.Stop)
 
 	mockPlatform.sensors["sensor"] = c.SensorCfg{LedIndex: 0, SpiMultiplex: "", AdcChannel: 0, TriggerValue: 0}
 
@@ -148,7 +197,6 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	app.sensorProd = []p.LedProducer{mockSensorProducer}
 
 	ledReader := u.NewAtomicMapEvent[p.LedProducer]()
-	ledWriter := make(chan []p.Led, 1)
 	app.stopsignal = make(chan struct{})
 	ledBufferPool := &sync.Pool{
 		New: func() any {
@@ -157,32 +205,23 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	}
 
 	app.shutdownWg.Add(1)
-	go app.combineAndUpdateDisplay(ledReader, ledWriter, ledBufferPool)
+	go app.combineAndUpdateDisplay(ledReader, ledBufferPool)
 	t.Cleanup(func() {
 		close(app.stopsignal)
 		app.shutdownWg.Wait()
 	})
 
 	// test initial state
-	select {
-	case <-ledWriter:
-		t.Error("Expected no leds to be written")
-	default:
+	if len(mockPlatform.GetLastLeds()) != 0 {
+		t.Errorf("Expected no leds to be written, but got %d", len(mockPlatform.GetLastLeds()))
 	}
 
 	// test sensor trigger
+	mockPlatform.ClearLastLeds()
 	mockSensorProducer.Start()
 	ledReader.Send(mockSensorProducer.GetUID(), mockSensorProducer)
-	time.Sleep(100 * time.Millisecond)
-	select {
-	case <-ledWriter:
-		// expected
-	default:
+	time.Sleep(200 * time.Millisecond)
+	if len(mockPlatform.GetLastLeds()) == 0 {
 		t.Error("Expected leds to be written")
 	}
-
-	// test stop
-	mockSensorProducer.Start()
-	ledReader.Send(mockSensorProducer.GetUID(), mockSensorProducer)
-	time.Sleep(100 * time.Millisecond)
 }

@@ -41,7 +41,7 @@ func NewTUIPlatform(conf *config.Config, ossignalchan chan os.Signal) *TUIPlatfo
 		tuiTriggerValue: 200, // Default trigger value
 		readyChan:       make(chan bool),
 	}
-	inst.AbstractPlatform = newAbstractPlatform(conf, inst.DisplayLeds)
+	inst.AbstractPlatform = newAbstractPlatform(conf, inst.tuiDisplayFunc)
 	return inst
 }
 
@@ -49,7 +49,7 @@ func (s *TUIPlatform) Ready() <-chan bool {
 	return s.readyChan
 }
 
-func (s *TUIPlatform) Start(ledWriter chan []producer.Led, pool *sync.Pool) error {
+func (s *TUIPlatform) Start(pool *sync.Pool) error {
 	s.ledBufferPool = pool
 
 	s.segments = parseDisplaySegments(s.config.Hardware.Display)
@@ -63,7 +63,7 @@ func (s *TUIPlatform) Start(ledWriter chan []producer.Led, pool *sync.Pool) erro
 	)
 
 	s.displayWg.Add(1)
-	go s.displayDriver(ledWriter)
+	go s.displayDriver()
 
 	return nil
 }
@@ -81,7 +81,7 @@ func (s *TUIPlatform) Stop() {
 	}
 }
 
-func (s *TUIPlatform) DisplayLeds(leds []producer.Led) {
+func (s *TUIPlatform) tuiDisplayFunc(leds []producer.Led) {
 	// Update the segments with the new LED data
 	for _, segarray := range s.segments {
 		for _, seg := range segarray {

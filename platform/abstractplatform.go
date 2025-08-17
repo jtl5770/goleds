@@ -13,6 +13,7 @@ import (
 
 type AbstractPlatform struct {
 	config          *c.Config
+	ledWriter       chan []p.Led
 	sensorEvents    chan *u.Trigger
 	sensors         map[string]*sensor
 	segments        map[string][]*segment
@@ -28,11 +29,16 @@ type AbstractPlatform struct {
 func newAbstractPlatform(conf *c.Config, displayFunc func([]p.Led)) *AbstractPlatform {
 	return &AbstractPlatform{
 		config:          conf,
+		ledWriter:       make(chan []p.Led, 1),
 		sensorEvents:    make(chan *u.Trigger),
 		sensors:         make(map[string]*sensor),
 		displayFunc:     displayFunc,
 		displayStopChan: make(chan bool),
 	}
+}
+
+func (s *AbstractPlatform) GetLedWriter() chan<- []p.Led {
+	return s.ledWriter
 }
 
 func (s *AbstractPlatform) GetSensorEvents() <-chan *u.Trigger {
@@ -61,14 +67,14 @@ func (s *AbstractPlatform) setInShutdown() {
 	s.shutdownMutex.Unlock()
 }
 
-func (s *AbstractPlatform) displayDriver(display chan []p.Led) {
+func (s *AbstractPlatform) displayDriver() {
 	defer s.displayWg.Done()
 	for {
 		select {
 		case <-s.displayStopChan:
 			slog.Info("Ending DisplayDriver go-routine...")
 			return
-		case sumLeds := <-display:
+		case sumLeds := <-s.ledWriter:
 			s.shutdownMutex.RLock()
 			if !s.isShuttingDown {
 				s.displayFunc(sumLeds)

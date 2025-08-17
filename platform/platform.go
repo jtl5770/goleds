@@ -13,14 +13,14 @@ import (
 // see this interface.
 type Platform interface {
 	// Start initializes the platform and launches its internal goroutines.
-	Start(ledWriter chan []p.Led, pool *sync.Pool) error
+	Start(pool *sync.Pool) error
 
 	// Stop cleans up all platform resources and gracefully stops its goroutines.
 	Stop()
 
-	// DisplayLeds sends the complete state of all LEDs to the output device.
-	// This will be either the LED stripes or the TUI simulation
-	DisplayLeds(leds []p.Led)
+	// GetLedWriter returns a write-only channel for the application to send
+	// LED data to the platform.
+	GetLedWriter() chan<- []p.Led
 
 	// GetSensorEvents returns a channel that the application can read from
 	// to receive sensor trigger events.

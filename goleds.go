@@ -188,9 +188,8 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	}
 
 	ledReader := u.NewAtomicMapEvent[p.LedProducer]()
-	ledWriter := make(chan []p.Led, 1)
 
-	if err := a.platform.Start(ledWriter, ledBufferPool); err != nil {
+	if err := a.platform.Start(ledBufferPool); err != nil {
 		return fmt.Errorf("failed to start platform: %w", err)
 	}
 
@@ -260,7 +259,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 
 	a.shutdownWg.Add(2)
 
-	go a.combineAndUpdateDisplay(ledReader, ledWriter, ledBufferPool)
+	go a.combineAndUpdateDisplay(ledReader, ledBufferPool)
 	go a.stateManager()
 	return nil
 }
@@ -287,9 +286,10 @@ func (a *App) shutdown() {
 // This go-routine combines the LED values from all producers and writes them to the
 // ledWriter channel.
 // It also forces an update of the LED stripe at regular intervals to avoid artifacts.
-func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer], ledwriter chan []p.Led, ledBufferPool *sync.Pool) {
+func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer], ledBufferPool *sync.Pool) {
 	defer a.shutdownWg.Done()
 
+	ledwriter := a.platform.GetLedWriter()
 	var oldLedsHash uint64
 	forceupdatedelay := a.platform.GetForceUpdateDelay()
 	ledsTotal := a.platform.GetLedsTotal()
