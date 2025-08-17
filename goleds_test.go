@@ -105,62 +105,100 @@ func NewMockPlatform() *MockPlatform {
 
 type MockLedProducer struct {
 	*p.AbstractProducer
-	uid       string
-	isRunning bool
-	leds      []p.Led
+	uid          string
+	wg           *sync.WaitGroup
+	mu           sync.Mutex
+	startCalls   int
+	stopCalls    int
+	triggerCalls int
+	leds         []p.Led
+}
+
+func NewMockLedProducer(uid string, wg *sync.WaitGroup) *MockLedProducer {
+	return &MockLedProducer{
+		uid: uid,
+		wg:  wg,
+	}
 }
 
 func (m *MockLedProducer) Start() {
-	m.isRunning = true
+	m.mu.Lock()
+	m.startCalls++
+	m.mu.Unlock()
+	if m.wg != nil {
+		m.wg.Add(1) // Expect one sensor producer to run
+	}
+	// Simulate work and then signal completion
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		if m.wg != nil {
+			m.wg.Done()
+		}
+	}()
 }
 
 func (m *MockLedProducer) SendTrigger(trigger *u.Trigger) {
-	// Simulate the real producer starting when it receives a trigger.
-	m.isRunning = true
+	m.mu.Lock()
+	m.triggerCalls++
+	m.wg.Add(1) // Expect one sensor producer to run
+	m.mu.Unlock()
+	// Simulate work and then signal completion
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		m.wg.Done()
+	}()
 }
 
 func (m *MockLedProducer) TryStop() (bool, error) {
-	wasRunning := m.isRunning
-	m.isRunning = false
-	return wasRunning, nil
-}
-
-func (m *MockLedProducer) GetIsRunning() bool {
-	return m.isRunning
+	m.mu.Lock()
+	m.stopCalls++
+	m.mu.Unlock()
+	return true, nil
 }
 
 func (m *MockLedProducer) GetLeds(buffer []p.Led) {
 	copy(buffer, m.leds)
 }
 
-func (m *MockLedProducer) Exit() {
-	// do nothing
-}
+func (m *MockLedProducer) Exit() {}
 
 func (m *MockLedProducer) GetUID() string {
 	return m.uid
 }
 
-func NewMockLedProducer(uid string) *MockLedProducer {
-	return &MockLedProducer{
-		uid:       uid,
-		isRunning: false,
-		leds:      make([]p.Led, 0),
-	}
+func (m *MockLedProducer) getCalls() (int, int, int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.startCalls, m.stopCalls, m.triggerCalls
 }
 
 func TestStateManager(t *testing.T) {
+	// Setup
 	ossignal := make(chan os.Signal, 1)
 	app := NewApp(ossignal)
 	app.ledproducers = make(map[string]p.LedProducer)
+	app.stopsignal = make(chan struct{})
 
 	mockPlatform := NewMockPlatform()
 	app.platform = mockPlatform
+	mockPlatform.sensors["sensor1"] = c.SensorCfg{LedIndex: 0}
 
-	mockProducer := NewMockLedProducer("test")
-	app.ledproducers["test"] = mockProducer
+	permProd := NewMockLedProducer("perm", nil)
+	sensorProd := NewMockLedProducer("sensor1", &app.sensorProdWg)
+	afterProd := NewMockLedProducer("after", &app.afterProdWg)
 
-	app.stopsignal = make(chan struct{})
+	app.permProd = []p.LedProducer{permProd}
+	app.sensorProd = []p.LedProducer{sensorProd}
+	app.afterProd = []p.LedProducer{afterProd}
+	app.ledproducers["perm"] = permProd
+	app.ledproducers["sensor1"] = sensorProd
+	app.ledproducers["after"] = afterProd
+
+	// Mimic the behavior of initialise() where permanent producers are started first.
+	for _, p := range app.permProd {
+		p.Start()
+	}
+
 	app.shutdownWg.Add(1)
 	go app.stateManager()
 	t.Cleanup(func() {
@@ -168,13 +206,43 @@ func TestStateManager(t *testing.T) {
 		app.shutdownWg.Wait()
 	})
 
-	// test normal trigger
-	mockPlatform.sensorEvents <- u.NewTrigger("test", 10, time.Now())
-	time.Sleep(100 * time.Millisecond)
-	if !mockProducer.GetIsRunning() {
-		t.Error("Expected producer to be running")
+	// --- Test Execution ---
+
+	// 1. Initial state: perm producer should be running.
+	start, stop, trigger := permProd.getCalls()
+	if start != 1 || stop != 0 || trigger != 0 {
+		t.Fatalf("Expected permProd to be running initially, got start:%d, stop:%d, trigger:%d", start, stop, trigger)
 	}
-	mockProducer.TryStop()
+
+	// 2. Trigger a sensor event
+	mockPlatform.sensorEvents <- u.NewTrigger("sensor1", 100, time.Now())
+
+	// 3. Verify state transition: perm should be stopped, sensor should be triggered
+	time.Sleep(25 * time.Millisecond) // Allow time for state transition
+	start, stop, trigger = permProd.getCalls()
+	if start != 1 || stop != 1 || trigger != 0 {
+		t.Fatalf("Expected permProd to be stopped, got start:%d, stop:%d, trigger:%d", start, stop, trigger)
+	}
+	start, stop, trigger = sensorProd.getCalls()
+	if start != 0 || stop != 0 || trigger != 1 {
+		t.Fatalf("Expected sensorProd to be triggered, got start:%d, stop:%d, trigger:%d", start, stop, trigger)
+	}
+
+	time.Sleep(75 * time.Millisecond) // Allow time for state transition
+
+	// 4. Verify state transition: sensor done -> afterProd should start
+	start, stop, trigger = afterProd.getCalls()
+	if start != 1 || stop != 0 || trigger != 0 {
+		t.Fatalf("Expected afterProd to be started, got start:%d, stop:%d, trigger:%d", start, stop, trigger)
+	}
+
+	time.Sleep(75 * time.Millisecond) // Allow time for state transition
+
+	// 5. Verify state transition: afterProd done -> permProd should restart
+	start, stop, trigger = permProd.getCalls()
+	if start != 2 || stop != 1 || trigger != 0 {
+		t.Fatalf("Expected permProd to be restarted, got start:%d, stop:%d, trigger:%d", start, stop, trigger)
+	}
 }
 
 func TestCombineAndUpdateDisplay(t *testing.T) {
@@ -190,8 +258,8 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 
 	mockPlatform.sensors["sensor"] = c.SensorCfg{LedIndex: 0, SpiMultiplex: "", AdcChannel: 0, TriggerValue: 0}
 
-	mockSensorProducer := NewMockLedProducer("sensor")
-	mockMultiBlobProducer := NewMockLedProducer(MULTI_BLOB_UID)
+	mockSensorProducer := NewMockLedProducer("sensor", nil)
+	mockMultiBlobProducer := NewMockLedProducer(MULTI_BLOB_UID, nil)
 	app.ledproducers["sensor"] = mockSensorProducer
 	app.ledproducers[MULTI_BLOB_UID] = mockMultiBlobProducer
 	app.sensorProd = []p.LedProducer{mockSensorProducer}
