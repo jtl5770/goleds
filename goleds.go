@@ -16,8 +16,8 @@
 //     configuration from a YAML file.
 //
 // The application is configured via a file (default: config.yml) and
-// supports dynamic reloading of the configuration on SIGHUP
-// signals. It can be gracefully shut down with an Interrupt signal.
+// supports dynamic reloading of the configuration if the file changes.
+// It can be gracefully shut down with an Interrupt signal.
 //
 // The main functionality is to read sensor data from the chosen
 // platform and drive the LED stripes using various
@@ -34,9 +34,9 @@ import (
 	"os/signal"
 	"path/filepath"
 	"sync"
-	"syscall"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	c "lautenbacher.net/goleds/config"
 	l "lautenbacher.net/goleds/logging"
 	pl "lautenbacher.net/goleds/platform"
@@ -98,33 +98,89 @@ func main() {
 
 	app := NewApp(ossignal)
 	if err := app.initialise(*cfile, *realp, *sensp); err != nil {
-		// The logging system might have been partially initialized (e.g., stdio
-		// redirected). Closing it ensures we restore the original console
-		// output before printing the final fatal error.
 		l.Close()
 		fmt.Fprintf(os.Stderr, "Error: Failed to initialize application: %v\n", err)
 		os.Exit(1)
 	}
 
-	signal.Notify(ossignal, os.Interrupt, syscall.SIGHUP)
+	// Start a watcher to automatically reload on config file changes.
+	reloadEvent := u.NewAtomicEvent[bool]()
+	go watchConfigFile(*cfile, reloadEvent)
 
-	for sig := range ossignal {
-		switch sig {
-		case os.Interrupt:
+	signal.Notify(ossignal, os.Interrupt)
+
+	for {
+		select {
+		case <-ossignal:
 			l.BufferOutput() // Start capturing all shutdown logs
 			slog.Info("Exiting...")
 			app.shutdown()
 			l.Close() // Final flush to console/file
 			os.Exit(0)
-		case syscall.SIGHUP:
+		case <-reloadEvent.Channel():
 			l.BufferOutput()
-			slog.Info("Resetting...")
+			slog.Info("Config file changed, resetting...")
 			app.shutdown()
 			if err := app.initialise(*cfile, *realp, *sensp); err != nil {
 				l.Close()
 				fmt.Fprintf(os.Stderr, "Error: Failed to re-initialize application: %v\n", err)
 				os.Exit(1)
 			}
+		}
+	}
+}
+
+// watchConfigFile sets up a fsnotify watcher to monitor the config file for changes.
+// It sends a signal on the reloadChan when a write or create event is detected.
+func watchConfigFile(cfile string, reloadEvent *u.AtomicEvent[bool]) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		slog.Error("Failed to create config file watcher", "error", err)
+		return
+	}
+	defer watcher.Close()
+
+	// Get the absolute path of the config file for reliable comparison.
+	configFileAbs, err := filepath.Abs(cfile)
+	if err != nil {
+		slog.Error("Failed to get absolute path for config file", "path", cfile, "error", err)
+		return
+	}
+	configFileDir := filepath.Dir(configFileAbs)
+
+	if err := watcher.Add(configFileDir); err != nil {
+		slog.Error("Failed to add config directory to watcher", "path", configFileDir, "error", err)
+		return
+	}
+	slog.Info("Watching for config file changes", "path", configFileAbs)
+
+	var reloadTimer *time.Timer
+
+	for {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+			slog.Debug("Got fsnotify event", "event", event)
+			// Check if the event is for our config file.
+			// We check for Write or Create to handle atomic saves (rename/create).
+			if event.Name == configFileAbs && (event.Has(fsnotify.Write) || event.Has(fsnotify.Create)) {
+				slog.Info("Config file modification detected", "path", event.Name, "op", event.Op)
+				// Debounce the event. If a timer is already running, reset it.
+				if reloadTimer != nil {
+					reloadTimer.Stop()
+				}
+				reloadTimer = time.AfterFunc(250*time.Millisecond, func() {
+					slog.Info("Debounced event triggered: sending reload signal.")
+					reloadEvent.Send(true)
+				})
+			}
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			slog.Error("Error from config file watcher", "error", err)
 		}
 	}
 }
@@ -264,7 +320,6 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	return nil
 }
 
-
 func (a *App) shutdown() {
 	slog.Info("Shutting down...")
 	for _, prod := range a.ledproducers {
@@ -283,8 +338,7 @@ func (a *App) shutdown() {
 	}
 }
 
-// This go-routine combines the LED values from all producers and writes them to the
-// ledWriter channel.
+// This go-routine combines the LED values from all producers and hands them to the platform via SetLeds()
 // It also forces an update of the LED stripe at regular intervals to avoid artifacts.
 func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer], ledBufferPool *sync.Pool) {
 	defer a.shutdownWg.Done()

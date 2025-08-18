@@ -5,6 +5,7 @@ go 1.23.0
 toolchain go1.24.4
 
 require (
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gammazero/deque v1.1.0
 	github.com/gdamore/tcell/v2 v2.8.1
 	github.com/gordonklaus/portaudio v0.0.0-20250206071425-98a94950218b

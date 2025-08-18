@@ -5,11 +5,17 @@ import (
 	"log/slog"
 	"math"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gordonklaus/portaudio"
 	c "lautenbacher.net/goleds/config"
 	u "lautenbacher.net/goleds/util"
+)
+
+var (
+	paMutex     sync.Mutex
+	paInitCount int
 )
 
 // AudioLEDProducer implements a VU meter that reads from an audio input
@@ -63,11 +69,30 @@ func NewAudioLEDProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer],
 
 // runner is the main processing loop for the producer.
 func (p *AudioLEDProducer) runner() {
-	if err := portaudio.Initialize(); err != nil {
-		slog.Error("AudioLEDProducer: failed to initialize portaudio", "uid", p.uid, "error", err)
-		return
+	paMutex.Lock()
+	if paInitCount == 0 {
+		if err := portaudio.Initialize(); err != nil {
+			slog.Error("AudioLEDProducer: failed to initialize portaudio", "uid", p.uid, "error", err)
+			paMutex.Unlock()
+			return
+		}
+		slog.Info("AudioLEDProducer: PortAudio initialized.")
 	}
-	defer portaudio.Terminate()
+	paInitCount++
+	paMutex.Unlock()
+
+	defer func() {
+		paMutex.Lock()
+		paInitCount--
+		if paInitCount == 0 {
+			if err := portaudio.Terminate(); err != nil {
+				slog.Error("AudioLEDProducer: failed to terminate portaudio", "uid", p.uid, "error", err)
+			} else {
+				slog.Info("AudioLEDProducer: PortAudio terminated.")
+			}
+		}
+		paMutex.Unlock()
+	}()
 
 	inDevice, err := p.findDevice()
 	if err != nil {

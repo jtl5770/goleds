@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -98,7 +97,7 @@ func (s *TUIPlatform) getIntroText(numSensors int) string {
 
 	line1 := fmt.Sprintf("Trigger value: [#ffff00]%-4d[white] | Hit [#ff0000]+[white]/[#ff0000]-[white] to change", triggerValue)
 	line2 := fmt.Sprintf("Hit [blue]1[-]...[blue]%d[-] to fire a sensor", numSensors)
-	line3 := "Hit [#ff0000]q[-] to exit, [#ff0000]r[-] to reload, [#ff0000]Up/Down[-] to scroll logs"
+	line3 := "Hit [#ff0000]q[-] to exit, [#ff0000]Up/Down[-] to scroll logs"
 
 	return fmt.Sprintf("%s\n%s\n%s", line1, line2, line3)
 }
@@ -172,9 +171,6 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 			switch key {
 			case "q", "Q":
 				ossignal <- os.Interrupt
-				return nil
-			case "r", "R":
-				ossignal <- syscall.SIGHUP
 				return nil
 			case "+":
 				s.tuiTriggerValue = s.tuiTriggerValue + 5

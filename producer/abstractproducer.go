@@ -36,7 +36,7 @@ func NewAbstractProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer],
 		stopchan:     make(chan bool),
 		runfunc:      runfunc,
 		triggerEvent: u.NewAtomicEvent[*u.Trigger](),
-		endWg:        &sync.WaitGroup{},
+		endWg:        nil,
 	}
 	return &inst
 }
@@ -65,7 +65,9 @@ func (s *AbstractProducer) GetUID() string {
 // It MUST be called with updateMutex held.
 func (s *AbstractProducer) startLocked() {
 	s.isRunning = true
-	s.endWg.Add(1)
+	if s.endWg != nil {
+		s.endWg.Add(1)
+	}
 	go s.runner()
 }
 
@@ -100,7 +102,9 @@ func (s *AbstractProducer) runner() {
 		} else {
 			// No trigger was pending, it's safe to stop.
 			s.isRunning = false
-			s.endWg.Done()
+			if s.endWg != nil {
+				s.endWg.Done()
+			}
 		}
 	}()
 
