@@ -185,9 +185,9 @@ func (p *AudioLEDProducer) checkSilence(rmsL float64, rmsR float64, ticker *time
 			p.silenceStart = true
 			p.silenceStartTime = time.Now()
 		} else {
-			if !p.slowedDown && time.Since(p.silenceStartTime) > 5*time.Second {
+			if !p.slowedDown && time.Since(p.silenceStartTime) > 10*time.Second {
 				slog.Info("AudioLEDProducer: No audio input detected for 5 seconds, slowing down loop...")
-				ticker.Reset(3 * time.Second)
+				ticker.Reset(5 * time.Second)
 				p.slowedDown = true
 			}
 		}
