@@ -145,15 +145,21 @@ func (p *AudioLEDProducer) runner() {
 		case <-p.stopchan:
 			return
 		case <-ticker.C:
+			if p.slowedDown {
+				stream.Start()
+			}
 			if err := stream.Read(); err != nil {
 				// This can happen, e.g., portaudio.InputOverflowed. We can log it but continue.
 			}
 
 			samplesL, samplesR := deInterleave(buffer, inDevice.MaxInputChannels)
-
 			rmsL := calculateRMS(samplesL)
 			rmsR := calculateRMS(samplesR)
 			p.checkSilence(rmsL, rmsR, ticker)
+			if p.slowedDown {
+				stream.Stop()
+			}
+
 			dbL := rmsToDB(rmsL)
 			dbR := rmsToDB(rmsR)
 			p.updateLeds(dbL, p.startLedLeft, p.endLedLeft)
