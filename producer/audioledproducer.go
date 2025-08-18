@@ -146,9 +146,17 @@ func (p *AudioLEDProducer) runner() {
 			return
 		case <-ticker.C:
 			if p.slowedDown {
-				stream.Start()
+				stream, err = portaudio.OpenStream(streamParams, buffer)
+				if err != nil {
+					slog.Error("AudioLEDProducer: failed to open stream", "uid", p.uid, "error", err)
+					return
+				}
+				if err = stream.Start(); err != nil {
+					slog.Error("AudioLEDProducer: failed to start stream", "uid", p.uid, "error", err)
+					return
+				}
 			}
-			if err := stream.Read(); err != nil {
+			if err = stream.Read(); err != nil {
 				// This can happen, e.g., portaudio.InputOverflowed. We can log it but continue.
 			}
 
@@ -158,6 +166,7 @@ func (p *AudioLEDProducer) runner() {
 			p.checkSilence(rmsL, rmsR, ticker)
 			if p.slowedDown {
 				stream.Stop()
+				stream.Close()
 			}
 
 			dbL := rmsToDB(rmsL)
@@ -186,7 +195,7 @@ func (p *AudioLEDProducer) checkSilence(rmsL float64, rmsR float64, ticker *time
 			p.silenceStartTime = time.Now()
 		} else {
 			if !p.slowedDown && time.Since(p.silenceStartTime) > 10*time.Second {
-				slog.Info("AudioLEDProducer: No audio input detected for 5 seconds, slowing down loop...")
+				slog.Info("AudioLEDProducer: No audio input detected for 10 seconds, slowing down loop...")
 				ticker.Reset(5 * time.Second)
 				p.slowedDown = true
 			}
