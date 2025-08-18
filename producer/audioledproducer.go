@@ -71,7 +71,7 @@ func (p *AudioLEDProducer) Finalize() {
 	p.updateMutex.Lock()
 	defer p.updateMutex.Unlock()
 
-	if !p.hasExited {
+	if p.hasExited {
 		paMutex.Lock()
 		defer paMutex.Unlock()
 		if paInitialized {

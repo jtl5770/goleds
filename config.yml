@@ -184,8 +184,8 @@ ClockLED:
   StartLedMinute: 111
   # Which LED to use as the "end" of the clock for the hours. (hour: 11 and minute: 59)
   EndLedMinute: 164
-  LedHour: [50, 50, 0]
-  LedMinute: [50, 50, 0]
+  LedHour: [50, 30, 0]
+  LedMinute: [50, 30, 0]
 
 # AudioLED: A producer connecting to squeezelite (or any other thing
 # producing audio) to show a VU meter
