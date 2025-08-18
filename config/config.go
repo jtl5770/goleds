@@ -232,9 +232,6 @@ func (c *Config) Validate() error {
 		if !isValidIndex(aud.StartLedLeft) || !isValidIndex(aud.EndLedLeft) || !isValidIndex(aud.StartLedRight) || !isValidIndex(aud.EndLedRight) {
 			return fmt.Errorf("AudioLED configuration has out-of-bounds LED indices")
 		}
-		if aud.StartLedLeft > aud.EndLedLeft || aud.StartLedRight > aud.EndLedRight {
-			return fmt.Errorf("AudioLED configuration has start index greater than end index")
-		}
 	}
 
 	// 5. Producer Enabled Validation
