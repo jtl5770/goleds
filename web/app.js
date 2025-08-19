@@ -56,56 +56,60 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// Kicks off the recursive form building process.
 function buildForm(config, container) {
     container.innerHTML = ''; // Clear previous form
-    for (const producerName in config) {
-        const producerConfig = config[producerName];
-        const fieldset = document.createElement('fieldset');
-        const legend = document.createElement('legend');
-        legend.textContent = producerName;
-        fieldset.appendChild(legend);
+    buildRecursive(config, container, []);
+}
 
-        for (const key in producerConfig) {
-            const value = producerConfig[key];
-            // For now, we'll just handle simple key-value pairs.
-            // We can add more complex handling for nested objects or arrays later.
-            if (typeof value !== 'object' && value !== null) {
-                const div = document.createElement('div');
-                const label = document.createElement('label');
-                label.textContent = key;
-                label.htmlFor = `${producerName}-${key}`;
-                
-                const input = document.createElement('input');
-                input.type = typeof value === 'boolean' ? 'checkbox' : 'text';
-                input.id = `${producerName}-${key}`;
-                input.name = `${producerName}-${key}`;
-                input.dataset.producer = producerName;
-                input.dataset.key = key;
-                // Store original type for smarter casting on save
-                input.dataset.type = typeof value;
+// Recursively builds form elements for a given object and path.
+function buildRecursive(data, parentElement, path) {
+    for (const key in data) {
+        const value = data[key];
+        const currentPath = [...path, key];
+        const pathString = currentPath.join('.');
 
-                if (typeof value === 'boolean') {
-                    input.checked = value;
-                } else {
-                    input.value = value;
-                }
+        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            const fieldset = document.createElement('fieldset');
+            const legend = document.createElement('legend');
+            legend.textContent = key;
+            fieldset.appendChild(legend);
+            parentElement.appendChild(fieldset);
+            buildRecursive(value, fieldset, currentPath); // Recurse into the nested object
+        } else {
+            // Handle primitive values and arrays (as text for now)
+            const div = document.createElement('div');
+            const label = document.createElement('label');
+            label.textContent = key;
+            label.htmlFor = pathString;
+            
+            const input = document.createElement('input');
+            input.id = pathString;
+            input.name = pathString;
+            input.dataset.path = pathString;
+            input.dataset.type = Array.isArray(value) ? 'array' : typeof value;
 
-                div.appendChild(label);
-                div.appendChild(input);
-                fieldset.appendChild(div);
+            if (typeof value === 'boolean') {
+                input.type = 'checkbox';
+                input.checked = value;
+            } else {
+                input.type = 'text';
+                input.value = Array.isArray(value) ? JSON.stringify(value) : value;
             }
+
+            div.appendChild(label);
+            div.appendChild(input);
+            parentElement.appendChild(div);
         }
-        container.appendChild(fieldset);
     }
 }
 
-// Updates the provided config object with values from the form inputs.
+// Updates the provided config object with values from the form inputs using their data-path.
 function updateConfigFromForm(config, container) {
     const inputs = container.querySelectorAll('input');
     
     inputs.forEach(input => {
-        const producer = input.dataset.producer;
-        const key = input.dataset.key;
+        const path = input.dataset.path.split('.');
         const originalType = input.dataset.type;
         let value;
 
@@ -116,13 +120,22 @@ function updateConfigFromForm(config, container) {
             // Attempt to cast back to the original type
             if (originalType === 'number') {
                 value = parseFloat(value);
+            } else if (originalType === 'array') {
+                try {
+                    value = JSON.parse(value);
+                } catch (e) {
+                    console.error(`Invalid JSON for array field ${input.dataset.path}:`, value);
+                    // Keep it as a string to show the user their error
+                }
             }
         }
         
-        // Update the value in the original config object
-        if (config[producer] && typeof config[producer][key] !== 'undefined') {
-            config[producer][key] = value;
+        // Traverse the config object to set the value at the correct path
+        let current = config;
+        for (let i = 0; i < path.length - 1; i++) {
+            current = current[path[i]];
         }
+        current[path[path.length - 1]] = value;
     });
 
     return config;
