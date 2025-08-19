@@ -67,19 +67,15 @@ func NewAudioLEDProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer],
 	return p
 }
 
-func (p *AudioLEDProducer) Finalize() {
-	p.updateMutex.Lock()
-	defer p.updateMutex.Unlock()
-
-	if p.hasExited {
-		paMutex.Lock()
-		defer paMutex.Unlock()
-		if paInitialized {
-			if err := portaudio.Terminate(); err != nil {
-				slog.Error("AudioLEDProducer: failed to terminate portaudio", "uid", p.uid, "error", err)
-			} else {
-				slog.Info("AudioLEDProducer: PortAudio terminated.")
-			}
+func (p *AudioLEDProducer) Exit() {
+	p.AbstractProducer.Exit()
+	paMutex.Lock()
+	defer paMutex.Unlock()
+	if paInitialized {
+		if err := portaudio.Terminate(); err != nil {
+			slog.Error("AudioLEDProducer: failed to terminate portaudio", "uid", p.uid, "error", err)
+		} else {
+			slog.Info("AudioLEDProducer: PortAudio terminated.")
 			paInitialized = false
 		}
 	}

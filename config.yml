@@ -27,7 +27,7 @@ Hardware:
     # To counteract electrical noise that might corrupt the LED state, the system
     # can periodically force a full refresh of all LED strips. This ensures the
     # display remains stable. Set to 0 to disable.
-    ForceUpdateDelay: 500ms
+    ForceUpdateDelay: 1000ms
     # The total number of LEDs in the virtual, continuous strip that producers
     # operate on. This can be larger than the sum of physical LEDs to create
     # "invisible" gaps between segments.
@@ -73,7 +73,7 @@ Hardware:
     SmoothingSize: 3
     # The delay between sensor read cycles. A smaller value means more
     # frequent readings and faster response times.
-    LoopDelay: 20ms
+    LoopDelay: 50ms
     # Configuration for each individual sensor.
     SensorCfg:
       # A unique name (UID) for the sensor. This UID is used to associate
@@ -203,8 +203,8 @@ AudioLED:
   # works perfectly fine on a full default pipewire Fedora.
   # On RaspberryPi try "pulse".
   Device: "squeezelite"
-  LedGreen: [0, 100, 0]
-  LedYellow: [50, 50, 0]
+  LedGreen: [0, 80, 0]
+  LedYellow: [40, 40, 0]
   LedRed: [100, 0, 0]
   SampleRate: 48000
   # How often to read out samples and update the LED strip

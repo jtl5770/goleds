@@ -10,5 +10,4 @@ type LedProducer interface {
 	SendTrigger(trigger *u.Trigger)
 	TryStop() (bool, error)
 	Exit()
-	Finalize()
 }

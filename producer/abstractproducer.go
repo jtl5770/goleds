@@ -156,18 +156,3 @@ func (s *AbstractProducer) Exit() {
 	s.isRunning = false
 	s.hasExited = true
 }
-
-// This method must only be called right before the end of the application
-// It's a NO-OP but can be used for producers to clean up global resources
-func (s *AbstractProducer) Finalize() {
-	s.updateMutex.Lock()
-	defer s.updateMutex.Unlock()
-
-	if s.hasExited != true {
-		slog.Error("Finalize called on a producer that has not exited", "uid", s.GetUID())
-		return
-	} else {
-		// NO-OP
-		return
-	}
-}

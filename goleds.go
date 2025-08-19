@@ -115,10 +115,6 @@ func main() {
 			l.BufferOutput() // Start capturing all shutdown logs
 			slog.Info("Exiting...")
 			app.shutdown()
-			for _, prod := range app.ledproducers {
-				slog.Info("Finalizing producer", "uid", prod.GetUID())
-				prod.Finalize()
-			}
 			l.Close() // Final flush to console/file
 			os.Exit(0)
 		case <-reloadEvent.Channel():
