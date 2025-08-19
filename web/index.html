@@ -1,12 +1,29 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GoLeds Control</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; }
+        fieldset { margin-bottom: 1em; border: 1px solid #ccc; border-radius: 5px; }
+        legend { font-weight: bold; }
+        label { display: inline-block; width: 150px; }
+        input { margin-bottom: 0.5em; }
+        #message { margin-top: 1em; font-weight: bold; }
+    </style>
 </head>
 <body>
-    <h1>Hello, this is GOLeds</h1>
-    <form action="/submit" method="post">
-        <button type="submit">Submit</button>
-    </form>
+    <h1>GoLeds Runtime Configuration</h1>
+    
+    <div id="config-form">
+        <p>Loading configuration...</p>
+    </div>
+    
+    <button id="save-button">Save Configuration</button>
+    
+    <div id="message"></div>
+
+    <script src="app.js"></script>
 </body>
 </html>
