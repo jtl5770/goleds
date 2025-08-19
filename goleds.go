@@ -40,9 +40,18 @@ import (
 	c "lautenbacher.net/goleds/config"
 	l "lautenbacher.net/goleds/logging"
 	pl "lautenbacher.net/goleds/platform"
+	"net/http"
 	p "lautenbacher.net/goleds/producer"
 	u "lautenbacher.net/goleds/util"
 )
+
+// submitHandler logs a message whenever it's called by the form submission.
+func submitHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Received submit request from web UI")
+	// We can redirect back to the main page or show a success message.
+	// For now, just a simple response is fine.
+	fmt.Fprintf(w, "Submit received!")
+}
 
 // UIDs for the different types of producers
 const (
@@ -106,6 +115,16 @@ func main() {
 	// Start a watcher to automatically reload on config file changes.
 	reloadEvent := u.NewAtomicEvent[bool]()
 	go watchConfigFile(*cfile, reloadEvent)
+
+	// Start the web server in a separate goroutine.
+	http.Handle("/", http.FileServer(http.Dir("./web")))
+	http.HandleFunc("/submit", submitHandler)
+	go func() {
+		slog.Info("Starting web server", "address", "http://localhost:8080")
+		if err := http.ListenAndServe(":8080", nil); err != nil {
+			slog.Error("Web server failed", "error", err)
+		}
+	}()
 
 	signal.Notify(ossignal, os.Interrupt)
 
