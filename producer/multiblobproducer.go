@@ -1,6 +1,7 @@
 package producer
 
 import (
+	"fmt"
 	"log/slog"
 	"math"
 	"math/rand/v2"
@@ -55,13 +56,10 @@ func (s *Blob) applyTo(leds []Led) {
 	// We use `5.0` for a rounder number and to be safe.
 	bound := int(math.Ceil(math.Sqrt(5.0 * s.width)))
 	start := int(math.Floor(s.x)) - bound
-	if start < 0 {
-		start = 0
-	}
+	start = max(0, start)
+
 	end := int(math.Ceil(s.x)) + bound
-	if end >= ledsTotal {
-		end = ledsTotal
-	}
+	end = min(end, ledsTotal)
 
 	for i := start; i < end; i++ {
 		y := math.Exp(-1 * (math.Pow(float64(i)-s.x, 2) / s.width))
@@ -82,7 +80,7 @@ type MultiBlobProducer struct {
 	delay    time.Duration
 }
 
-func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, duration, delay time.Duration, blobCfg map[string]c.BlobCfg, endwg *sync.WaitGroup) *MultiBlobProducer {
+func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, duration, delay time.Duration, blobCfg []c.BlobCfg, endwg *sync.WaitGroup) *MultiBlobProducer {
 	inst := &MultiBlobProducer{
 		duration: duration,
 		delay:    delay,
@@ -93,7 +91,8 @@ func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer]
 	}
 
 	inst.allblobs = make(map[string]*Blob)
-	for uid, cfg := range blobCfg {
+	for ind, cfg := range blobCfg {
+		uid := fmt.Sprintf("Blob_%d", ind)
 		blob := NewBlob(uid, cfg.LedRGB, cfg.X, cfg.Width, cfg.DeltaX)
 		inst.allblobs[uid] = blob
 	}

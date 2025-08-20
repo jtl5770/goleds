@@ -76,10 +76,10 @@ type CylonLEDConfig struct {
 
 // MultiBlobLEDConfig defines the configuration for the MultiBlobLED producer.
 type MultiBlobLEDConfig struct {
-	Enabled  bool               `yaml:"Enabled"`
-	Duration time.Duration      `yaml:"Duration"`
-	Delay    time.Duration      `yaml:"Delay"`
-	BlobCfg  map[string]BlobCfg `yaml:"BlobCfg"`
+	Enabled  bool          `yaml:"Enabled"`
+	Duration time.Duration `yaml:"Duration"`
+	Delay    time.Duration `yaml:"Delay"`
+	BlobCfg  []BlobCfg     `yaml:"BlobCfg"`
 }
 
 // BlobCfg defines the configuration for a single blob in the MultiBlobLED producer.

@@ -160,18 +160,22 @@ MultiBlobLED:
   Delay: 120ms
   # Configuration for each individual blob.
   BlobCfg:
-    BlobRed:
-      # Movement speed and direction (positive=right, negative=left).
-      DeltaX: 0.3
-      # Initial position on the virtual strip.
+    - DeltaX: 0.3
       X: 20
-      # A factor influencing the blob's width (larger = wider).
       Width: 512
-      # The color and intensity of the blob.
       LedRGB: [30, 0, 0]
-    BlobGreen: { DeltaX: -0.5, X: 40, Width: 512, LedRGB: [0, 30, 0] }
-    BlobBlue: { DeltaX: 0.4, X: 130, Width: 768, LedRGB: [0, 0, 40] }
-    BlobRed2: { DeltaX: -0.2, X: 150, Width: 512, LedRGB: [30, 0, 0] }
+    - DeltaX: -0.5
+      X: 40
+      Width: 512
+      LedRGB: [0, 30, 0]
+    - DeltaX: 0.4
+      X: 130
+      Width: 768
+      LedRGB: [0, 0, 40]
+    - DeltaX: -0.2
+      X: 150
+      Width: 512
+      LedRGB: [30, 0, 0]
 
 # ClockLED: A simple producer that creates a clock-like effect, 
 ClockLED:
