@@ -6,7 +6,7 @@ package config
 type RuntimeConfig struct {
 	SensorLED    SensorLEDConfig    `yaml:"SensorLED" json:"SensorLED"`
 	NightLED     NightLEDConfig     `yaml:"NightLED" json:"NightLED"`
-	ClockLED     ClockLEDConfig     `yaml"ClockLED" json:"ClockLED"`
+	ClockLED     ClockLEDConfig     `yaml:"ClockLED" json:"ClockLED"`
 	AudioLED     AudioLEDConfig     `yaml:"AudioLED" json:"AudioLED"`
 	CylonLED     CylonLEDConfig     `yaml:"CylonLED" json:"CylonLED"`
 	MultiBlobLED MultiBlobLEDConfig `yaml:"MultiBlobLED" json:"MultiBlobLED"`
