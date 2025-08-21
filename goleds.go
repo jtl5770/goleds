@@ -26,10 +26,12 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"hash/fnv"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -37,14 +39,12 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"gopkg.in/yaml.v3"
 	c "lautenbacher.net/goleds/config"
 	l "lautenbacher.net/goleds/logging"
 	pl "lautenbacher.net/goleds/platform"
-	"encoding/json"
-	"net/http"
 	p "lautenbacher.net/goleds/producer"
 	u "lautenbacher.net/goleds/util"
-	"gopkg.in/yaml.v3"
 )
 
 // configHandler routes API requests for /api/config to the appropriate handler
@@ -137,7 +137,7 @@ func setConfigHandler(w http.ResponseWriter, r *http.Request, cfile string) {
 	}
 
 	// 6. Write the new YAML back to the config file, triggering the reload.
-	if err := os.WriteFile(cfile, yamlData, 0644); err != nil {
+	if err := os.WriteFile(cfile, yamlData, 0o644); err != nil {
 		slog.Error("Failed to write updated config file", "error", err)
 		http.Error(w, "Failed to save configuration", http.StatusInternalServerError)
 		return
