@@ -9,9 +9,10 @@
         h1 { color: #111; }
         fieldset { margin-bottom: 1.5em; border: 1px solid #ccc; border-radius: 8px; padding: 1em; background-color: #fff; }
         legend { font-weight: bold; font-size: 1.2em; color: #005a9c; }
-        .form-control { margin-bottom: 1em; display: flex; align-items: center; }
+        .form-control { margin-bottom: 1em; display: flex; align-items: flex-start; }
         label { display: inline-block; width: 150px; font-weight: bold; }
         input[type="text"], input[type="checkbox"], textarea { margin-left: 10px; }
+        input[type="text"] { width: 80px; }
         textarea { width: 250px; }
         #message { margin-top: 1em; font-weight: bold; padding: 0.5em; border-radius: 5px; }
         #save-button {
@@ -29,7 +30,7 @@
         }
         .rgb-input-container { display: flex; align-items: center; margin-left: 10px; gap: 2px; }
         .rgb-input-container .labeled-input { margin: 0; }
-        .duration-input-container { display: flex; align-items: center; gap: 5px; }
+        .duration-input-container { display: flex; align-items: center; gap: 5px; margin-left: 10px; }
         .duration-input-container input { width: 80px; }
 
         .labeled-input { display: flex; flex-direction: column; align-items: flex-start; }
