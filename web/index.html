@@ -7,7 +7,7 @@
     <style>
         body { font-family: sans-serif; margin: 2em; background-color: #f4f4f4; color: #333; }
         h1 { color: #111; }
-        fieldset { margin-bottom: 1.5em; border: 1px solid #ccc; border-radius: 8px; padding: 1em; background-color: #fff; }
+        fieldset { margin-bottom: 1.5em; border: 1px solid #888; border-radius: 8px; padding: 1em; background-color: #fff; }
         legend { font-weight: bold; font-size: 1.2em; color: #005a9c; }
         .form-control { margin-bottom: 1em; display: flex; align-items: flex-start; }
         label { display: inline-block; width: 150px; font-weight: bold; }
@@ -28,25 +28,25 @@
             cursor: pointer;
             border-radius: 5px;
         }
-        .rgb-input-container { display: flex; align-items: center; margin-left: 10px; gap: 2px; }
+        .rgb-input-container { display: flex; align-items: center; margin-left: 10px; gap: 2px; border: 1px solid #888; padding: 3px; background-color: #ddd;}
         .rgb-input-container .labeled-input { margin: 0; }
         .duration-input-container { display: flex; align-items: center; gap: 5px; margin-left: 10px; }
         .duration-input-container input { width: 80px; }
 
         .labeled-input { display: flex; flex-direction: column; align-items: flex-start; }
-        .labeled-input label { font-size: 0.8em; margin-bottom: 2px; color: #555; }
+        .labeled-input label { font-size: 0.8em; width: 90px; margin-bottom: 2px; color: #555; }
         .labeled-input input { width: 70px; }
         
         /* Styles for the dynamic color list */
         .color-list-container { margin-left: 10px; }
-        .color-list-item { display: flex; align-items: center; margin-bottom: 5px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; gap: 2px; }
+        .color-list-item { display: flex; align-items: center; margin-bottom: 5px; padding: 5px; border: 1px solid #888; border-radius: 4px; gap: 2px; background-color: #ddd }
         .drag-handle { cursor: move; margin-right: 10px; user-select: none; }
         .delete-color-btn { margin-left: 10px; cursor: pointer; color: red; }
         .add-color-btn { margin-top: 10px; cursor: pointer; }
 
         /* Styles for the dynamic blob list */
         .blob-list-container { margin-left: 10px; }
-        .blob-list-item { display: flex; align-items: center; margin-bottom: 5px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; gap: 2px; flex-wrap: wrap; }
+        .blob-list-item { display: flex; align-items: top; margin-bottom: 5px; padding: 5px; border: 1px solid #888; border-radius: 4px; gap: 2px; flex-wrap: wrap; }
         .delete-blob-btn { margin-left: auto; cursor: pointer; color: red; }
         .add-blob-btn { margin-top: 10px; cursor: pointer; }
     </style>

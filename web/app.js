@@ -100,11 +100,11 @@ function buildRecursive(data, parentElement, path) {
                 addButton.className = 'add-color-btn';
                 addButton.type = 'button';
                 addButton.addEventListener('click', () => {
-                    listContainer.appendChild(createColorListItem([0, 0, 0]));
+                    listContainer.insertBefore(createColorListItem([0, 0, 0]),listContainer.lastChild);
                 });
                 
                 div.appendChild(listContainer);
-                div.appendChild(addButton);
+                listContainer.appendChild(addButton);
                 
                 // Init drag and drop
                 let draggedItem = null;
@@ -128,8 +128,8 @@ function buildRecursive(data, parentElement, path) {
                     e.preventDefault();
                     const afterElement = getDragAfterElement(listContainer, e.clientY);
                     const currentItem = document.querySelector('.dragging');
-                    if (afterElement == null) {
-                        listContainer.appendChild(draggedItem);
+                    if (afterElement == null || afterElement == listContainer.lastChild) {
+                        listContainer.insertBefore(draggedItem, listContainer.lastChild);
                     } else {
                         listContainer.insertBefore(draggedItem, afterElement);
                     }
@@ -149,11 +149,11 @@ function buildRecursive(data, parentElement, path) {
                 addButton.className = 'add-blob-btn';
                 addButton.type = 'button';
                 addButton.addEventListener('click', () => {
-                    listContainer.appendChild(createBlobListItem({ DeltaX: 0.1, X: 50, Width: 512, LedRGB: [255,0,0]}));
+                    listContainer.insertBefore(createBlobListItem({ DeltaX: 0.1, X: 50, Width: 512, LedRGB: [255,0,0]}),
+                        listContainer.lastChild);
                 });
-                
+                listContainer.appendChild(addButton);
                 div.appendChild(listContainer);
-                div.appendChild(addButton);
             } else if (isDurationField(key)) {
                 const container = document.createElement('div');
                 container.className = 'duration-input-container';
