@@ -136,6 +136,8 @@ func (p *AudioLEDProducer) runner() {
 		p.ledsChanged.Send(p.GetUID(), p)
 	}()
 
+	p.slowedDown = false
+	p.silenceStart = false
 	for {
 		select {
 		case <-p.stopchan:
