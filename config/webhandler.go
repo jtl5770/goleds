@@ -39,6 +39,7 @@ func getConfigHandler(w http.ResponseWriter, r *http.Request, cfile string) {
 	}
 
 	runtimeConfig := RuntimeConfig{
+		LedsTotal:    fullConfig.Hardware.Display.LedsTotal,
 		SensorLED:    fullConfig.SensorLED,
 		NightLED:     fullConfig.NightLED,
 		ClockLED:     fullConfig.ClockLED,

@@ -92,7 +92,6 @@ func (s *AbstractProducer) runner() {
 		s.updateMutex.Lock()
 		defer s.updateMutex.Unlock()
 
-		// This is the core of the race condition fix.
 		// After the runfunc completes, we do a final non-destructive check for a trigger.
 		if s.triggerEvent.HasPending() {
 			// A trigger was pending. Relaunch the runner to handle it.

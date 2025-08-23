@@ -4,6 +4,7 @@ package config
 // safely modified at runtime through the web UI. It excludes
 // hardware-specific and other sensitive settings.
 type RuntimeConfig struct {
+	LedsTotal    int                `json:"LedsTotal"`
 	SensorLED    SensorLEDConfig    `yaml:"SensorLED" json:"SensorLED"`
 	NightLED     NightLEDConfig     `yaml:"NightLED" json:"NightLED"`
 	ClockLED     ClockLEDConfig     `yaml:"ClockLED" json:"ClockLED"`

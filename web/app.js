@@ -57,15 +57,19 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- Form Building ---
 
 const isColorField = (key) => /LedRGB$|^Led(Hour|Minute|Green|Yellow|Red)$/i.test(key);
-const isDurationField = (key) => /Duration$|Delay$|Time$|UpdateFreq$/i.test(key);
+const isDurationField = (key) => /(Duration|Delay|Time|UpdateFreq)$/i.test(key);
+const isNonNegativeNumber = (key) => /^(SampleRate|FramesPerBuffer|Width)$/i.test(key);
+const isDbField = (key) => /^(MinDB|MaxDB)$/i.test(key);
+const isLedPosition = (key) => /^(StartLed|EndLed)/i.test(key);
 
 function buildForm(config, container) {
     container.innerHTML = '';
-    buildRecursive(config, container, []);
+    buildRecursive(config, container, [], config.LedsTotal);
 }
 
-function buildRecursive(data, parentElement, path) {
+function buildRecursive(data, parentElement, path, ledsTotal) {
     for (const key in data) {
+        if (key === 'LedsTotal') continue; // Don't show this field
         const value = data[key];
         const currentPath = [...path, key];
         const pathString = currentPath.join('.');
@@ -76,7 +80,7 @@ function buildRecursive(data, parentElement, path) {
             legend.textContent = key;
             fieldset.appendChild(legend);
             parentElement.appendChild(fieldset);
-            buildRecursive(value, fieldset, currentPath);
+            buildRecursive(value, fieldset, currentPath, ledsTotal);
         } else {
             const div = document.createElement('div');
             div.className = 'form-control';
@@ -141,7 +145,7 @@ function buildRecursive(data, parentElement, path) {
                 listContainer.dataset.path = pathString;
 
                 value.forEach(blob => {
-                    listContainer.appendChild(createBlobListItem(blob));
+                    listContainer.appendChild(createBlobListItem(blob, ledsTotal));
                 });
 
                 const addButton = document.createElement('button');
@@ -154,15 +158,69 @@ function buildRecursive(data, parentElement, path) {
                 });
                 listContainer.appendChild(addButton);
                 div.appendChild(listContainer);
+            } else if (pathString === 'CylonLED.Step') {
+                const container = document.createElement('div');
+                container.className = 'number-input-container';
+                const input = createNumberInput(value, 0.1, undefined, 0.1);
+                input.id = pathString;
+                input.dataset.path = pathString;
+                container.appendChild(input);
+                div.appendChild(container);
+            } else if (pathString === 'CylonLED.Width') {
+                const container = document.createElement('div');
+                container.className = 'number-input-container';
+                const input = createNumberInput(value, 1, ledsTotal > 0 ? Math.floor(ledsTotal / 2) : 1, 1);
+                input.id = pathString;
+                input.dataset.path = pathString;
+                container.appendChild(input);
+                div.appendChild(container);
+            } else if (pathString === 'NightLED.Latitude') {
+                const container = document.createElement('div');
+                container.className = 'number-input-container';
+                const input = createNumberInput(value, -90, 90, 0.000001);
+                input.id = pathString;
+                input.dataset.path = pathString;
+                container.appendChild(input);
+                div.appendChild(container);
+            } else if (pathString === 'NightLED.Longitude') {
+                const container = document.createElement('div');
+                container.className = 'number-input-container';
+                const input = createNumberInput(value, -180, 180, 0.000001);
+                input.id = pathString;
+                input.dataset.path = pathString;
+                container.appendChild(input);
+                div.appendChild(container);
+            } else if (isNonNegativeNumber(key)) {
+                const container = document.createElement('div');
+                container.className = 'number-input-container';
+                const input = createNumberInput(value, 0, undefined, 1);
+                input.id = pathString;
+                input.dataset.path = pathString;
+                container.appendChild(input);
+                div.appendChild(container);
+            } else if (isDbField(key)) {
+                const container = document.createElement('div');
+                container.className = 'number-input-container';
+                const input = createNumberInput(value, undefined, 0, 1);
+                input.id = pathString;
+                input.dataset.path = pathString;
+                container.appendChild(input);
+                div.appendChild(container);
+            } else if (isLedPosition(key)) {
+                const container = document.createElement('div');
+                container.className = 'number-input-container';
+                const input = createNumberInput(value, 0, ledsTotal > 0 ? ledsTotal - 1 : 0, 1);
+                input.id = pathString;
+                input.dataset.path = pathString;
+                container.appendChild(input);
+                div.appendChild(container);
             } else if (isDurationField(key)) {
                 const container = document.createElement('div');
                 container.className = 'duration-input-container';
-                const input = document.createElement('input');
+                const input = createNumberInput(value / 1000000, 0, undefined, 1);
                 input.id = pathString;
                 input.dataset.path = pathString;
                 input.dataset.type = 'duration';
-                input.type = 'number';
-                input.value = value / 1000000; // Convert ns to ms
                 container.appendChild(input);
                 const unitLabel = document.createElement('span');
                 unitLabel.textContent = 'ms';
@@ -173,9 +231,9 @@ function buildRecursive(data, parentElement, path) {
                 container.className = 'rgb-input-container';
                 container.dataset.path = pathString;
                 const [r, g, b] = value;
-                container.appendChild(createLabeledInput('R', r));
-                container.appendChild(createLabeledInput('G', g));
-                container.appendChild(createLabeledInput('B', b));
+                container.appendChild(createLabeledInput('R', r, 0, 255, 1));
+                container.appendChild(createLabeledInput('G', g, 0, 255, 1));
+                container.appendChild(createLabeledInput('B', b, 0, 255, 1));
                 div.appendChild(container);
             } else {
                 const input = document.createElement('input');
@@ -222,9 +280,9 @@ function createColorListItem(color) {
     item.appendChild(handle);
 
     const [r, g, b] = color;
-    item.appendChild(createLabeledInput('R', r));
-    item.appendChild(createLabeledInput('G', g));
-    item.appendChild(createLabeledInput('B', b));
+    item.appendChild(createLabeledInput('R', r, 0, 255, 1));
+    item.appendChild(createLabeledInput('G', g, 0, 255, 1));
+    item.appendChild(createLabeledInput('B', b, 0, 255, 1));
 
     const deleteBtn = document.createElement('span');
     deleteBtn.className = 'delete-color-btn';
@@ -242,21 +300,21 @@ function createColorListItem(color) {
     return item;
 }
 
-function createBlobListItem(blob) {
+function createBlobListItem(blob, ledsTotal) {
     const item = document.createElement('div');
     item.className = 'blob-list-item';
 
     // Create inputs for blob properties
-    item.appendChild(createLabeledInput('DeltaX', blob.DeltaX, -1, 1, 0.1));
-    item.appendChild(createLabeledInput('X', blob.X, 0, 1000, 1));
-    item.appendChild(createLabeledInput('Width', blob.Width, 0, 1000, 1));
+    item.appendChild(createLabeledInput('DeltaX', blob.DeltaX, undefined, undefined, 0.1));
+    item.appendChild(createLabeledInput('X', blob.X, 0, ledsTotal > 0 ? ledsTotal - 1 : 0, 1));
+    item.appendChild(createLabeledInput('Width', blob.Width, 0, undefined, 1));
 
     const [r, g, b] = blob.LedRGB;
     const rgbContainer = document.createElement('div');
     rgbContainer.className = 'rgb-input-container';
-    rgbContainer.appendChild(createLabeledInput('R', r));
-    rgbContainer.appendChild(createLabeledInput('G', g));
-    rgbContainer.appendChild(createLabeledInput('B', b));
+    rgbContainer.appendChild(createLabeledInput('R', r, 0, 255, 1));
+    rgbContainer.appendChild(createLabeledInput('G', g, 0, 255, 1));
+    rgbContainer.appendChild(createLabeledInput('B', b, 0, 255, 1));
     item.appendChild(rgbContainer);
 
     const deleteBtn = document.createElement('span');
@@ -270,17 +328,31 @@ function createBlobListItem(blob) {
     return item;
 }
 
-function createNumberInput(value) {
+function createNumberInput(value, min, max, step) {
     const input = document.createElement('input');
     input.type = 'number';
-    input.min = 0;
-    input.max = 255;
-    input.step = 1;
+    if (min !== undefined) input.min = min;
+    if (max !== undefined) input.max = max;
+    if (step !== undefined) input.step = step;
     input.value = value;
+
+    input.addEventListener('input', () => {
+        const numValue = parseFloat(input.value);
+        const minValue = input.min !== '' ? parseFloat(input.min) : -Infinity;
+        const maxValue = input.max !== '' ? parseFloat(input.max) : Infinity;
+
+        if (numValue < minValue) {
+            input.value = input.min;
+        }
+        if (numValue > maxValue) {
+            input.value = input.max;
+        }
+    });
+
     return input;
 }
 
-function createLabeledInput(labelText, value, min = 0, max = 255, step = 1) {
+function createLabeledInput(labelText, value, min, max, step) {
     const container = document.createElement('div');
     container.className = 'labeled-input';
     const label = document.createElement('label');
@@ -294,33 +366,47 @@ function createLabeledInput(labelText, value, min = 0, max = 255, step = 1) {
 
 function updateConfigFromForm(config, container) {
     // Handle standard inputs
-    const inputs = container.querySelectorAll('input[data-path]:not([type="number"]), textarea[data-path]');
+    const inputs = container.querySelectorAll('input[data-path], textarea[data-path]');
     inputs.forEach(input => {
         const path = input.dataset.path;
         if (!path) return;
-        
+
         const pathParts = path.split('.');
+        const lastPart = pathParts[pathParts.length - 1];
         let value;
+
         if (input.tagName === 'TEXTAREA') {
-            try { value = JSON.parse(input.value); } catch (e) { value = []; }
+            try {
+                value = JSON.parse(input.value);
+            } catch (e) {
+                value = [];
+            }
         } else if (input.type === 'checkbox') {
             value = input.checked;
+        } else if (input.type === 'number') {
+            if (input.dataset.type === 'duration') {
+                value = parseFloat(input.value) * 1000000; // convert ms to ns
+            } else {
+                value = parseFloat(input.value);
+            }
         } else {
             value = input.value;
-            if (input.dataset.type === 'duration') {
-                value = `${value}ms`;
-            } else if (input.dataset.type === 'number') {
-                value = parseFloat(value);
-            } else if (input.dataset.type === 'array') {
-                try { value = JSON.parse(value); } catch (e) {}
+            if (input.dataset.type === 'array') {
+                try {
+                    value = JSON.parse(value);
+                } catch (e) {}
             }
         }
-        
+
         let current = config;
         for (let i = 0; i < pathParts.length - 1; i++) {
             current = current[pathParts[i]];
         }
-        current[pathParts[pathParts.length - 1]] = value;
+        if (isLedPosition(lastPart)) {
+            current[lastPart] = parseInt(value, 10);
+        } else {
+            current[lastPart] = value;
+        }
     });
 
     // Handle single RGB color inputs
