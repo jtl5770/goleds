@@ -21,6 +21,8 @@ Hardware:
   LEDType: "ws2801"
   # SPI bus frequency in Hz. 2097152 is a common, stable value for Raspberry Pi.
   SPIFrequency: 2097152
+  # Port of the internal web server used for runtime configuration
+  WebserverPort: 8080
 
   # Configuration for the LED display output.
   Display:
