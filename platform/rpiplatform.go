@@ -194,10 +194,11 @@ func (s *RaspberryPiPlatform) spiExchangeMultiplex(index string, data []byte) []
 		pin.Out(gpio.High)
 	}
 
-	if err := s.spiConn.Tx(data, data); err != nil {
+	read := make([]byte, len(data))
+	if err := s.spiConn.Tx(data, read); err != nil {
 		slog.Error("spi transaction failed", "error", err)
 	}
-	return data
+	return read
 }
 
 // ledDriver interface and implementations
