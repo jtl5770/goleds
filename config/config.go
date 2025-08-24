@@ -92,7 +92,6 @@ type BlobCfg struct {
 
 // HardwareConfig defines the hardware configuration.
 type HardwareConfig struct {
-	WebserverPort    uint16        `yaml:"WebserverPort"`
 	LEDType          string        `yaml:"LEDType"`
 	SPIFrequency     int           `yaml:"SPIFrequency"`
 	Display          DisplayConfig `yaml:"Display"`
