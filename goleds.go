@@ -108,16 +108,6 @@ func main() {
 	reloadEvent := u.NewAtomicEvent[bool]()
 	go watchConfigFile(*cfile, reloadEvent)
 
-	// Start the web server in a separate goroutine.
-	http.Handle("/", http.FileServer(http.Dir("./web")))
-	http.HandleFunc("/api/config", c.ConfigHandler(*cfile))
-	go func() {
-		slog.Info("Starting web server", "address", "http://localhost:8080")
-		if err := http.ListenAndServe(":8080", nil); err != nil {
-			slog.Error("Web server failed", "error", err)
-		}
-	}()
-
 	signal.Notify(ossignal, os.Interrupt)
 
 	for {
@@ -326,6 +316,17 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 
 	go a.combineAndUpdateDisplay(ledReader, ledBufferPool)
 	go a.stateManager()
+
+	// Start the web server in a separate goroutine.
+	http.Handle("/", http.FileServer(http.Dir("./web")))
+	http.HandleFunc("/api/config", c.ConfigHandler(cfile))
+	go func() {
+		slog.Info("Starting web server", "address", "http://localhost:8080")
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", conf.Hardware.WebserverPort), nil); err != nil {
+			slog.Error("Web server failed", "error", err)
+		}
+	}()
+
 	return nil
 }
 
