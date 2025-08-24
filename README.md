@@ -105,7 +105,7 @@ All aspects of the system are controlled by the `config.yml`
 file. This is where you define your hardware layout, sensor
 properties, and producer settings.
 
-**[➡️ See the example `config.yml,orig` for a full list of parameters and detailed comments.](config.yml)**
+**[➡️ See the example `config.yml.orig` for a full list of parameters and detailed comments.](config.yml.orig)**
 
 A key aspect of the configuration is the interaction between
 producers. For example, by default, the `MultiBlobProducer` and
