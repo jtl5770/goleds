@@ -19,12 +19,12 @@ type SensorLEDConfig struct {
 	RunUpDelay        time.Duration `yaml:"RunUpDelay"`
 	RunDownDelay      time.Duration `yaml:"RunDownDelay"`
 	HoldTime          time.Duration `yaml:"HoldTime"`
-	LedRGB            []float64     `yaml:"LedRGB"`
+	LedRGB            []float64     `yaml:"LedRGB,flow"`
 	LatchEnabled      bool          `yaml:"LatchEnabled"`
 	LatchTriggerValue int           `yaml:"LatchTriggerValue"`
 	LatchTriggerDelay time.Duration `yaml:"LatchTriggerDelay"`
 	LatchTime         time.Duration `yaml:"LatchTime"`
-	LatchLedRGB       []float64     `yaml:"LatchLedRGB"`
+	LatchLedRGB       []float64     `yaml:"LatchLedRGB,flow"`
 }
 
 // NightLEDConfig defines the configuration for the NightLED producer.
@@ -32,7 +32,7 @@ type NightLEDConfig struct {
 	Enabled   bool        `yaml:"Enabled"`
 	Latitude  float64     `yaml:"Latitude"`
 	Longitude float64     `yaml:"Longitude"`
-	LedRGB    [][]float64 `yaml:"LedRGB"`
+	LedRGB    [][]float64 `yaml:"LedRGB,flow"`
 }
 
 // ClockLEDConfig defines the configuration for the ClockLED producer.
@@ -42,8 +42,8 @@ type ClockLEDConfig struct {
 	EndLedHour     int       `yaml:"EndLedHour"`
 	StartLedMinute int       `yaml:"StartLedMinute"`
 	EndLedMinute   int       `yaml:"EndLedMinute"`
-	LedHour        []float64 `yaml:"LedHour"`
-	LedMinute      []float64 `yaml:"LedMinute"`
+	LedHour        []float64 `yaml:"LedHour,flow"`
+	LedMinute      []float64 `yaml:"LedMinute,flow"`
 }
 
 // AudioLEDConfig defines the configuration for the AudioLED producer.
@@ -54,9 +54,9 @@ type AudioLEDConfig struct {
 	EndLedLeft      int           `yaml:"EndLedLeft"`
 	StartLedRight   int           `yaml:"StartLedRight"`
 	EndLedRight     int           `yaml:"EndLedRight"`
-	LedGreen        []float64     `yaml:"LedGreen"`
-	LedYellow       []float64     `yaml:"LedYellow"`
-	LedRed          []float64     `yaml:"LedRed"`
+	LedGreen        []float64     `yaml:"LedGreen,flow"`
+	LedYellow       []float64     `yaml:"LedYellow,flow"`
+	LedRed          []float64     `yaml:"LedRed,flow"`
 	SampleRate      int           `yaml:"SampleRate"`
 	FramesPerBuffer int           `yaml:"FramesPerBuffer"`
 	UpdateFreq      time.Duration `yaml:"UpdateFreq"`
@@ -71,7 +71,7 @@ type CylonLEDConfig struct {
 	Delay    time.Duration `yaml:"Delay"`
 	Step     float64       `yaml:"Step"`
 	Width    int           `yaml:"Width"`
-	LedRGB   []float64     `yaml:"LedRGB"`
+	LedRGB   []float64     `yaml:"LedRGB,flow"`
 }
 
 // MultiBlobLEDConfig defines the configuration for the MultiBlobLED producer.
@@ -79,7 +79,7 @@ type MultiBlobLEDConfig struct {
 	Enabled  bool          `yaml:"Enabled"`
 	Duration time.Duration `yaml:"Duration"`
 	Delay    time.Duration `yaml:"Delay"`
-	BlobCfg  []BlobCfg     `yaml:"BlobCfg"`
+	BlobCfg  []BlobCfg     `yaml:"BlobCfg,flow"`
 }
 
 // BlobCfg defines the configuration for a single blob in the MultiBlobLED producer.
@@ -87,7 +87,7 @@ type BlobCfg struct {
 	DeltaX float64   `yaml:"DeltaX"`
 	X      float64   `yaml:"X"`
 	Width  float64   `yaml:"Width"`
-	LedRGB []float64 `yaml:"LedRGB"`
+	LedRGB []float64 `yaml:"LedRGB,flow"`
 }
 
 // HardwareConfig defines the hardware configuration.
@@ -97,8 +97,8 @@ type HardwareConfig struct {
 	Display          DisplayConfig `yaml:"Display"`
 	Sensors          SensorsConfig `yaml:"Sensors"`
 	SpiMultiplexGPIO map[string]struct {
-		Low  []int `yaml:"Low"`
-		High []int `yaml:"High"`
+		Low  []int `yaml:"Low,flow"`
+		High []int `yaml:"High,flow"`
 	} `yaml:"SpiMultiplexGPIO"`
 }
 
@@ -106,9 +106,9 @@ type HardwareConfig struct {
 type DisplayConfig struct {
 	ForceUpdateDelay  time.Duration                 `yaml:"ForceUpdateDelay"`
 	LedsTotal         int                           `yaml:"LedsTotal"`
-	ColorCorrection   []float64                     `yaml:"ColorCorrection"`
+	ColorCorrection   []float64                     `yaml:"ColorCorrection,flow"`
 	APA102_Brightness byte                          `yaml:"APA102_Brightness"`
-	LedSegments       map[string][]LedSegmentConfig `yaml:"LedSegments"`
+	LedSegments       map[string][]LedSegmentConfig `yaml:"LedSegments,flow"`
 }
 
 // LedSegmentConfig defines the configuration for a single LED segment.

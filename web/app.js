@@ -250,6 +250,9 @@ function buildRecursive(data, parentElement, path, ledsTotal) {
                 if (typeof value === 'boolean') {
                     input.type = 'checkbox';
                     input.checked = value;
+                } else if (typeof value === 'number') {
+                    input.type = 'number';
+                    input.value = value;
                 } else {
                     input.type = 'text';
                     input.value = Array.isArray(value) ? JSON.stringify(value) : value;
@@ -465,6 +468,7 @@ function updateConfigFromForm(config, container) {
     const pickers = container.querySelectorAll('.rgb-input-container');
     pickers.forEach(picker => {
         const path = picker.dataset.path;
+        if (!path) return;
         const numberInputs = picker.querySelectorAll('input[type="number"]');
         const r = parseInt(numberInputs[0].value, 10) || 0;
         const g = parseInt(numberInputs[1].value, 10) || 0;
