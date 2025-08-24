@@ -67,12 +67,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     resetButton.addEventListener('click', () => {
-        if (originalConfig) {
-            buildForm(originalConfig, formContainer);
-            showMessage('Form has been reset.', 'info');
-        } else {
-            showMessage('Original configuration not available.', 'error');
-        }
+        fetch('/api/config')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(config => {
+                originalConfig = config;
+                buildForm(originalConfig, formContainer);
+                showMessage('Form has been reset with the latest configuration from the server.', 'info');
+            })
+            .catch(error => {
+                showMessage(`Error loading configuration: ${error}`, 'error');
+            });
     });
 });
 
@@ -126,7 +135,9 @@ function buildRecursive(data, parentElement, path, ledsTotal) {
                 addButton.className = 'add-color-btn';
                 addButton.type = 'button';
                 addButton.addEventListener('click', () => {
-                    listContainer.insertBefore(createColorListItem([0, 0, 0]),listContainer.lastChild);
+                    const newItem = createColorListItem([0, 0, 0]);
+                    listContainer.insertBefore(newItem, addButton);
+                    updateArrowStates(listContainer);
                 });
                 
                 div.appendChild(listContainer);
@@ -148,11 +159,13 @@ function buildRecursive(data, parentElement, path, ledsTotal) {
                 addButton.className = 'add-blob-btn';
                 addButton.type = 'button';
                 addButton.addEventListener('click', () => {
-                    listContainer.insertBefore(createBlobListItem({ DeltaX: 0.1, X: 50, Width: 512, LedRGB: [255,0,0]}),
-                        listContainer.lastChild);
+                    const newItem = createBlobListItem({ DeltaX: 0.1, X: 50, Width: 512, LedRGB: [255,0,0]}, ledsTotal);
+                    listContainer.insertBefore(newItem, addButton);
+                    updateBlobListStates(listContainer);
                 });
                 listContainer.appendChild(addButton);
                 div.appendChild(listContainer);
+                updateBlobListStates(listContainer);
             } else if (pathString === 'CylonLED.Step') {
                 const container = document.createElement('div');
                 container.className = 'number-input-container';
@@ -214,7 +227,6 @@ function buildRecursive(data, parentElement, path, ledsTotal) {
                 container.className = 'duration-input-container';
                 const input = createNumberInput(value / 1000000, 0, undefined, 1);
                 input.id = pathString;
-                input.dataset.path = pathString;
                 input.dataset.type = 'duration';
                 container.appendChild(input);
                 const unitLabel = document.createElement('span');
@@ -251,16 +263,25 @@ function buildRecursive(data, parentElement, path, ledsTotal) {
 
 function updateArrowStates(listContainer) {
     const items = listContainer.querySelectorAll('.color-list-item');
+    const numItems = items.length;
     items.forEach((item, index) => {
         const upArrow = item.querySelector('.arrow-up');
         const downArrow = item.querySelector('.arrow-down');
+        const deleteBtn = item.querySelector('.delete-color-btn');
 
         if (upArrow) upArrow.classList.toggle('disabled', index === 0);
-        if (downArrow) downArrow.classList.toggle('disabled', index === items.length - 1);
+        if (downArrow) downArrow.classList.toggle('disabled', index === numItems - 1);
+        if (deleteBtn) deleteBtn.classList.toggle('disabled', numItems === 1);
+    });
+}
 
-        if (items.length === 1) {
-            if (upArrow) upArrow.classList.add('disabled');
-            if (downArrow) downArrow.classList.add('disabled');
+function updateBlobListStates(listContainer) {
+    const items = listContainer.querySelectorAll('.blob-list-item');
+    const numItems = items.length;
+    items.forEach((item) => {
+        const deleteBtn = item.querySelector('.delete-blob-btn');
+        if (deleteBtn) {
+            deleteBtn.classList.toggle('disabled', numItems === 1);
         }
     });
 }
@@ -307,12 +328,9 @@ function createColorListItem(color) {
     deleteBtn.textContent = '✖';
     deleteBtn.addEventListener('click', () => {
         const listContainer = item.parentElement;
-        // Ensure at least one item remains
-        if (listContainer.children.length > 2) { // 2 because of the add button
+        if (listContainer.querySelectorAll('.color-list-item').length > 1) {
             item.remove();
             updateArrowStates(listContainer);
-        } else {
-            alert('At least one color is required.');
         }
     });
     item.appendChild(deleteBtn);
@@ -351,7 +369,11 @@ function createBlobListItem(blob, ledsTotal) {
     deleteBtn.className = 'delete-blob-btn';
     deleteBtn.textContent = '✖';
     deleteBtn.addEventListener('click', () => {
-        item.remove();
+        const listContainer = item.parentElement;
+        if (listContainer.querySelectorAll('.blob-list-item').length > 1) {
+            item.remove();
+            updateBlobListStates(listContainer);
+        }
     });
     item.appendChild(deleteBtn);
 

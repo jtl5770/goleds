@@ -10,7 +10,7 @@
         fieldset { margin-bottom: 1.5em; border: 1px solid #999; border-radius: 8px; padding: 1em; background-color: #333; color: #eee; }
         legend { font-weight: bold; font-size: 1.2em; color: #007bff; background-color: #fff; padding: 5px 10px; border: solid 1px; border-radius: 8px }
         .form-control { margin-bottom: 1em; display: flex; align-items: flex-start; }
-        label { display: inline-block; width: 150px; font-weight: bold; }
+        label { display: inline-block; width: 140px; }
         input[type="text"], input[type="checkbox"], textarea { margin-left: 10px; }
         input[type="text"] { width: 80px; }
         textarea { width: 250px; }
@@ -85,6 +85,12 @@
         .blob-list-item .rgb-input-container { background-color: #aaa; margin-left: 0; }
         .delete-blob-btn { cursor: pointer; color: red; margin-left: 20px}
         .add-blob-btn { margin-top: 10px; cursor: pointer; background-color: #007bff; color: #fff; padding: 5px 10px }
+
+        .delete-color-btn.disabled, .delete-blob-btn.disabled {
+            color: #888;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
     </style>
 </head>
 <body>

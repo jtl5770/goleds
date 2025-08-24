@@ -5,3 +5,4 @@
 .aider*
 /.gemini/
 .commit_message.txt
+config.yml.orig
