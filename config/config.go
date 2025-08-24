@@ -146,9 +146,6 @@ type LoggingConfig struct {
 }
 
 type Config struct {
-	RealHW       bool
-	SensorShow   bool
-	Configfile   string
 	SensorLED    SensorLEDConfig    `yaml:"SensorLED"`
 	NightLED     NightLEDConfig     `yaml:"NightLED"`
 	ClockLED     ClockLEDConfig     `yaml:"ClockLED"`
@@ -173,19 +170,17 @@ func (c *Config) Validate() error {
 	}
 
 	// 1. SPI Multiplexer Validation (only in hardware mode)
-	if c.RealHW {
-		// Check sensors
-		for name, sensorCfg := range c.Hardware.Sensors.SensorCfg {
-			if _, ok := c.Hardware.SpiMultiplexGPIO[sensorCfg.SpiMultiplex]; !ok {
-				return fmt.Errorf("sensor '%s' uses undefined SpiMultiplex key: '%s'", name, sensorCfg.SpiMultiplex)
-			}
+	// Check sensors
+	for name, sensorCfg := range c.Hardware.Sensors.SensorCfg {
+		if _, ok := c.Hardware.SpiMultiplexGPIO[sensorCfg.SpiMultiplex]; !ok {
+			return fmt.Errorf("sensor '%s' uses undefined SpiMultiplex key: '%s'", name, sensorCfg.SpiMultiplex)
 		}
-		// Check LED segments
-		for groupName, segments := range c.Hardware.Display.LedSegments {
-			for i, segmentCfg := range segments {
-				if _, ok := c.Hardware.SpiMultiplexGPIO[segmentCfg.SpiMultiplex]; !ok {
-					return fmt.Errorf("LED segment %d in group '%s' uses undefined SpiMultiplex key: '%s'", i, groupName, segmentCfg.SpiMultiplex)
-				}
+	}
+	// Check LED segments
+	for groupName, segments := range c.Hardware.Display.LedSegments {
+		for i, segmentCfg := range segments {
+			if _, ok := c.Hardware.SpiMultiplexGPIO[segmentCfg.SpiMultiplex]; !ok {
+				return fmt.Errorf("LED segment %d in group '%s' uses undefined SpiMultiplex key: '%s'", i, groupName, segmentCfg.SpiMultiplex)
 			}
 		}
 	}
@@ -246,7 +241,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-func ReadConfig(cfile string, realhw bool, sensorshow bool) (*Config, error) {
+func ReadConfig(cfile string) (*Config, error) {
 	slog.Info("Reading config file", "file", cfile)
 	f, err := os.Open(cfile)
 	if err != nil {
@@ -259,9 +254,6 @@ func ReadConfig(cfile string, realhw bool, sensorshow bool) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	conf.RealHW = realhw
-	conf.SensorShow = sensorshow
-	conf.Configfile = cfile
 
 	if err := conf.Validate(); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)

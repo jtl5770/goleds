@@ -30,8 +30,7 @@ func ConfigHandler(cfile string) http.HandlerFunc {
 func getConfigHandler(w http.ResponseWriter, r *http.Request, cfile string) {
 	slog.Info("Handling GET /api/config request")
 	// We read the file on every request to ensure we always have the latest version.
-	// The realp and sensp flags are false because they don't affect reading the producer settings.
-	fullConfig, err := ReadConfig(cfile, false, false)
+	fullConfig, err := ReadConfig(cfile)
 	if err != nil {
 		slog.Error("Failed to read config file for API", "error", err)
 		http.Error(w, "Failed to read configuration", http.StatusInternalServerError)
@@ -69,8 +68,7 @@ func setConfigHandler(w http.ResponseWriter, r *http.Request, cfile string) {
 	defer r.Body.Close()
 
 	// 2. Read the current full configuration from disk to preserve hardware settings.
-	// The realp and sensp flags are false because we are just reading and merging.
-	fullConfig, err := ReadConfig(cfile, false, false)
+	fullConfig, err := ReadConfig(cfile)
 	if err != nil {
 		slog.Error("Failed to read existing config for update", "error", err)
 		http.Error(w, "Failed to read configuration", http.StatusInternalServerError)

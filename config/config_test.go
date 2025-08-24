@@ -39,20 +39,16 @@ Logging:
     Format: "json"
     File: "/var/log/goleds-hw.log"
 `
-	err = os.WriteFile(configFile, []byte(configData), 0644)
+	err = os.WriteFile(configFile, []byte(configData), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write dummy config file: %v", err)
 	}
 
 	// Call the function to be tested
-	conf, err := ReadConfig(configFile, true, false)
+	conf, err := ReadConfig(configFile)
 	assert.NoError(t, err, "ReadConfig should not return an error")
 
 	// Assertions
-	assert.True(t, conf.RealHW, "RealHW should be true")
-	assert.False(t, conf.SensorShow, "SensorShow should be false")
-	assert.Equal(t, configFile, conf.Configfile, "Configfile should be set correctly")
-
 	assert.True(t, conf.SensorLED.Enabled, "SensorLED.Enabled should be true")
 	assert.Equal(t, 10*time.Millisecond, conf.SensorLED.RunUpDelay, "SensorLED.RunUpDelay should be 10ms")
 	assert.Equal(t, 20*time.Millisecond, conf.SensorLED.RunDownDelay, "SensorLED.RunDownDelay should be 20ms")
@@ -95,13 +91,13 @@ CylonLED:
 MultiBlobLED:
   Enabled: false
 `
-	err = os.WriteFile(configFile, []byte(configData), 0644)
+	err = os.WriteFile(configFile, []byte(configData), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write dummy config file: %v", err)
 	}
 
 	// Call the function to be tested
-	_, err = ReadConfig(configFile, false, false)
+	_, err = ReadConfig(configFile)
 
 	// Assertions
 	assert.Error(t, err, "ReadConfig should return an error")
@@ -127,13 +123,13 @@ SensorLED:
 CylonLED:
   Enabled: true
 `
-	err = os.WriteFile(configFile, []byte(configData), 0644)
+	err = os.WriteFile(configFile, []byte(configData), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write dummy config file: %v", err)
 	}
 
 	// Call the function to be tested
-	_, err = ReadConfig(configFile, false, false)
+	_, err = ReadConfig(configFile)
 
 	// Assertions
 	assert.Error(t, err, "ReadConfig should return an error")

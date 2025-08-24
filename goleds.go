@@ -204,7 +204,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	a.stopsignal = make(chan struct{})
 	a.ledproducers = make(map[string]p.LedProducer)
 
-	conf, err := c.ReadConfig(cfile, realp, sensp)
+	conf, err := c.ReadConfig(cfile)
 	if err != nil {
 		return fmt.Errorf("failed to read or validate config: %w", err)
 	}
@@ -212,7 +212,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	// Configure logging with values from the config file.
 	var logConf c.SingleLoggingConfig
 	bufferLogs := false
-	if conf.RealHW {
+	if realp {
 		logConf = conf.Logging.HW
 	} else {
 		logConf = conf.Logging.TUI
@@ -227,7 +227,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	}
 
 	// Handle the special "-sensor-show development mode"
-	if !conf.RealHW && conf.SensorShow {
+	if !realp && sensp {
 		slog.Info("Starting in Sensor Viewer development mode...")
 		viewer := pl.NewSensorViewer(conf.Hardware.Sensors, a.ossignal, true)
 		go viewer.Start()
@@ -236,9 +236,9 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	}
 
 	// Standard platform setup
-	if conf.RealHW {
+	if realp {
 		rpiPlatform := pl.NewRaspberryPiPlatform(conf)
-		if conf.SensorShow {
+		if sensp {
 			viewer := pl.NewSensorViewer(conf.Hardware.Sensors, a.ossignal, false)
 			rpiPlatform.SetSensorViewer(viewer)
 		}
@@ -260,9 +260,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 		return fmt.Errorf("failed to start platform: %w", err)
 	}
 
-	// Block until the platform signals it's ready. This is crucial for the TUI
-	// to prevent race conditions with libraries that interact with the terminal,
-	// like portaudio.
+	// Block until the platform signals it's ready.
 	<-a.platform.Ready()
 	slog.Info("Platform is ready, starting producers...")
 
