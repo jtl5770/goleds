@@ -1,8 +1,26 @@
 document.addEventListener('DOMContentLoaded', () => {
     const formContainer = document.getElementById('config-form');
     const saveButton = document.getElementById('save-button');
+    const resetButton = document.getElementById('reset-button');
     const messageDiv = document.getElementById('message');
     let originalConfig = null;
+
+    function repositionMessageDiv() {
+        const formRect = formContainer.getBoundingClientRect();
+        messageDiv.style.left = `${formRect.left + formRect.width / 2}px`;
+        messageDiv.style.transform = 'translateX(-50%)';
+    }
+
+    function showMessage(message, type = 'info', duration = 3000) {
+        repositionMessageDiv();
+        messageDiv.textContent = message;
+        messageDiv.className = `show ${type}`;
+        setTimeout(() => {
+            messageDiv.className = messageDiv.className.replace('show', '');
+        }, duration);
+    }
+
+    window.addEventListener('resize', repositionMessageDiv);
 
     // Fetch config and build the form
     fetch('/api/config')
@@ -17,15 +35,13 @@ document.addEventListener('DOMContentLoaded', () => {
             buildForm(originalConfig, formContainer);
         })
         .catch(error => {
-            messageDiv.textContent = `Error loading configuration: ${error}`;
-            messageDiv.style.color = 'red';
+            showMessage(`Error loading configuration: ${error}`, 'error');
         });
 
     // Handle form submission
     saveButton.addEventListener('click', () => {
         if (!originalConfig) {
-            messageDiv.textContent = 'Configuration not loaded yet. Cannot save.';
-            messageDiv.style.color = 'red';
+            showMessage('Configuration not loaded yet. Cannot save.', 'error');
             return;
         }
 
@@ -43,14 +59,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return response.text();
         })
         .then(data => {
-            messageDiv.textContent = 'Configuration saved successfully! The application will now reload.';
-            messageDiv.style.color = 'green';
-            setTimeout(() => { messageDiv.textContent = ''; }, 5000);
+            showMessage('Configuration saved successfully! The application will now reload.', 'success', 5000);
         })
         .catch(error => {
-            messageDiv.textContent = `Error saving configuration: ${error}`;
-            messageDiv.style.color = 'red';
+            showMessage(`Error saving configuration: ${error}`, 'error');
         });
+    });
+
+    resetButton.addEventListener('click', () => {
+        if (originalConfig) {
+            buildForm(originalConfig, formContainer);
+            showMessage('Form has been reset.', 'info');
+        } else {
+            showMessage('Original configuration not available.', 'error');
+        }
     });
 });
 
@@ -110,34 +132,7 @@ function buildRecursive(data, parentElement, path, ledsTotal) {
                 div.appendChild(listContainer);
                 listContainer.appendChild(addButton);
                 
-                // Init drag and drop
-                let draggedItem = null;
-                listContainer.addEventListener('dragstart', e => {
-                    draggedItem = e.target.closest('.color-list-item');
-                    setTimeout(() => {
-                        if (draggedItem) draggedItem.style.display = 'none';
-                    }, 0);
-                });
-
-                listContainer.addEventListener('dragend', e => {
-                    setTimeout(() => {
-                        if (draggedItem) {
-                            draggedItem.style.display = 'flex';
-                            draggedItem = null;
-                        }
-                    }, 0);
-                });
-
-                listContainer.addEventListener('dragover', e => {
-                    e.preventDefault();
-                    const afterElement = getDragAfterElement(listContainer, e.clientY);
-                    const currentItem = document.querySelector('.dragging');
-                    if (afterElement == null || afterElement == listContainer.lastChild) {
-                        listContainer.insertBefore(draggedItem, listContainer.lastChild);
-                    } else {
-                        listContainer.insertBefore(draggedItem, afterElement);
-                    }
-                });
+                updateArrowStates(listContainer);
 
             } else if (pathString === 'MultiBlobLED.BlobCfg' && Array.isArray(value)) {
                 const listContainer = document.createElement('div');
@@ -254,30 +249,53 @@ function buildRecursive(data, parentElement, path, ledsTotal) {
     }
 }
 
-function getDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('.color-list-item:not(.dragging)')];
+function updateArrowStates(listContainer) {
+    const items = listContainer.querySelectorAll('.color-list-item');
+    items.forEach((item, index) => {
+        const upArrow = item.querySelector('.arrow-up');
+        const downArrow = item.querySelector('.arrow-down');
 
-    return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) {
-            return { offset: offset, element: child };
-        } else {
-            return closest;
+        if (upArrow) upArrow.classList.toggle('disabled', index === 0);
+        if (downArrow) downArrow.classList.toggle('disabled', index === items.length - 1);
+
+        if (items.length === 1) {
+            if (upArrow) upArrow.classList.add('disabled');
+            if (downArrow) downArrow.classList.add('disabled');
         }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
+    });
 }
 
 
 function createColorListItem(color) {
     const item = document.createElement('div');
     item.className = 'color-list-item';
-    item.draggable = true;
 
-    const handle = document.createElement('span');
-    handle.className = 'drag-handle';
-    handle.textContent = '☰';
-    item.appendChild(handle);
+    const moveHandle = document.createElement('div');
+    moveHandle.className = 'move-handle';
+    const upArrow = document.createElement('span');
+    upArrow.className = 'arrow-up';
+    upArrow.innerHTML = '&#9650;'; // Up-pointing triangle
+    upArrow.addEventListener('click', () => {
+        if (item.previousElementSibling) {
+            item.parentElement.insertBefore(item, item.previousElementSibling);
+            updateArrowStates(item.parentElement);
+        }
+    });
+
+    const downArrow = document.createElement('span');
+    downArrow.className = 'arrow-down';
+    downArrow.innerHTML = '&#9660;'; // Down-pointing triangle
+    downArrow.addEventListener('click', () => {
+        if (item.nextElementSibling && item.nextElementSibling.tagName === 'DIV') {
+            item.parentElement.insertBefore(item.nextElementSibling, item);
+            updateArrowStates(item.parentElement);
+        }
+    });
+
+    moveHandle.appendChild(upArrow);
+    moveHandle.appendChild(downArrow);
+    item.appendChild(moveHandle);
+
 
     const [r, g, b] = color;
     item.appendChild(createLabeledInput('R', r, 0, 255, 1));
@@ -288,9 +306,11 @@ function createColorListItem(color) {
     deleteBtn.className = 'delete-color-btn';
     deleteBtn.textContent = '✖';
     deleteBtn.addEventListener('click', () => {
+        const listContainer = item.parentElement;
         // Ensure at least one item remains
-        if (item.parentElement.children.length > 1) {
+        if (listContainer.children.length > 2) { // 2 because of the add button
             item.remove();
+            updateArrowStates(listContainer);
         } else {
             alert('At least one color is required.');
         }
@@ -304,18 +324,28 @@ function createBlobListItem(blob, ledsTotal) {
     const item = document.createElement('div');
     item.className = 'blob-list-item';
 
-    // Create inputs for blob properties
-    item.appendChild(createLabeledInput('DeltaX', blob.DeltaX, undefined, undefined, 0.1));
-    item.appendChild(createLabeledInput('X', blob.X, 0, ledsTotal > 0 ? ledsTotal - 1 : 0, 1));
-    item.appendChild(createLabeledInput('Width', blob.Width, 0, undefined, 1));
+    const controlsContainer = document.createElement('div');
+    controlsContainer.className = 'blob-item-controls';
 
+    const topRow = document.createElement('div');
+    topRow.className = 'blob-list-item-row';
+    topRow.appendChild(createLabeledInput('DeltaX', blob.DeltaX, undefined, undefined, 0.1));
+    topRow.appendChild(createLabeledInput('X', blob.X, 0, ledsTotal > 0 ? ledsTotal - 1 : 0, 1));
+    topRow.appendChild(createLabeledInput('Width', blob.Width, 0, undefined, 1));
+    controlsContainer.appendChild(topRow);
+
+    const bottomRow = document.createElement('div');
+    bottomRow.className = 'blob-list-item-row';
     const [r, g, b] = blob.LedRGB;
     const rgbContainer = document.createElement('div');
     rgbContainer.className = 'rgb-input-container';
     rgbContainer.appendChild(createLabeledInput('R', r, 0, 255, 1));
     rgbContainer.appendChild(createLabeledInput('G', g, 0, 255, 1));
     rgbContainer.appendChild(createLabeledInput('B', b, 0, 255, 1));
-    item.appendChild(rgbContainer);
+    bottomRow.appendChild(rgbContainer);
+    controlsContainer.appendChild(bottomRow);
+
+    item.appendChild(controlsContainer);
 
     const deleteBtn = document.createElement('span');
     deleteBtn.className = 'delete-blob-btn';
