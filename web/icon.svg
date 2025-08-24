@@ -1,7 +1,70 @@
-<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="192" height="192" rx="32" fill="#2C2C2C"/>
-    <path d="M128 96C128 74.9249 111.075 58 90 58C68.9251 58 52 74.9249 52 96C52 117.075 68.9251 134 90 134H96" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="96" cy="110" r="6" fill="#FF0000"/>
-    <circle cx="110" cy="110" r="6" fill="#00FF00"/>
-    <circle cx="124" cy="110" r="6" fill="#0000FF"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="192"
+   height="192"
+   viewBox="0 0 192 192"
+   fill="none"
+   version="1.1"
+   id="svg3"
+   sodipodi:docname="icon.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs3" />
+  <sodipodi:namedview
+     id="namedview3"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="6.1041667"
+     inkscape:cx="96"
+     inkscape:cy="96"
+     inkscape:window-width="2256"
+     inkscape:window-height="1432"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg3" />
+  <rect
+     width="192"
+     height="192"
+     rx="32"
+     fill="#2C2C2C"
+     id="rect1" />
+  <path
+     d="M 122.84331,24.076479 C 82.590517,9.3695694 38.453652,29.885034 23.746814,70.13763 c -14.7067701,40.2524 5.808364,84.38959 46.061151,99.09649 40.252605,14.70683 84.389715,-5.80876 99.096515,-46.06117 l 4.18699,-11.45979"
+     stroke="#ffffff"
+     stroke-width="24.4016"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     id="path1" />
+  <circle
+     cx="63.437737"
+     cy="104.58649"
+     fill="#ff0000"
+     id="circle1"
+     style="stroke-width:3.62414"
+     r="21.74482" />
+  <circle
+     cx="114.17565"
+     cy="104.58649"
+     fill="#00ff00"
+     id="circle2"
+     style="stroke-width:3.62414"
+     r="21.74482" />
+  <circle
+     cx="164.91359"
+     cy="104.58649"
+     fill="#0000ff"
+     id="circle3"
+     style="stroke-width:3.62414"
+     r="21.74482" />
 </svg>
