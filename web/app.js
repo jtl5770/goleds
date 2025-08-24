@@ -92,6 +92,7 @@ const isDurationField = (key) => /(Duration|Delay|Time|UpdateFreq)$/i.test(key);
 const isNonNegativeNumber = (key) => /^(SampleRate|FramesPerBuffer|Width)$/i.test(key);
 const isDbField = (key) => /^(MinDB|MaxDB)$/i.test(key);
 const isLedPosition = (key) => /^(StartLed|EndLed)/i.test(key);
+const isLatchTriggerValue = (key) => key === 'LatchTriggerValue';
 
 function buildForm(config, container) {
     container.innerHTML = '';
@@ -222,6 +223,14 @@ function buildRecursive(data, parentElement, path, ledsTotal) {
                 input.dataset.path = pathString;
                 container.appendChild(input);
                 div.appendChild(container);
+            } else if (isLatchTriggerValue(key)) {
+                const container = document.createElement('div');
+                container.className = 'number-input-container';
+                const input = createNumberInput(value, 0, 1023, 1);
+                input.id = pathString;
+                input.dataset.path = pathString;
+                container.appendChild(input);
+                div.appendChild(container);
             } else if (isDurationField(key)) {
                 const container = document.createElement('div');
                 container.className = 'duration-input-container';
@@ -243,21 +252,28 @@ function buildRecursive(data, parentElement, path, ledsTotal) {
                 container.appendChild(createLabeledInput('B', b, 0, 255, 1));
                 div.appendChild(container);
             } else {
-                const input = document.createElement('input');
-                input.id = pathString;
-                input.dataset.path = pathString;
-                input.dataset.type = Array.isArray(value) ? 'array' : typeof value;
-                if (typeof value === 'boolean') {
-                    input.type = 'checkbox';
-                    input.checked = value;
-                } else if (typeof value === 'number') {
-                    input.type = 'number';
-                    input.value = value;
+                if (typeof value === 'number') {
+                    const container = document.createElement('div');
+                    container.className = 'number-input-container';
+                    const input = createNumberInput(value, undefined, undefined, 1);
+                    input.id = pathString;
+                    input.dataset.path = pathString;
+                    container.appendChild(input);
+                    div.appendChild(container);
                 } else {
-                    input.type = 'text';
-                    input.value = Array.isArray(value) ? JSON.stringify(value) : value;
+                    const input = document.createElement('input');
+                    input.id = pathString;
+                    input.dataset.path = pathString;
+                    input.dataset.type = Array.isArray(value) ? 'array' : typeof value;
+                    if (typeof value === 'boolean') {
+                        input.type = 'checkbox';
+                        input.checked = value;
+                    } else {
+                        input.type = 'text';
+                        input.value = Array.isArray(value) ? JSON.stringify(value) : value;
+                    }
+                    div.appendChild(input);
                 }
-                div.appendChild(input);
             }
             parentElement.appendChild(div);
         }
