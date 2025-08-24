@@ -198,7 +198,6 @@ func (s *RaspberryPiPlatform) spiExchangeMultiplex(index string, data []byte) []
 	if err := s.spiConn.Tx(data, read); err != nil {
 		slog.Error("spi transaction failed", "error", err)
 	}
-	slog.Debug("SPI exchange", "index", index, "write", fmt.Sprintf("%x", data), "read", fmt.Sprintf("%x", read))
 	return read
 }
 
@@ -316,7 +315,5 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 func (s *RaspberryPiPlatform) readAdc(multiplex string, channel byte) int {
 	write := []byte{1, (8 + channel) << 4, 0}
 	read := s.spiExchangeMultiplex(multiplex, write)
-	value := ((int(read[1]) & 3) << 8) + int(read[2])
-	slog.Debug("ADC read", "multiplex", multiplex, "channel", channel, "value", value)
-	return value
+	return ((int(read[1]) & 3) << 8) + int(read[2])
 }
