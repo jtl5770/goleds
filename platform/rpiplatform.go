@@ -277,6 +277,5 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 func (s *RaspberryPiPlatform) readAdc(multiplex string, channel byte) int {
 	write := []byte{1, (8 + channel) << 4, 0}
 	read := s.spiExchangeMultiplex(multiplex, write)
-	slog.Debug("ReadADC:", "MTPLX", multiplex, "chan", fmt.Sprintf("%x", channel), "w", fmt.Sprintf("%x", write), "r", fmt.Sprintf("%x", read))
 	return ((int(read[1]) & 3) << 8) + int(read[2])
 }
