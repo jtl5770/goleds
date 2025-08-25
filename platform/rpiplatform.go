@@ -8,22 +8,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/stianeikeland/go-rpio/v4"
 	"lautenbacher.net/goleds/config"
 	"lautenbacher.net/goleds/producer"
 	"lautenbacher.net/goleds/util"
-	"periph.io/x/conn/v3/gpio"
-	"periph.io/x/conn/v3/gpio/gpioreg"
-	"periph.io/x/conn/v3/physic"
-	"periph.io/x/conn/v3/spi"
-	"periph.io/x/conn/v3/spi/spireg"
-	"periph.io/x/host/v3"
 )
 
 type RaspberryPiPlatform struct {
 	*AbstractPlatform
 	ledDriver       ledDriver
-	spiPort         spi.PortCloser
-	spiConn         spi.Conn
 	spiMutex        sync.Mutex
 	spimultiplexcfg map[string]gpiocfg
 	sensorViewer    *SensorViewer
@@ -33,8 +26,8 @@ type RaspberryPiPlatform struct {
 }
 
 type gpiocfg struct {
-	low  []gpio.PinIO
-	high []gpio.PinIO
+	low  []rpio.Pin
+	high []rpio.Pin
 }
 
 func NewRaspberryPiPlatform(conf *config.Config) *RaspberryPiPlatform {
@@ -62,48 +55,29 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 	s.segments = parseDisplaySegments(s.config.Hardware.Display)
 
 	slog.Info("Initialise GPIO and Spi...")
-	if _, err := host.Init(); err != nil {
-		return fmt.Errorf("failed to init periph: %w", err)
+	if err := rpio.Open(); err != nil {
+		return fmt.Errorf("failed to open rpio: %w", err)
+	}
+	if err := rpio.SpiBegin(rpio.Spi0); err != nil {
+		return fmt.Errorf("failed to begin spi: %w", err)
 	}
 
-	var err error
-	s.spiPort, err = spireg.Open("")
-	if err != nil {
-		return fmt.Errorf("failed to open spi: %w", err)
-	}
+	rpio.SpiSpeed(s.config.Hardware.SPIFrequency)
 
-	s.spiConn, err = s.spiPort.Connect(physic.Frequency(s.config.Hardware.SPIFrequency)*physic.Hertz, spi.Mode0, 8)
-	if err != nil {
-		return fmt.Errorf("failed to connect to spi device: %w", err)
-	}
-
-	if p, ok := s.spiConn.(spi.Pins); ok {
-		slog.Debug("****** SPI Pins:", "CLK", p.CLK(), "MOSI", p.MOSI(), "MISO", p.MISO(), "CS", p.CS())
-	}
 	s.spimultiplexcfg = make(map[string]gpiocfg, len(s.config.Hardware.SpiMultiplexGPIO))
 
 	for key, cfg := range s.config.Hardware.SpiMultiplexGPIO {
-		low := make([]gpio.PinIO, 0, len(cfg.Low))
-		high := make([]gpio.PinIO, 0, len(cfg.High))
-		for _, pinName := range cfg.Low {
-			pin := gpioreg.ByName(fmt.Sprintf("GPIO%d", pinName))
-			if pin == nil {
-				return fmt.Errorf("failed to find pin %d", pinName)
-			}
-			if err := pin.Out(gpio.Low); err != nil {
-				return fmt.Errorf("failed to set pin %d to output: %w", pinName, err)
-			}
-			low = append(low, pin)
+		low := make([]rpio.Pin, 0, len(cfg.Low))
+		high := make([]rpio.Pin, 0, len(cfg.High))
+		for _, pin := range cfg.Low {
+			rpiopin := rpio.Pin(pin)
+			rpiopin.Output()
+			low = append(low, rpiopin)
 		}
-		for _, pinName := range cfg.High {
-			pin := gpioreg.ByName(fmt.Sprintf("GPIO%d", pinName))
-			if pin == nil {
-				return fmt.Errorf("failed to find pin %d", pinName)
-			}
-			if err := pin.Out(gpio.High); err != nil {
-				return fmt.Errorf("failed to set pin %d to output: %w", pinName, err)
-			}
-			high = append(high, pin)
+		for _, pin := range cfg.High {
+			rpiopin := rpio.Pin(pin)
+			rpiopin.Output()
+			high = append(high, rpiopin)
 		}
 		s.spimultiplexcfg[key] = gpiocfg{
 			low:  low,
@@ -148,22 +122,10 @@ func (s *RaspberryPiPlatform) Stop() {
 	s.sensorWg.Wait()
 
 	// Now, safely close hardware
-	if s.spiPort != nil {
-		if err := s.spiPort.Close(); err != nil {
-			slog.Error("Error closing spi port", "error", err)
-		}
-		s.spiPort = nil
+	rpio.SpiEnd(rpio.Spi0)
+	if err := rpio.Close(); err != nil {
+		slog.Error("Error closing rpio", "error", err)
 	}
-
-	for _, cfg := range s.spimultiplexcfg {
-		for _, pin := range cfg.low {
-			pin.Halt()
-		}
-		for _, pin := range cfg.high {
-			pin.Halt()
-		}
-	}
-	s.spimultiplexcfg = nil
 
 	// If there is a SensorViewer TUI, close it.
 	if s.sensorViewer != nil {
@@ -191,17 +153,14 @@ func (s *RaspberryPiPlatform) spiExchangeMultiplex(index string, data []byte) []
 	// The existence of the key is guaranteed by the config validation at startup.
 	cfg := s.spimultiplexcfg[index]
 	for _, pin := range cfg.low {
-		pin.Out(gpio.Low)
+		pin.Low()
 	}
 	for _, pin := range cfg.high {
-		pin.Out(gpio.High)
+		pin.High()
 	}
 
-	read := make([]byte, len(data))
-	if err := s.spiConn.Tx(data, read); err != nil {
-		slog.Error("spi transaction failed", "error", err)
-	}
-	return read
+	rpio.SpiExchange(data)
+	return data
 }
 
 // ledDriver interface and implementations

@@ -11,10 +11,9 @@ require (
 	github.com/gordonklaus/portaudio v0.0.0-20250206071425-98a94950218b
 	github.com/nathan-osman/go-sunrise v1.1.0
 	github.com/rivo/tview v0.0.0-20250625164341-a4a78f1e05cb
+	github.com/stianeikeland/go-rpio/v4 v4.6.0
 	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792
 	gopkg.in/yaml.v3 v3.0.1
-	periph.io/x/conn/v3 v3.7.2
-	periph.io/x/host/v3 v3.8.5
 )
 
 require (
