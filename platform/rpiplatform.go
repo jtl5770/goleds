@@ -67,7 +67,7 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 	}
 
 	var err error
-	s.spiPort, err = spireg.Open("/dev/spidev0.1")
+	s.spiPort, err = spireg.Open("/dev/spidev0.0")
 	if err != nil {
 		return fmt.Errorf("failed to open spi: %w", err)
 	}
@@ -289,6 +289,9 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 	ticker := time.NewTicker(s.config.Hardware.Sensors.LoopDelay)
 	defer ticker.Stop()
 
+	ticker2 := time.NewTicker(20 * time.Second)
+	defer ticker2.Stop()
+
 	latestValues := make(map[string]int)
 
 	for {
@@ -296,6 +299,8 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 		case <-s.sensorStopChan:
 			slog.Info("Ending SensorDriver go-routine (RPi)")
 			return
+		case <-ticker2.C:
+			s.sensorEvents <- util.NewTrigger("S0", 150, time.Now())
 		case <-ticker.C:
 			for name, sensor := range s.sensors {
 				value := sensor.smoothedValue(s.readAdc(sensor.spimultiplex, sensor.adcChannel))
