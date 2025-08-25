@@ -67,7 +67,7 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 	}
 
 	var err error
-	s.spiPort, err = spireg.Open("/dev/spidev0.0")
+	s.spiPort, err = spireg.Open("/dev/spidev0.1")
 	if err != nil {
 		return fmt.Errorf("failed to open spi: %w", err)
 	}
