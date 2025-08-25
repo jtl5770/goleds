@@ -72,7 +72,7 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 		return fmt.Errorf("failed to open spi: %w", err)
 	}
 
-	s.spiConn, err = s.spiPort.Connect(physic.Frequency(s.config.Hardware.SPIFrequency)*physic.Hertz, spi.Mode0|spi.NoCS, 8)
+	s.spiConn, err = s.spiPort.Connect(physic.Frequency(s.config.Hardware.SPIFrequency)*physic.Hertz, spi.Mode0, 8)
 	if err != nil {
 		return fmt.Errorf("failed to connect to spi device: %w", err)
 	}
@@ -318,6 +318,6 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 func (s *RaspberryPiPlatform) readAdc(multiplex string, channel byte) int {
 	write := []byte{1, (8 + channel) << 4, 0}
 	read := s.spiExchangeMultiplex(multiplex, write)
-	slog.Debug("ReadADC:", "MTPLX:", multiplex, "w:", fmt.Sprintf("%x", write), "r:", fmt.Sprintf("%x", read))
+	slog.Debug("ReadADC:", "MTPLX", multiplex, "chan", fmt.Sprintf("%x", channel), "w", fmt.Sprintf("%x", write), "r", fmt.Sprintf("%x", read))
 	return ((int(read[1]) & 3) << 8) + int(read[2])
 }
