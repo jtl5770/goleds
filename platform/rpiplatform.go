@@ -67,16 +67,20 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 	}
 
 	var err error
-	s.spiPort, err = spireg.Open("/dev/spidev0.0")
+	s.spiPort, err = spireg.Open("")
 	if err != nil {
 		return fmt.Errorf("failed to open spi: %w", err)
 	}
 
-	s.spiConn, err = s.spiPort.Connect(physic.Frequency(s.config.Hardware.SPIFrequency)*physic.Hertz, spi.Mode0, 8)
+	s.spiConn, err = s.spiPort.Connect(0, spi.Mode0, 8)
 	if err != nil {
 		return fmt.Errorf("failed to connect to spi device: %w", err)
 	}
+	s.spiPort.LimitSpeed(physic.Frequency(s.config.Hardware.SPIFrequency) * physic.Hertz)
 
+	if p, ok := s.spiConn.(spi.Pins); ok {
+		slog.Debug("****** SPI Pins:", "CLK", p.CLK(), "MOSI", p.MOSI(), "MISO", p.MISO(), "CS", p.CS())
+	}
 	s.spimultiplexcfg = make(map[string]gpiocfg, len(s.config.Hardware.SpiMultiplexGPIO))
 
 	for key, cfg := range s.config.Hardware.SpiMultiplexGPIO {
@@ -289,9 +293,6 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 	ticker := time.NewTicker(s.config.Hardware.Sensors.LoopDelay)
 	defer ticker.Stop()
 
-	ticker2 := time.NewTicker(20 * time.Second)
-	defer ticker2.Stop()
-
 	latestValues := make(map[string]int)
 
 	for {
@@ -299,8 +300,6 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 		case <-s.sensorStopChan:
 			slog.Info("Ending SensorDriver go-routine (RPi)")
 			return
-		case <-ticker2.C:
-			s.sensorEvents <- util.NewTrigger("S0", 150, time.Now())
 		case <-ticker.C:
 			for name, sensor := range s.sensors {
 				value := sensor.smoothedValue(s.readAdc(sensor.spimultiplex, sensor.adcChannel))
