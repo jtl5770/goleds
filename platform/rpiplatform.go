@@ -67,7 +67,7 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 	}
 
 	var err error
-	s.spiPort, err = spireg.Open("/dev/spidev0.1")
+	s.spiPort, err = spireg.Open("/dev/spidev0.0")
 	if err != nil {
 		return fmt.Errorf("failed to open spi: %w", err)
 	}
@@ -198,6 +198,7 @@ func (s *RaspberryPiPlatform) spiExchangeMultiplex(index string, data []byte) []
 	if err := s.spiConn.Tx(data, read); err != nil {
 		slog.Error("spi transaction failed", "error", err)
 	}
+	slog.Debug("SPI TX:", "Multiplex:", index, "w:", data, "r:", read)
 	return read
 }
 
