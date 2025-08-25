@@ -72,11 +72,10 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 		return fmt.Errorf("failed to open spi: %w", err)
 	}
 
-	s.spiConn, err = s.spiPort.Connect(0, spi.Mode0, 8)
+	s.spiConn, err = s.spiPort.Connect(physic.Frequency(s.config.Hardware.SPIFrequency)*physic.Hertz, spi.Mode0, 8)
 	if err != nil {
 		return fmt.Errorf("failed to connect to spi device: %w", err)
 	}
-	s.spiPort.LimitSpeed(physic.Frequency(s.config.Hardware.SPIFrequency) * physic.Hertz)
 
 	if p, ok := s.spiConn.(spi.Pins); ok {
 		slog.Debug("****** SPI Pins:", "CLK", p.CLK(), "MOSI", p.MOSI(), "MISO", p.MISO(), "CS", p.CS())
