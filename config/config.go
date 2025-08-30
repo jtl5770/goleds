@@ -267,11 +267,12 @@ func ReadConfig(cfile string) (*Config, error) {
 			return nil, err
 		}
 		defer func() {
-			if cerr := in.Close(); cerr != nil {
-				slog.Error("Error closing default config file config.yml.orig", "error", err)
-			}
+			in.Close()
 			if cerr := out.Close(); cerr != nil {
-				slog.Error("Error closing new config file", "file", cfile, "error", err)
+				slog.Error("Error closing new config file", "file", cfile, "error", cerr)
+				if err == nil {
+					err = cerr
+				}
 			}
 		}()
 		if _, err := io.Copy(out, in); err != nil {
