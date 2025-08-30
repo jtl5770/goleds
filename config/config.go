@@ -2,16 +2,16 @@ package config
 
 import (
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
 const CONFILE = "config.yml"
-
-var CONFIG *Config
 
 // SensorLEDConfig defines the configuration for the SensorLED producer.
 type SensorLEDConfig struct {
@@ -244,13 +244,58 @@ func (c *Config) Validate() error {
 
 func ReadConfig(cfile string) (*Config, error) {
 	slog.Info("Reading config file", "file", cfile)
+	var conf Config
+	exe, err := os.Executable()
+	if err != nil {
+		slog.Error("Path of current executable can't be found", "error", err)
+		return nil, err
+	}
+	exPath := filepath.Dir(exe)
+	oldcfile := exPath + "/config.yml.orig"
+
+	if _, err := os.Stat(cfile); err != nil && os.IsNotExist(err) {
+		slog.Warn("Config file does not exist, using default values to create it.", "config file", cfile)
+
+		in, err := os.Open(oldcfile)
+		if err != nil {
+			slog.Error("Default config file 'config.yml.orig' can't be found. Your installation is incomplete.")
+			return nil, err
+		}
+		out, err := os.Create(cfile)
+		if err != nil {
+			slog.Error("Can't create config file", "file", cfile)
+			return nil, err
+		}
+		defer func() {
+			if cerr := in.Close(); cerr != nil {
+				slog.Error("Error closing default config file config.yml.orig", "error", err)
+			}
+			if cerr := out.Close(); cerr != nil {
+				slog.Error("Error closing new config file", "file", cfile, "error", err)
+			}
+		}()
+		if _, err := io.Copy(out, in); err != nil {
+			slog.Error("Error copying config.yml.orig to new config file", "file", cfile, "error", err)
+			return nil, err
+		}
+	} else {
+		f, err := os.Open(oldcfile)
+		if err != nil {
+			return nil, err
+		}
+		decoder := yaml.NewDecoder(f)
+		err = decoder.Decode(&conf)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	f, err := os.Open(cfile)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 	decoder := yaml.NewDecoder(f)
-	var conf Config
 	err = decoder.Decode(&conf)
 	if err != nil {
 		return nil, err
