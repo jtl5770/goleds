@@ -280,15 +280,15 @@ func ReadConfig(cfile string) (*Config, error) {
 			return nil, err
 		}
 	} else {
-		f, err := os.Open(oldcfile)
-		if err != nil {
-			return nil, err
-		}
-		decoder := yaml.NewDecoder(f)
-		err = decoder.Decode(&conf)
-		if err != nil {
-			return nil, err
-		}
+		// f, err := os.Open(oldcfile)
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// decoder := yaml.NewDecoder(f)
+		// err = decoder.Decode(&conf)
+		// if err != nil {
+		// 	return nil, err
+		// }
 	}
 
 	f, err := os.Open(cfile)
