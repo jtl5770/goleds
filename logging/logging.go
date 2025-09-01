@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 // logWriter is a thread-safe writer that only writes to the central log buffer.
@@ -61,10 +63,10 @@ func InitialSetup() error {
 		return fmt.Errorf("failed to create pipe: %w", err)
 	}
 
-	if err := syscall.Dup2(int(w.Fd()), int(os.Stdout.Fd())); err != nil {
+	if err := unix.Dup2(int(w.Fd()), int(os.Stdout.Fd())); err != nil {
 		return fmt.Errorf("failed to redirect stdout: %w", err)
 	}
-	if err := syscall.Dup2(int(w.Fd()), int(os.Stderr.Fd())); err != nil {
+	if err := unix.Dup2(int(w.Fd()), int(os.Stderr.Fd())); err != nil {
 		return fmt.Errorf("failed to redirect stderr: %w", err)
 	}
 
@@ -186,12 +188,12 @@ func Close() error {
 
 	// Restore stdio first, so the final flush goes to the console.
 	if originalStdout != -1 {
-		syscall.Dup2(originalStdout, int(os.Stdout.Fd()))
+		unix.Dup2(originalStdout, int(os.Stdout.Fd()))
 		syscall.Close(originalStdout)
 		originalStdout = -1
 	}
 	if originalStderr != -1 {
-		syscall.Dup2(originalStderr, int(os.Stderr.Fd()))
+		unix.Dup2(originalStderr, int(os.Stderr.Fd()))
 		syscall.Close(originalStderr)
 		originalStderr = -1
 	}
