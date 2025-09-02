@@ -78,9 +78,9 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 		return fmt.Errorf("failed to connect to spi device: %w", err)
 	}
 
-	if p, ok := s.spiConn.(spi.Pins); ok {
-		slog.Debug("****** SPI Pins:", "CLK", p.CLK(), "MOSI", p.MOSI(), "MISO", p.MISO(), "CS", p.CS())
-	}
+	// if p, ok := s.spiConn.(spi.Pins); ok {
+	// 	slog.Debug("****** SPI Pins:", "CLK", p.CLK(), "MOSI", p.MOSI(), "MISO", p.MISO(), "CS", p.CS())
+	// }
 	s.spimultiplexcfg = make(map[string]gpiocfg, len(s.config.Hardware.SpiMultiplexGPIO))
 
 	for key, cfg := range s.config.Hardware.SpiMultiplexGPIO {
@@ -331,6 +331,6 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 func (s *RaspberryPiPlatform) readAdc(multiplex string, channel byte) int {
 	write := []byte{1, (8 + channel) << 4, 0}
 	read := s.spiExchangeMultiplex(multiplex, write)
-	slog.Debug("ReadADC:", "MTPLX", multiplex, "chan", fmt.Sprintf("%x", channel), "w", fmt.Sprintf("%x", write), "r", fmt.Sprintf("%x", read))
+	// slog.Warn("ReadADC:", "MTPLX", multiplex, "chan", fmt.Sprintf("%x", channel), "w", fmt.Sprintf("%x", write), "r", fmt.Sprintf("%x", read))
 	return ((int(read[1]) & 3) << 8) + int(read[2])
 }
