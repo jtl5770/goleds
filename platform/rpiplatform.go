@@ -35,6 +35,7 @@ type RaspberryPiPlatform struct {
 type gpiocfg struct {
 	low  []gpio.PinIO
 	high []gpio.PinIO
+	cs   gpio.PinIO
 }
 
 func NewRaspberryPiPlatform(conf *config.Config) *RaspberryPiPlatform {
@@ -105,9 +106,17 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 			}
 			high = append(high, pin)
 		}
+		var cs gpio.PinIO
+		if cfg.CS != 0 {
+			cs = gpioreg.ByName(fmt.Sprintf("GPIO%d", cfg.CS))
+			if err := cs.Out(gpio.High); err != nil {
+				return fmt.Errorf("failed to set pin %d to output: %w", cfg.CS, err)
+			}
+		}
 		s.spimultiplexcfg[key] = gpiocfg{
 			low:  low,
 			high: high,
+			cs:   cs,
 		}
 	}
 
@@ -197,6 +206,10 @@ func (s *RaspberryPiPlatform) spiExchangeMultiplex(index string, data []byte) []
 		pin.Out(gpio.High)
 	}
 
+	if cs := cfg.cs; cs != nil {
+		cs.Out(gpio.Low)
+		defer cs.Out(gpio.High)
+	}
 	read := make([]byte, len(data))
 	if err := s.spiConn.Tx(data, read); err != nil {
 		slog.Error("spi transaction failed", "error", err)
