@@ -28,6 +28,7 @@ type RaspberryPiPlatform struct {
 type gpiocfg struct {
 	low  []rpio.Pin
 	high []rpio.Pin
+	cs   rpio.Pin
 }
 
 func NewRaspberryPiPlatform(conf *config.Config) *RaspberryPiPlatform {
@@ -79,9 +80,17 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 			rpiopin.Output()
 			high = append(high, rpiopin)
 		}
+		var cs rpio.Pin
+		if cfg.CS != 0 {
+			cs = rpio.Pin(cfg.CS)
+			cs.Output()
+			cs.High()
+		}
+
 		s.spimultiplexcfg[key] = gpiocfg{
 			low:  low,
 			high: high,
+			cs:   cs,
 		}
 	}
 
@@ -158,8 +167,13 @@ func (s *RaspberryPiPlatform) spiExchangeMultiplex(index string, data []byte) []
 	for _, pin := range cfg.high {
 		pin.High()
 	}
-
+	if cfg.cs != rpio.Pin(0) {
+		cfg.cs.Low()
+	}
 	rpio.SpiExchange(data)
+	if cfg.cs != rpio.Pin(0) {
+		cfg.cs.High()
+	}
 	return data
 }
 
