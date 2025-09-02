@@ -100,6 +100,7 @@ type HardwareConfig struct {
 	SpiMultiplexGPIO map[string]struct {
 		Low  []int `yaml:"Low,flow"`
 		High []int `yaml:"High,flow"`
+		CS   int   `yaml:"CS,flow"`
 	} `yaml:"SpiMultiplexGPIO"`
 }
 
