@@ -1,17 +1,17 @@
 module lautenbacher.net/goleds
 
-go 1.23.0
+go 1.24.0
 
-toolchain go1.24.4
+toolchain go1.24.6
 
 require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gammazero/deque v1.1.0
-	github.com/gdamore/tcell/v2 v2.8.1
+	github.com/gdamore/tcell/v2 v2.9.0
 	github.com/gordonklaus/portaudio v0.0.0-20250206071425-98a94950218b
 	github.com/nathan-osman/go-sunrise v1.1.0
-	github.com/rivo/tview v0.0.0-20250625164341-a4a78f1e05cb
-	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792
+	github.com/rivo/tview v0.42.0
+	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
 	golang.org/x/sys v0.35.0
 	gopkg.in/yaml.v3 v3.0.1
 	periph.io/x/conn/v3 v3.7.2
@@ -21,7 +21,7 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
@@ -29,6 +29,6 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	golang.org/x/term v0.33.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
+	golang.org/x/term v0.34.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 )
