@@ -169,11 +169,9 @@ func (s *RaspberryPiPlatform) spiExchangeMultiplex(index string, data []byte) []
 	}
 	if cfg.cs != rpio.Pin(0) {
 		cfg.cs.Low()
+		defer cfg.cs.High()
 	}
 	rpio.SpiExchange(data)
-	if cfg.cs != rpio.Pin(0) {
-		cfg.cs.High()
-	}
 	return data
 }
 
