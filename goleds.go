@@ -352,8 +352,9 @@ func (a *App) shutdown() {
 	}
 }
 
-// This go-routine combines the LED values from all producers and hands them to the platform via SetLeds()
-// It also forces an update of the LED stripe at regular intervals to avoid artifacts.
+// This go-routine combines the LED values from all producers.
+// It hands them to the platform via SetLeds() It also forces an
+// update of the LED stripe at regular intervals to avoid artifacts.
 func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer], ledBufferPool *sync.Pool) {
 	defer a.shutdownWg.Done()
 
@@ -405,7 +406,7 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 }
 
 // This go routine distributes sensor events and handles the
-// transition of the states the LED strip can be in
+// transition of the states the LED strip can be in.
 func (a *App) stateManager() {
 	defer a.shutdownWg.Done()
 
