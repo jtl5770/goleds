@@ -90,7 +90,10 @@ func main() {
 	exPath := filepath.Dir(ex)
 	cfile := flag.String("config", exPath+"/"+c.CONFILE, "Config file to use")
 	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
-	sensp := flag.Bool("show-sensors", false, "Set to true if program should only display sensor values.\n* will be using live data from the sensor hardware if -real is given - useful for calibrating the sensors' trigger values\n* will be using random values if -real is not given - useful only for development of the viewer component itself")
+	sensp := flag.Bool("show-sensors", false,
+		"Set to true if program should only display sensor values.\n"+
+			"* will be using live data from the sensor hardware if -real is given - useful for calibrating the sensors' trigger values\n"+
+			"* will be using random values if -real is not given - useful only for development of the viewer component itself")
 	flag.Parse()
 
 	if err := l.InitialSetup(); err != nil {
