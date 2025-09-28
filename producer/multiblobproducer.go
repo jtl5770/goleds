@@ -239,8 +239,8 @@ func detectBlobColl(blob_a *Blob, blob_b *Blob) bool {
 	collide := (a_start <= b_end) && (b_start <= a_end)
 	if collide {
 		// Generate a random value between 0 and 1 and if smaller
-		// than 0.2, just return as if no collision is detected.
-		if rand.Float64() < 0.33 {
+		// than a threshold, just return as if no collision is detected.
+		if rand.Float64() <= 0.33 {
 			return false
 		}
 		// log.Println("Collision detected between " + blob_a.uid + " and " + blob_b.uid)
