@@ -29,18 +29,18 @@ func TestNewMultiBlobProducer(t *testing.T) {
 	assert.Len(t, p.allblobs, 2)
 
 	// Verify individual blobs
-	blob1 := p.allblobs["blob1"]
+	blob1 := p.allblobs["Blob_0"]
 	assert.NotNil(t, blob1)
-	assert.Equal(t, "blob1", blob1.uid)
+	assert.Equal(t, "Blob_0", blob1.uid)
 	assert.Equal(t, Led{Red: 255, Green: 0, Blue: 0}, blob1.led)
 	assert.Equal(t, 2.0, blob1.x)
 	assert.Equal(t, 1.0, blob1.width)
 	assert.Equal(t, 0.1, blob1.delta)
 	assert.Equal(t, float64(1), blob1.dir)
 
-	blob2 := p.allblobs["blob2"]
+	blob2 := p.allblobs["Blob_1"]
 	assert.NotNil(t, blob2)
-	assert.Equal(t, "blob2", blob2.uid)
+	assert.Equal(t, "Blob_1", blob2.uid)
 	assert.Equal(t, Led{Red: 0, Green: 255, Blue: 0}, blob2.led)
 	assert.Equal(t, 8.0, blob2.x)
 	assert.Equal(t, 1.5, blob2.width)
