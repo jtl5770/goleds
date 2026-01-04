@@ -54,8 +54,8 @@ func (c *SensorLEDConfig) Validate() error {
 		return fmt.Errorf("LedRGB invalid: %w", err)
 	}
 	if c.LatchEnabled {
-		if c.LatchTriggerValue < 0 {
-			return fmt.Errorf("LatchTriggerValue must be non-negative")
+		if c.LatchTriggerValue < 0 || c.LatchTriggerValue > 1023 {
+			return fmt.Errorf("LatchTriggerValue must be between 0 and 1023")
 		}
 		if c.LatchTriggerDelay < 0 {
 			return fmt.Errorf("LatchTriggerDelay must be non-negative")
@@ -187,6 +187,12 @@ func (c *AudioLEDConfig) Validate(ledsTotal int) error {
 	if c.UpdateFreq < 0 {
 		return fmt.Errorf("UpdateFreq must be non-negative")
 	}
+	if c.MinDB > 0 {
+		return fmt.Errorf("MinDB must be <= 0")
+	}
+	if c.MaxDB > 0 {
+		return fmt.Errorf("MaxDB must be <= 0")
+	}
 	if c.MinDB >= c.MaxDB {
 		return fmt.Errorf("MinDB (%f) must be less than MaxDB (%f)", c.MinDB, c.MaxDB)
 	}
@@ -203,7 +209,7 @@ type CylonLEDConfig struct {
 	LedRGB   []float64     `yaml:"LedRGB,flow"`
 }
 
-func (c *CylonLEDConfig) Validate() error {
+func (c *CylonLEDConfig) Validate(ledsTotal int) error {
 	if c.Duration < 0 {
 		return fmt.Errorf("Duration must be non-negative")
 	}
@@ -215,6 +221,9 @@ func (c *CylonLEDConfig) Validate() error {
 	}
 	if c.Width <= 0 {
 		return fmt.Errorf("Width must be positive")
+	}
+	if ledsTotal > 0 && c.Width > ledsTotal/2 {
+		return fmt.Errorf("Width (%d) cannot be larger than half of LedsTotal (%d)", c.Width, ledsTotal)
 	}
 	if err := validateRGB(c.LedRGB); err != nil {
 		return fmt.Errorf("LedRGB invalid: %w", err)
@@ -230,7 +239,7 @@ type MultiBlobLEDConfig struct {
 	BlobCfg  []BlobCfg     `yaml:"BlobCfg,flow"`
 }
 
-func (c *MultiBlobLEDConfig) Validate() error {
+func (c *MultiBlobLEDConfig) Validate(ledsTotal int) error {
 	if c.Duration < 0 {
 		return fmt.Errorf("Duration must be non-negative")
 	}
@@ -238,7 +247,7 @@ func (c *MultiBlobLEDConfig) Validate() error {
 		return fmt.Errorf("Delay must be non-negative")
 	}
 	for i, b := range c.BlobCfg {
-		if err := b.Validate(); err != nil {
+		if err := b.Validate(ledsTotal); err != nil {
 			return fmt.Errorf("BlobCfg[%d] invalid: %w", i, err)
 		}
 	}
@@ -253,9 +262,12 @@ type BlobCfg struct {
 	LedRGB []float64 `yaml:"LedRGB,flow"`
 }
 
-func (b *BlobCfg) Validate() error {
+func (b *BlobCfg) Validate(ledsTotal int) error {
 	if b.Width <= 0 {
 		return fmt.Errorf("Width must be positive")
+	}
+	if b.X < 0 || b.X >= float64(ledsTotal) {
+		return fmt.Errorf("X (%f) must be between 0 and %d", b.X, ledsTotal-1)
 	}
 	if err := validateRGB(b.LedRGB); err != nil {
 		return fmt.Errorf("LedRGB invalid: %w", err)
@@ -421,13 +433,13 @@ func (c *Config) Validate() error {
 	}
 
 	if c.CylonLED.Enabled {
-		if err := c.CylonLED.Validate(); err != nil {
+		if err := c.CylonLED.Validate(ledsTotal); err != nil {
 			return fmt.Errorf("CylonLED configuration invalid: %w", err)
 		}
 	}
 
 	if c.MultiBlobLED.Enabled {
-		if err := c.MultiBlobLED.Validate(); err != nil {
+		if err := c.MultiBlobLED.Validate(ledsTotal); err != nil {
 			return fmt.Errorf("MultiBlobLED configuration invalid: %w", err)
 		}
 	}

@@ -164,3 +164,38 @@ SensorLED:
 	assert.Error(t, err, "ReadConfig should return an error for RGB > 255")
 	assert.Contains(t, err.Error(), "must be between 0 and 255", "Error message should indicate invalid RGB range")
 }
+
+func TestReadConfig_InvalidBlobX(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "goleds-test-invalid-blob-x")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	configFile := filepath.Join(tempDir, "config.yml")
+	configData := `
+Hardware:
+  Display:
+    LedsTotal: 10
+SensorLED:
+  Enabled: true
+  RunUpDelay: 10ms
+  RunDownDelay: 20ms
+  HoldTime: 30s
+  LedRGB: [0, 0, 0]
+MultiBlobLED:
+  Enabled: true
+  Duration: 10s
+  Delay: 100ms
+  BlobCfg:
+    - { DeltaX: 0.1, X: 11, Width: 1, LedRGB: [0, 0, 0] }
+`
+	err = os.WriteFile(configFile, []byte(configData), 0o644)
+	if err != nil {
+		t.Fatalf("Failed to write dummy config file: %v", err)
+	}
+
+	_, err = ReadConfig(configFile)
+	assert.Error(t, err, "ReadConfig should return an error for Blob X out of bounds")
+	assert.Contains(t, err.Error(), "must be between 0 and 9", "Error message should indicate invalid X range")
+}
