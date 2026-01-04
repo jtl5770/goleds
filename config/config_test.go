@@ -135,3 +135,32 @@ CylonLED:
 	assert.Error(t, err, "ReadConfig should return an error")
 	assert.Contains(t, err.Error(), "require the SensorLED producer to be enabled", "Error message should indicate dependency on SensorLED")
 }
+
+func TestReadConfig_InvalidRGB(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "goleds-test-invalid-rgb")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	configFile := filepath.Join(tempDir, "config.yml")
+	configData := `
+Hardware:
+  Display:
+    LedsTotal: 10
+SensorLED:
+  Enabled: true
+  RunUpDelay: 10ms
+  RunDownDelay: 20ms
+  HoldTime: 30s
+  LedRGB: [256, 0, 0]
+`
+	err = os.WriteFile(configFile, []byte(configData), 0o644)
+	if err != nil {
+		t.Fatalf("Failed to write dummy config file: %v", err)
+	}
+
+	_, err = ReadConfig(configFile)
+	assert.Error(t, err, "ReadConfig should return an error for RGB > 255")
+	assert.Contains(t, err.Error(), "must be between 0 and 255", "Error message should indicate invalid RGB range")
+}

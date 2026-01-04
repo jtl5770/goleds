@@ -13,14 +13,14 @@ import (
 
 const CONFILE = "config.yml"
 
-// validateRGB checks if the RGB slice has exactly 3 non-negative components.
+// validateRGB checks if the RGB slice has exactly 3 components between 0 and 255.
 func validateRGB(rgb []float64) error {
 	if len(rgb) != 3 {
 		return fmt.Errorf("must have exactly 3 components, got %d", len(rgb))
 	}
 	for i, v := range rgb {
-		if v < 0 {
-			return fmt.Errorf("component %d cannot be negative: %f", i, v)
+		if v < 0 || v > 255 {
+			return fmt.Errorf("component %d must be between 0 and 255: %f", i, v)
 		}
 	}
 	return nil
