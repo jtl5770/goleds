@@ -16,7 +16,7 @@ func ConfigHandler(cfile string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			getConfigHandler(w, r, cfile)
+			getConfigHandler(w, cfile)
 		case http.MethodPost:
 			setConfigHandler(w, r, cfile)
 		default:
@@ -27,7 +27,7 @@ func ConfigHandler(cfile string) http.HandlerFunc {
 
 // getConfigHandler reads the current config file, extracts the runtime-safe
 // configuration, and returns it as JSON.
-func getConfigHandler(w http.ResponseWriter, r *http.Request, cfile string) {
+func getConfigHandler(w http.ResponseWriter, cfile string) {
 	slog.Info("Handling GET /api/config request")
 	// We read the file on every request to ensure we always have the latest version.
 	fullConfig, err := ReadConfig(cfile)
