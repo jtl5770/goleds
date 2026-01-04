@@ -26,6 +26,11 @@ func validateRGB(rgb []float64) error {
 	return nil
 }
 
+// isValidIndex checks if an index is within the valid range [0, ledsTotal).
+func isValidIndex(index, ledsTotal int) bool {
+	return index >= 0 && index < ledsTotal
+}
+
 // SensorLEDConfig defines the configuration for the SensorLED producer.
 type SensorLEDConfig struct {
 	Enabled           bool          `yaml:"Enabled"`
@@ -105,19 +110,16 @@ type ClockLEDConfig struct {
 }
 
 func (c *ClockLEDConfig) Validate(ledsTotal int) error {
-	isValidIndex := func(index int) bool {
-		return index >= 0 && index < ledsTotal
-	}
-	if !isValidIndex(c.StartLedHour) {
+	if !isValidIndex(c.StartLedHour, ledsTotal) {
 		return fmt.Errorf("StartLedHour out of bounds (0-%d): %d", ledsTotal-1, c.StartLedHour)
 	}
-	if !isValidIndex(c.EndLedHour) {
+	if !isValidIndex(c.EndLedHour, ledsTotal) {
 		return fmt.Errorf("EndLedHour out of bounds (0-%d): %d", ledsTotal-1, c.EndLedHour)
 	}
-	if !isValidIndex(c.StartLedMinute) {
+	if !isValidIndex(c.StartLedMinute, ledsTotal) {
 		return fmt.Errorf("StartLedMinute out of bounds (0-%d): %d", ledsTotal-1, c.StartLedMinute)
 	}
-	if !isValidIndex(c.EndLedMinute) {
+	if !isValidIndex(c.EndLedMinute, ledsTotal) {
 		return fmt.Errorf("EndLedMinute out of bounds (0-%d): %d", ledsTotal-1, c.EndLedMinute)
 	}
 	if c.StartLedHour > c.EndLedHour {
@@ -154,19 +156,16 @@ type AudioLEDConfig struct {
 }
 
 func (c *AudioLEDConfig) Validate(ledsTotal int) error {
-	isValidIndex := func(index int) bool {
-		return index >= 0 && index < ledsTotal
-	}
-	if !isValidIndex(c.StartLedLeft) {
+	if !isValidIndex(c.StartLedLeft, ledsTotal) {
 		return fmt.Errorf("StartLedLeft out of bounds")
 	}
-	if !isValidIndex(c.EndLedLeft) {
+	if !isValidIndex(c.EndLedLeft, ledsTotal) {
 		return fmt.Errorf("EndLedLeft out of bounds")
 	}
-	if !isValidIndex(c.StartLedRight) {
+	if !isValidIndex(c.StartLedRight, ledsTotal) {
 		return fmt.Errorf("StartLedRight out of bounds")
 	}
-	if !isValidIndex(c.EndLedRight) {
+	if !isValidIndex(c.EndLedRight, ledsTotal) {
 		return fmt.Errorf("EndLedRight out of bounds")
 	}
 	if err := validateRGB(c.LedGreen); err != nil {
@@ -351,11 +350,6 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("LedsTotal must be a positive number")
 	}
 
-	// Helper function to check if an index is within the valid range
-	isValidIndex := func(index int) bool {
-		return index >= 0 && index < ledsTotal
-	}
-
 	// 1. SPI Multiplexer Validation (only in hardware mode)
 	// Check sensors
 	for name, sensorCfg := range c.Hardware.Sensors.SensorCfg {
@@ -376,7 +370,7 @@ func (c *Config) Validate() error {
 	for name, segArray := range c.Hardware.Display.LedSegments {
 		allLeds := make([]bool, ledsTotal)
 		for _, seg := range segArray {
-			if !isValidIndex(seg.FirstLed) || !isValidIndex(seg.LastLed) {
+			if !isValidIndex(seg.FirstLed, ledsTotal) || !isValidIndex(seg.LastLed, ledsTotal) {
 				return fmt.Errorf("segment in group '%s' has out-of-bounds indices: FirstLed=%d, LastLed=%d (LedsTotal=%d)", name, seg.FirstLed, seg.LastLed, ledsTotal)
 			}
 			if seg.FirstLed > seg.LastLed {
@@ -393,7 +387,7 @@ func (c *Config) Validate() error {
 
 	// 3. Sensor Configuration Validation
 	for name, sensorCfg := range c.Hardware.Sensors.SensorCfg {
-		if !isValidIndex(sensorCfg.LedIndex) {
+		if !isValidIndex(sensorCfg.LedIndex, ledsTotal) {
 			return fmt.Errorf("sensor '%s' has an out-of-bounds LedIndex: %d (LedsTotal=%d)", name, sensorCfg.LedIndex, ledsTotal)
 		}
 	}
