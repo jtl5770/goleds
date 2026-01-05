@@ -36,7 +36,7 @@ class ConfigProvider with ChangeNotifier {
     fetchConfig();
   }
 
-  Future<void> fetchConfig({int retries = 3}) async {
+  Future<void> fetchConfig({int retries = 9}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -50,11 +50,13 @@ class ConfigProvider with ChangeNotifier {
       } catch (e) {
         attempt++;
         final msg = e.toString();
-        if (attempt <= retries && 
-           (msg.contains("Invalid response line") || msg.contains("Connection closed") || msg.contains("Connection refused"))) {
+        if (attempt <= retries &&
+            (msg.contains("Invalid response line") ||
+                msg.contains("Connection closed") ||
+                msg.contains("Connection refused"))) {
           // Wait a bit for server to come back up
           await Future.delayed(Duration(milliseconds: 500 * attempt));
-          continue; 
+          continue;
         }
         _error = "Attempt $attempt failed:\n$msg";
       }
@@ -71,14 +73,15 @@ class ConfigProvider with ChangeNotifier {
 
     try {
       await _apiService.saveConfig(newConfig);
-      _config = newConfig; 
-      // After a successful save, the server will restart. 
+      _config = newConfig;
+      // After a successful save, the server will restart.
       // We give it a moment then fetch the latest state to confirm.
       await Future.delayed(const Duration(milliseconds: 500));
       await fetchConfig();
     } catch (e) {
       final msg = e.toString();
-      if (msg.contains("Invalid response line") || msg.contains("Connection closed")) {
+      if (msg.contains("Invalid response line") ||
+          msg.contains("Connection closed")) {
         // Server likely restarted immediately after save. Treat as success and reload.
         await fetchConfig();
         return;
@@ -89,19 +92,31 @@ class ConfigProvider with ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   void toggleProducer(String producerName, bool isEnabled) {
-    if (_config == null) return; 
-    
+    if (_config == null) return;
+
     switch (producerName) {
-      case 'SensorLED': _config!.sensorLED.enabled = isEnabled; break;
-      case 'NightLED': _config!.nightLED.enabled = isEnabled; break;
-      case 'ClockLED': _config!.clockLED.enabled = isEnabled; break;
-      case 'AudioLED': _config!.audioLED.enabled = isEnabled; break;
-      case 'CylonLED': _config!.cylonLED.enabled = isEnabled; break;
-      case 'MultiBlobLED': _config!.multiBlobLED.enabled = isEnabled; break;
+      case 'SensorLED':
+        _config!.sensorLED.enabled = isEnabled;
+        break;
+      case 'NightLED':
+        _config!.nightLED.enabled = isEnabled;
+        break;
+      case 'ClockLED':
+        _config!.clockLED.enabled = isEnabled;
+        break;
+      case 'AudioLED':
+        _config!.audioLED.enabled = isEnabled;
+        break;
+      case 'CylonLED':
+        _config!.cylonLED.enabled = isEnabled;
+        break;
+      case 'MultiBlobLED':
+        _config!.multiBlobLED.enabled = isEnabled;
+        break;
     }
-    
+
     updateConfig(_config!);
   }
 }

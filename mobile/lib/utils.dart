@@ -15,12 +15,12 @@ List<double> toRgbList(Color c) {
 /// while preserving its hue and saturation.
 Color toDisplayColor(Color actualColor) {
   final hsv = HSVColor.fromColor(actualColor);
-  // Make the minimum hsv.value 0.3 and scale accordingly with lower slope.
+  // Make the minimum hsv.value 0.4 and scale accordingly with lower slope.
   // But let's make sure black remains black.'
   if (hsv.value == 0) {
     return Color(0xFF000000);
   }
-  return hsv.withValue(0.3 + (0.7 * hsv.value)).toColor();
+  return hsv.withValue(0.4 + (0.6 * hsv.value)).toColor();
 }
 
 /// Generates a glow effect proportional to the actual color's intensity.
