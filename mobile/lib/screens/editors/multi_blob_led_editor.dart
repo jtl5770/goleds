@@ -117,6 +117,7 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
                     labelTypes: const [ColorLabelType.rgb, ColorLabelType.hsv],
                     pickerAreaHeightPercent: 0.7,
                     displayThumbColor: true,
+                    hexInputBar: true,
                   ),
                 ],
               ),

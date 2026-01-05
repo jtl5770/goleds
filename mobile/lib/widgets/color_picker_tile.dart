@@ -39,6 +39,7 @@ class ColorPickerTile extends StatelessWidget {
                 enableAlpha: false,
                 labelTypes: const [ColorLabelType.rgb, ColorLabelType.hsv],
                 displayThumbColor: true,
+                hexInputBar: true,
               ),
             ),
             actions: [

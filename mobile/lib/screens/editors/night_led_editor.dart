@@ -61,6 +61,7 @@ class _NightLEDEditorState extends State<NightLEDEditor> {
             labelTypes: const [ColorLabelType.rgb, ColorLabelType.hsv],
             pickerAreaHeightPercent: 0.7,
             displayThumbColor: true,
+            hexInputBar: true,
           ),
         ),
         actions: [
