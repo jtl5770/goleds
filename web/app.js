@@ -63,6 +63,21 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(error => {
             showMessage(`Error saving configuration: ${error}`, 'error');
+            // Revert to valid state from server
+            fetch('/api/config')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(config => {
+                    originalConfig = config;
+                    buildForm(originalConfig, formContainer);
+                })
+                .catch(loadError => {
+                    showMessage(`Error reloading configuration: ${loadError}`, 'error');
+                });
         });
     });
 
