@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/config_provider.dart';
 import '../../utils.dart';
 import '../../widgets/rgb_input_picker.dart';
+import '../../widgets/led_preview.dart';
 
 class NightLEDEditor extends StatefulWidget {
   const NightLEDEditor({super.key});
@@ -123,18 +124,7 @@ class _NightLEDEditorState extends State<NightLEDEditor> {
               ...List.generate(colors.length, (index) {
                 return GestureDetector(
                   onTap: () => _editColor(index),
-                  child: Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: colors[index],
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white38, width: 2),
-                      boxShadow: [
-                        BoxShadow(color: colors[index].withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 1)
-                      ],
-                    ),
-                  ),
+                  child: LedPreview(color: colors[index], size: 60),
                 );
               }),
               GestureDetector(

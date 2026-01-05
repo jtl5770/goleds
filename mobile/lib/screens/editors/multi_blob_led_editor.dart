@@ -5,6 +5,7 @@ import '../../widgets/config_slider.dart';
 import '../../models.dart';
 import '../../utils.dart';
 import '../../widgets/rgb_input_picker.dart';
+import '../../widgets/led_preview.dart';
 
 class MultiBlobLEDEditor extends StatefulWidget {
   const MultiBlobLEDEditor({super.key});
@@ -194,7 +195,7 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
               color: Colors.grey.shade900,
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
-                leading: CircleAvatar(backgroundColor: color, radius: 12),
+                leading: LedPreview(color: color, size: 24),
                 title: Text('Blob $i (Width: ${b.width.toInt()})'),
                 subtitle: Text('Pos: ${b.x.toInt()}, Speed: ${b.deltaX.toStringAsFixed(2)}'),
                 trailing: const Icon(Icons.edit, size: 20),

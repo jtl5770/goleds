@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'led_preview.dart';
 
 class RgbInputPicker extends StatefulWidget {
   final Color initialColor;
@@ -115,22 +116,7 @@ class _RgbInputPickerState extends State<RgbInputPicker> {
               _buildRGBField('BLUE', bCtrl),
               const SizedBox(width: 20),
               // NEW: Color Preview Circle
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: currentColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: currentColor.withValues(alpha: 0.4),
-                      blurRadius: 12,
-                      spreadRadius: 2,
-                    )
-                  ],
-                ),
-              ),
+              LedPreview(color: currentColor, size: 50),
             ],
           ),
         ],

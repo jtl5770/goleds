@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'rgb_input_picker.dart';
+import 'led_preview.dart';
 
 class ColorPickerTile extends StatelessWidget {
   final String label;
@@ -17,15 +18,7 @@ class ColorPickerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       title: Text(label),
-      trailing: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white24),
-        ),
-      ),
+      trailing: LedPreview(color: color, size: 36),
       onTap: () {
         showDialog(
           context: context,
