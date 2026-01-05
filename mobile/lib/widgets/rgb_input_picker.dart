@@ -59,11 +59,16 @@ class _RgbInputPickerState extends State<RgbInputPicker> {
   }
 
   void _updateFromText() {
-    int r = int.tryParse(rCtrl.text) ?? 0;
-    int g = int.tryParse(gCtrl.text) ?? 0;
-    int b = int.tryParse(bCtrl.text) ?? 0;
+    int r = (int.tryParse(rCtrl.text) ?? 0).clamp(0, 255);
+    int g = (int.tryParse(gCtrl.text) ?? 0).clamp(0, 255);
+    int b = (int.tryParse(bCtrl.text) ?? 0).clamp(0, 255);
     
-    Color newColor = Color.fromARGB(255, r.clamp(0, 255), g.clamp(0, 255), b.clamp(0, 255));
+    // Update controllers to reflect clamping if user typed e.g. 300
+    _updateTextIfChanged(rCtrl, r.toString());
+    _updateTextIfChanged(gCtrl, g.toString());
+    _updateTextIfChanged(bCtrl, b.toString());
+
+    Color newColor = Color.fromARGB(255, r, g, b);
     HSVColor newHsv = HSVColor.fromColor(newColor);
     
     if (newHsv != hsvColor) {
