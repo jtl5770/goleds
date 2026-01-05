@@ -58,20 +58,20 @@ func (c *SensorLEDConfig) Validate() error {
 	if err := validateRGB(c.LedRGB); err != nil {
 		return fmt.Errorf("LedRGB invalid: %w", err)
 	}
-	if c.LatchEnabled {
-		if c.LatchTriggerValue < 0 || c.LatchTriggerValue > 1023 {
-			return fmt.Errorf("LatchTriggerValue must be between 0 and 1023")
-		}
-		if c.LatchTriggerDelay < 0 {
-			return fmt.Errorf("LatchTriggerDelay must be non-negative")
-		}
-		if c.LatchTime < 0 {
-			return fmt.Errorf("LatchTime must be non-negative")
-		}
-		if err := validateRGB(c.LatchLedRGB); err != nil {
-			return fmt.Errorf("LatchLedRGB invalid: %w", err)
-		}
+
+	if c.LatchTriggerValue < 0 || c.LatchTriggerValue > 1023 {
+		return fmt.Errorf("LatchTriggerValue must be between 0 and 1023")
 	}
+	if c.LatchTriggerDelay < 0 {
+		return fmt.Errorf("LatchTriggerDelay must be non-negative")
+	}
+	if c.LatchTime < 0 {
+		return fmt.Errorf("LatchTime must be non-negative")
+	}
+	if err := validateRGB(c.LatchLedRGB); err != nil {
+		return fmt.Errorf("LatchLedRGB invalid: %w", err)
+	}
+
 	return nil
 }
 
@@ -402,40 +402,28 @@ func (c *Config) Validate() error {
 	}
 
 	// 5. Producer-Specific Validations
-	if c.SensorLED.Enabled {
-		if err := c.SensorLED.Validate(); err != nil {
-			return fmt.Errorf("SensorLED configuration invalid: %w", err)
-		}
+	if err := c.SensorLED.Validate(); err != nil {
+		return fmt.Errorf("SensorLED configuration invalid: %w", err)
 	}
 
-	if c.NightLED.Enabled {
-		if err := c.NightLED.Validate(); err != nil {
-			return fmt.Errorf("NightLED configuration invalid: %w", err)
-		}
+	if err := c.NightLED.Validate(); err != nil {
+		return fmt.Errorf("NightLED configuration invalid: %w", err)
 	}
 
-	if c.ClockLED.Enabled {
-		if err := c.ClockLED.Validate(ledsTotal); err != nil {
-			return fmt.Errorf("ClockLED configuration invalid: %w", err)
-		}
+	if err := c.ClockLED.Validate(ledsTotal); err != nil {
+		return fmt.Errorf("ClockLED configuration invalid: %w", err)
 	}
 
-	if c.AudioLED.Enabled {
-		if err := c.AudioLED.Validate(ledsTotal); err != nil {
-			return fmt.Errorf("AudioLED configuration invalid: %w", err)
-		}
+	if err := c.AudioLED.Validate(ledsTotal); err != nil {
+		return fmt.Errorf("AudioLED configuration invalid: %w", err)
 	}
 
-	if c.CylonLED.Enabled {
-		if err := c.CylonLED.Validate(ledsTotal); err != nil {
-			return fmt.Errorf("CylonLED configuration invalid: %w", err)
-		}
+	if err := c.CylonLED.Validate(ledsTotal); err != nil {
+		return fmt.Errorf("CylonLED configuration invalid: %w", err)
 	}
 
-	if c.MultiBlobLED.Enabled {
-		if err := c.MultiBlobLED.Validate(ledsTotal); err != nil {
-			return fmt.Errorf("MultiBlobLED configuration invalid: %w", err)
-		}
+	if err := c.MultiBlobLED.Validate(ledsTotal); err != nil {
+		return fmt.Errorf("MultiBlobLED configuration invalid: %w", err)
 	}
 
 	return nil
