@@ -92,8 +92,8 @@ class _SensorLEDEditorState extends State<SensorLEDEditor> {
         padding: const EdgeInsets.all(16),
         children: [
           _buildSectionHeader('Timing & Color'),
-          _buildSlider('Run Up Delay', runUpDelayMs.toDouble(), 0, 1000, 'ms', (v) => setState(() => runUpDelayMs = v.toInt())),
-          _buildSlider('Run Down Delay', runDownDelayMs.toDouble(), 0, 1000, 'ms', (v) => setState(() => runDownDelayMs = v.toInt())),
+          _buildSlider('Run Up Delay', runUpDelayMs.toDouble(), 0, 50, 'ms', (v) => setState(() => runUpDelayMs = v.toInt())),
+          _buildSlider('Run Down Delay', runDownDelayMs.toDouble(), 0, 50, 'ms', (v) => setState(() => runDownDelayMs = v.toInt())),
           _buildSlider('Hold Time', holdTimeSec.toDouble(), 0, 60, 's', (v) => setState(() => holdTimeSec = v.toInt())),
           ColorPickerTile(
             label: 'Active Color',
@@ -111,7 +111,7 @@ class _SensorLEDEditorState extends State<SensorLEDEditor> {
           if (latchEnabled) ...[
              _buildSlider('Trigger Value', latchTriggerValue.toDouble(), 0, 1023, '', (v) => setState(() => latchTriggerValue = v.toInt())),
              _buildSlider('Trigger Delay', latchTriggerDelaySec.toDouble(), 0, 10, 's', (v) => setState(() => latchTriggerDelaySec = v.toInt())),
-             _buildSlider('Latch Duration', latchTimeSec.toDouble(), 0, 600, 's', (v) => setState(() => latchTimeSec = v.toInt())),
+             _buildSlider('Latch Duration', latchTimeSec.toDouble(), 0, 3600, 's', (v) => setState(() => latchTimeSec = v.toInt())),
              ColorPickerTile(
                 label: 'Latch Color',
                 color: latchColor,

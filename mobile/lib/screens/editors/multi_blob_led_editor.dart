@@ -101,7 +101,7 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
                     label: 'Width',
                     value: tempBlob.width,
                     min: 1,
-                    max: 20,
+                    max: 1024,
                     onChanged: (v) => setState(() => tempBlob.width = v),
                     activeColor: Colors.pinkAccent,
                   ),
@@ -119,16 +119,15 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
               if (index != null)
                 TextButton(
                   onPressed: () {
                     this.setState(() => blobs.removeAt(index));
                     Navigator.pop(ctx);
                   },
-                  child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                  child: const Text('DELETE', style: TextStyle(color: Colors.red)),
                 ),
-              TextButton(
+              ElevatedButton(
                 onPressed: () {
                   this.setState(() {
                     if (index != null) {
@@ -139,7 +138,7 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
                   });
                   Navigator.pop(ctx);
                 },
-                child: const Text('Save'),
+                child: const Text('DONE'),
               ),
             ],
           );

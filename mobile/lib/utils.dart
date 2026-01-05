@@ -15,21 +15,21 @@ List<double> toRgbList(Color c) {
 /// while preserving its hue and saturation.
 Color toDisplayColor(Color actualColor) {
   final hsv = HSVColor.fromColor(actualColor);
-  // If the color is essentially black (v < 0.3), boost it to 30% for visibility.
-  // Otherwise, use the actual color.
-  if (hsv.value < 0.3) {
-    return hsv.withValue(0.3).toColor();
+  // Make the minimum hsv.value 0.3 and scale accordingly with lower slope.
+  // But let's make sure black remains black.'
+  if (hsv.value == 0) {
+    return Color(0xFF000000);
   }
-  return actualColor;
+  return hsv.withValue(0.3 + (0.7 * hsv.value)).toColor();
 }
 
 /// Generates a glow effect proportional to the actual color's intensity.
 List<BoxShadow> getGlowShadow(Color actualColor, {double scale = 1.0}) {
   final hsv = HSVColor.fromColor(actualColor);
-  
+
   // Intensity is represented by the HSV Value (0.0 to 1.0)
   double intensity = hsv.value;
-  
+
   // No intensity, no glow
   if (intensity <= 0) return [];
 

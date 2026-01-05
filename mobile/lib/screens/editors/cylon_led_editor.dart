@@ -76,7 +76,7 @@ class _CylonLEDEditorState extends State<CylonLEDEditor> {
           
           const SizedBox(height: 16),
           _buildSectionHeader('Appearance'),
-          _buildSlider('Eye Width', width.toDouble(), 1, 20, 'px', (v) => setState(() => width = v.toInt())),
+          _buildSlider('Eye Width', width.toDouble(), 1, 100, 'px', (v) => setState(() => width = v.toInt())),
           // Step is a double, maybe use a slider with divisions
           _buildSlider('Step Size', step, 0.1, 5.0, '', (v) => setState(() => step = double.parse(v.toStringAsFixed(1)))),
           

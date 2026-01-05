@@ -20,18 +20,22 @@ class ColorPickerTile extends StatelessWidget {
       title: Text(label),
       trailing: LedPreview(color: color, size: 36),
       onTap: () {
+        Color tempColor = color;
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
             title: Text('Pick $label'),
             content: RgbInputPicker(
               initialColor: color,
-              onColorChanged: onColorChanged,
+              onColorChanged: (c) => tempColor = c,
             ),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Done'),
+              ElevatedButton(
+                onPressed: () {
+                  onColorChanged(tempColor);
+                  Navigator.of(ctx).pop();
+                },
+                child: const Text('DONE'),
               ),
             ],
           ),

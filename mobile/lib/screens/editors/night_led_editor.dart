@@ -66,16 +66,16 @@ class _NightLEDEditorState extends State<NightLEDEditor> {
                });
                Navigator.pop(ctx);
              },
-             child: const Text('Delete', style: TextStyle(color: Colors.red)),
+             child: const Text('DELETE', style: TextStyle(color: Colors.red)),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
               setState(() {
                 colors[index] = tempColor;
               });
               Navigator.pop(ctx);
             },
-            child: const Text('Save'),
+            child: const Text('DONE'),
           ),
         ],
       ),
