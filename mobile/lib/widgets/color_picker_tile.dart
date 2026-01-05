@@ -31,11 +31,9 @@ class ColorPickerTile extends StatelessWidget {
           context: context,
           builder: (ctx) => AlertDialog(
             title: Text('Pick $label'),
-            content: SingleChildScrollView(
-              child: RgbInputPicker(
-                initialColor: color,
-                onColorChanged: onColorChanged,
-              ),
+            content: RgbInputPicker(
+              initialColor: color,
+              onColorChanged: onColorChanged,
             ),
             actions: [
               TextButton(

@@ -53,11 +53,9 @@ class _NightLEDEditorState extends State<NightLEDEditor> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Pick Night Color'),
-        content: SingleChildScrollView(
-          child: RgbInputPicker(
-            initialColor: tempColor,
-            onColorChanged: (c) => tempColor = c,
-          ),
+        content: RgbInputPicker(
+          initialColor: tempColor,
+          onColorChanged: (c) => tempColor = c,
         ),
         actions: [
           TextButton(

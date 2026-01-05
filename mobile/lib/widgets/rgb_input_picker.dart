@@ -16,16 +16,17 @@ class RgbInputPicker extends StatefulWidget {
 }
 
 class _RgbInputPickerState extends State<RgbInputPicker> {
-  late Color currentColor;
+  late HSVColor hsvColor;
   late TextEditingController rCtrl, gCtrl, bCtrl;
 
   @override
   void initState() {
     super.initState();
-    currentColor = widget.initialColor;
-    rCtrl = TextEditingController(text: (currentColor.r * 255).round().toString());
-    gCtrl = TextEditingController(text: (currentColor.g * 255).round().toString());
-    bCtrl = TextEditingController(text: (currentColor.b * 255).round().toString());
+    hsvColor = HSVColor.fromColor(widget.initialColor);
+    final color = widget.initialColor;
+    rCtrl = TextEditingController(text: (color.r * 255).round().toString());
+    gCtrl = TextEditingController(text: (color.g * 255).round().toString());
+    bCtrl = TextEditingController(text: (color.b * 255).round().toString());
   }
 
   @override
@@ -36,16 +37,18 @@ class _RgbInputPickerState extends State<RgbInputPicker> {
     super.dispose();
   }
 
-  void _updateFromPicker(Color color) {
-    if (color == currentColor) return;
+  void _updateColor(HSVColor newHsv) {
+    final clampedHsv = newHsv.withHue(newHsv.hue.clamp(0.0, 360.0));
+    if (clampedHsv == hsvColor) return;
+    
     setState(() {
-      currentColor = color;
-      // Use selection-aware update to avoid cursor jumping if focused
+      hsvColor = clampedHsv;
+      final color = clampedHsv.toColor();
       _updateTextIfChanged(rCtrl, (color.r * 255).round().toString());
       _updateTextIfChanged(gCtrl, (color.g * 255).round().toString());
       _updateTextIfChanged(bCtrl, (color.b * 255).round().toString());
     });
-    widget.onColorChanged(color);
+    widget.onColorChanged(clampedHsv.toColor());
   }
 
   void _updateTextIfChanged(TextEditingController ctrl, String newValue) {
@@ -60,9 +63,11 @@ class _RgbInputPickerState extends State<RgbInputPicker> {
     int b = int.tryParse(bCtrl.text) ?? 0;
     
     Color newColor = Color.fromARGB(255, r.clamp(0, 255), g.clamp(0, 255), b.clamp(0, 255));
-    if (newColor.r != currentColor.r || newColor.g != currentColor.g || newColor.b != currentColor.b) {
+    HSVColor newHsv = HSVColor.fromColor(newColor);
+    
+    if (newHsv != hsvColor) {
       setState(() {
-        currentColor = newColor;
+        hsvColor = newHsv;
       });
       widget.onColorChanged(newColor);
     }
@@ -70,46 +75,154 @@ class _RgbInputPickerState extends State<RgbInputPicker> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ColorPicker(
-          pickerColor: currentColor,
-          onColorChanged: _updateFromPicker,
-          enableAlpha: false,
-          labelTypes: const [], // Hide the library's labels
-          displayThumbColor: true,
-          pickerAreaHeightPercent: 0.7,
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            _buildField('R', rCtrl),
-            _buildField('G', gCtrl),
-            _buildField('B', bCtrl),
-          ],
-        ),
-        const SizedBox(height: 8),
-      ],
+    final currentColor = hsvColor.toColor();
+    return SizedBox(
+      width: 340,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Upper Area: Area + Slider
+          Row(
+            children: [
+              // 2D Saturation/Value Picker
+              Expanded(
+                child: Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(11),
+                    child: ColorPickerArea(hsvColor, _updateColor, PaletteType.hsv),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Vertical Hue Slider
+              _buildHueSlider(200),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Lower Area: RGB Fields + Preview
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _buildRGBField('RED', rCtrl),
+              const SizedBox(width: 10),
+              _buildRGBField('GREEN', gCtrl),
+              const SizedBox(width: 10),
+              _buildRGBField('BLUE', bCtrl),
+              const SizedBox(width: 20),
+              // NEW: Color Preview Circle
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: currentColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: currentColor.withValues(alpha: 0.4),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    )
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildField(String label, TextEditingController ctrl) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: TextFormField(
-          controller: ctrl,
-          keyboardType: TextInputType.number,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold),
-          decoration: InputDecoration(
-            labelText: label,
-            border: const OutlineInputBorder(),
-            contentPadding: const EdgeInsets.symmetric(vertical: 8),
+  Widget _buildHueSlider(double height) {
+    return GestureDetector(
+      onVerticalDragUpdate: (details) {
+        double newHue = (details.localPosition.dy / height) * 360;
+        _updateColor(hsvColor.withHue(newHue.clamp(0.0, 360.0)));
+      },
+      onTapDown: (details) {
+        double newHue = (details.localPosition.dy / height) * 360;
+        _updateColor(hsvColor.withHue(newHue.clamp(0.0, 360.0)));
+      },
+      child: Container(
+        width: 30,
+        height: height,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFFF0000), Color(0xFFFFFF00), Color(0xFF00FF00),
+              Color(0xFF00FFFF), Color(0xFF0000FF), Color(0xFFFF00FF),
+              Color(0xFFFF0000),
+            ],
           ),
-          onChanged: (_) => _updateFromText(),
         ),
+        child: Stack(
+          alignment: Alignment.topCenter,
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              top: (hsvColor.hue / 360) * height - 3,
+              child: Container(
+                height: 6,
+                width: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(3),
+                  boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black54)],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRGBField(String label, TextEditingController ctrl) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.white54,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 40,
+            child: TextFormField(
+              controller: ctrl,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.bold,
+              ),
+              decoration: InputDecoration(
+                contentPadding: EdgeInsets.zero,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.deepPurpleAccent, width: 2),
+                ),
+              ),
+              onChanged: (_) => _updateFromText(),
+            ),
+          ),
+        ],
       ),
     );
   }
