@@ -114,10 +114,10 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
                         tempBlob.ledRGB = toRgbList(c);
                     },
                     enableAlpha: false,
-                    labelTypes: const [ColorLabelType.rgb, ColorLabelType.hsv],
+                    labelTypes: const [ColorLabelType.rgb],
                     pickerAreaHeightPercent: 0.7,
                     displayThumbColor: true,
-                    hexInputBar: true,
+                    hexInputBar: false,
                   ),
                 ],
               ),
