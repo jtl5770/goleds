@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/config_provider.dart';
 import '../../utils.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import '../../widgets/rgb_input_picker.dart';
 
 class NightLEDEditor extends StatefulWidget {
   const NightLEDEditor({super.key});
@@ -54,14 +54,9 @@ class _NightLEDEditorState extends State<NightLEDEditor> {
       builder: (ctx) => AlertDialog(
         title: const Text('Pick Night Color'),
         content: SingleChildScrollView(
-          child: ColorPicker(
-            pickerColor: tempColor,
+          child: RgbInputPicker(
+            initialColor: tempColor,
             onColorChanged: (c) => tempColor = c,
-            enableAlpha: false,
-            labelTypes: const [ColorLabelType.rgb],
-            pickerAreaHeightPercent: 0.7,
-            displayThumbColor: true,
-            hexInputBar: false,
           ),
         ),
         actions: [

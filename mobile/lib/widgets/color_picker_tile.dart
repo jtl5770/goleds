@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'rgb_input_picker.dart';
 
 class ColorPickerTile extends StatelessWidget {
   final String label;
@@ -32,14 +32,9 @@ class ColorPickerTile extends StatelessWidget {
           builder: (ctx) => AlertDialog(
             title: Text('Pick $label'),
             content: SingleChildScrollView(
-              child: ColorPicker(
-                pickerColor: color,
+              child: RgbInputPicker(
+                initialColor: color,
                 onColorChanged: onColorChanged,
-                pickerAreaHeightPercent: 0.7,
-                enableAlpha: false,
-                labelTypes: const [ColorLabelType.rgb],
-                displayThumbColor: true,
-                hexInputBar: false,
               ),
             ),
             actions: [

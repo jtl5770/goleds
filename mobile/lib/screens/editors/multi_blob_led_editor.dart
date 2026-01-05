@@ -4,7 +4,7 @@ import '../../providers/config_provider.dart';
 import '../../widgets/config_slider.dart';
 import '../../models.dart';
 import '../../utils.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart'; // Needed for direct color picker use in dialog if we want custom UI
+import '../../widgets/rgb_input_picker.dart';
 
 class MultiBlobLEDEditor extends StatefulWidget {
   const MultiBlobLEDEditor({super.key});
@@ -107,17 +107,12 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
                   const SizedBox(height: 16),
                   const Text('Blob Color', style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  ColorPicker(
-                    pickerColor: tempColor,
+                  RgbInputPicker(
+                    initialColor: tempColor,
                     onColorChanged: (c) {
                         tempColor = c;
                         tempBlob.ledRGB = toRgbList(c);
                     },
-                    enableAlpha: false,
-                    labelTypes: const [ColorLabelType.rgb],
-                    pickerAreaHeightPercent: 0.7,
-                    displayThumbColor: true,
-                    hexInputBar: false,
                   ),
                 ],
               ),
