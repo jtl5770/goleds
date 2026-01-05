@@ -58,8 +58,9 @@ class _NightLEDEditorState extends State<NightLEDEditor> {
             pickerColor: tempColor,
             onColorChanged: (c) => tempColor = c,
             enableAlpha: false,
-            labelTypes: const [],
+            labelTypes: const [ColorLabelType.rgb, ColorLabelType.hsv],
             pickerAreaHeightPercent: 0.7,
+            displayThumbColor: true,
           ),
         ),
         actions: [
