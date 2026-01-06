@@ -25,11 +25,13 @@ tasks:
       - "web/**/*"
     generates:
       - "../web/index.html"
+      - "../goleds_web.tar.gz"
     cmds:
       - flutter build web --release
       - rm -rf ../web/*
       - cp -r build/web/* ../web/
-      - echo "Web build deployed to ./web"
+      - cd .. && tar -czf goleds_web.tar.gz web/
+      - echo "Web build deployed to ./web and archived to ./goleds_web.tar.gz"
 
   build-linux:
     desc: Build Flutter Linux Desktop app
@@ -64,7 +66,7 @@ tasks:
   clean:
     desc: Clean all artifacts
     cmds:
-      - rm -f goleds goleds_commander goleds_commander.apk
+      - rm -f goleds goleds_commander goleds_commander.apk goleds_web.tar.gz
       - rm -rf web/* commander_linux/
       - cmd: cd mobile && flutter clean
         ignore_error: true
