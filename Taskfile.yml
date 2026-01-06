@@ -39,11 +39,13 @@ tasks:
       - "linux/**/*"
       - "pubspec.yaml"
     generates:
-      - "../goleds_commander"
+      - "../commander_linux/goleds_commander"
     cmds:
       - flutter build linux --release
-      - cp build/linux/x64/release/bundle/goleds_commander ../goleds_commander
-      - echo "Linux binary copied to ./goleds_commander"
+      - rm -rf ../commander_linux
+      - mkdir -p ../commander_linux
+      - cp -r build/linux/x64/release/bundle/* ../commander_linux/
+      - echo "Linux app bundle deployed to ./commander_linux/"
 
   build-android:
     desc: Build Flutter Android APK
@@ -62,7 +64,7 @@ tasks:
   clean:
     desc: Clean all artifacts
     cmds:
-      - rm -f goleds goleds_commander goleds_commander.apk
-      - rm -rf web/*
+      - rm -f goleds goleds_pi goleds_commander goleds_commander.apk
+      - rm -rf web/* commander_linux/
       - cmd: cd mobile && flutter clean
         ignore_error: true
