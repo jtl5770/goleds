@@ -118,7 +118,7 @@ transition between effects.
 First, build the application. This project uses [Task](https://taskfile.dev/)
 to manage builds for the server and the cross-platform management app.
 
-To build everything at once (Server, Pi Binary, Web UI, Linux App, and Android APK):
+To build everything at once (Server, Web UI, Linux App, and Android APK):
 ```bash
 task
 ```
@@ -126,30 +126,15 @@ task
 Or build specific components:
 ```bash
 task build-server   # Build the Go server (goleds) for local dev
-task build-pi       # Cross-compile for Raspberry Pi (goleds_pi)
 task build-web      # Build the Flutter Web UI and deploy to ./web
 task build-linux    # Build the Flutter Linux Desktop app
 task build-android  # Build the Flutter Android APK
 ```
 
-#### On Raspberry Pi (Real Hardware)
+#### Running the Application
 
-To access GPIO and SPI, the program typically requires root
-permissions. For best performance and stable LED timing, it's
-recommended to run it with real-time priority using `chrt`.
-
-The `-real` flag tells the program to use the `RaspberryPiPlatform`
-and interact with actual hardware.
-
-```bash
-# Run with real-time priority
-sudo chrt 99 ./goleds_pi -real
-```
-
-#### In TUI Simulation Mode
-
-To run the terminal-based simulation, simply omit the `-real`
-flag. This is ideal for developing new producers or testing
+To run the terminal-based simulation (TUI), simply execute the built
+binary. This is ideal for developing new producers or testing
 configurations without hardware.
 
 ```bash

@@ -2,8 +2,8 @@ version: '3'
 
 tasks:
   default:
-    desc: Build everything (Server, Pi Binary, Web, Linux App, Android App)
-    deps: [build-server, build-pi, build-web, build-linux, build-android]
+    desc: Build everything (Server, Web, Linux App, Android App)
+    deps: [build-server, build-web, build-linux, build-android]
 
   build-server:
     desc: Build the Go server for local development
@@ -15,22 +15,6 @@ tasks:
       - goleds
     cmds:
       - go build -o goleds .
-
-  build-pi:
-    desc: Cross-compile the Go server for Raspberry Pi (ARMv7)
-    sources:
-      - "**/*.go"
-      - "go.mod"
-      - "go.sum"
-    generates:
-      - goleds_pi
-    env:
-      GOOS: linux
-      GOARCH: arm
-      GOARM: 7
-    cmds:
-      - go build -o goleds_pi .
-      - echo "Raspberry Pi binary built as ./goleds_pi"
 
   build-web:
     desc: Build Flutter Web app and deploy to ./web
@@ -78,7 +62,7 @@ tasks:
   clean:
     desc: Clean all artifacts
     cmds:
-      - rm -f goleds goleds_pi goleds_commander goleds_commander.apk
+      - rm -f goleds goleds_commander goleds_commander.apk
       - rm -rf web/*
       - cmd: cd mobile && flutter clean
         ignore_error: true
