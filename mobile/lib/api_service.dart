@@ -23,10 +23,14 @@ class ApiService {
       if (response.statusCode == 200) {
         return RuntimeConfig.fromJson(jsonDecode(response.body));
       } else {
-        throw Exception('Server returned ${response.statusCode}\nBody: ${response.body}');
+        throw Exception(
+          'Server returned ${response.statusCode}\nBody: ${response.body}',
+        );
       }
     } on http.ClientException catch (e) {
-      throw Exception('HTTP Client Error: ${e.message}\nCheck if the server is running at $uri');
+      throw Exception(
+        'HTTP Client Error: ${e.message}\nCheck if the server is running at $uri',
+      );
     } catch (e) {
       rethrow;
     }
@@ -35,16 +39,20 @@ class ApiService {
   Future<void> saveConfig(RuntimeConfig config) async {
     final uri = Uri.parse('$baseUrl/api/config');
     try {
-      final response = await http.post(
-        uri,
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: jsonEncode(config.toJson()),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .post(
+            uri,
+            headers: <String, String>{
+              'Content-Type': 'application/json; charset=UTF-8',
+            },
+            body: jsonEncode(config.toJson()),
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode != 200) {
-        throw Exception('Failed to save (Status: ${response.statusCode})\nError: ${response.body}');
+        throw Exception(
+          'Failed to save (Status: ${response.statusCode})\nError: ${response.body}',
+        );
       }
     } catch (e) {
       rethrow;

@@ -1,5 +1,3 @@
-
-
 class RuntimeConfig {
   int ledsTotal;
   SensorLEDConfig sensorLED;
@@ -120,7 +118,7 @@ class NightLEDConfig {
       rgbList = list.map((e) => _parseDoubleList(e)).toList();
     } else {
       rgbList = [
-        [0.0, 0.0, 0.0]
+        [0.0, 0.0, 0.0],
       ];
     }
     return NightLEDConfig(
@@ -357,12 +355,7 @@ class BlobCfg {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'DeltaX': deltaX,
-      'X': x,
-      'Width': width,
-      'LedRGB': ledRGB,
-    };
+    return {'DeltaX': deltaX, 'X': x, 'Width': width, 'LedRGB': ledRGB};
   }
 }
 

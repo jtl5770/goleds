@@ -41,7 +41,7 @@ class _RgbInputPickerState extends State<RgbInputPicker> {
   void _updateColor(HSVColor newHsv) {
     final clampedHsv = newHsv.withHue(newHsv.hue.clamp(0.0, 360.0));
     if (clampedHsv == hsvColor) return;
-    
+
     setState(() {
       hsvColor = clampedHsv;
       final color = clampedHsv.toColor();
@@ -62,7 +62,7 @@ class _RgbInputPickerState extends State<RgbInputPicker> {
     int r = (int.tryParse(rCtrl.text) ?? 0).clamp(0, 255);
     int g = (int.tryParse(gCtrl.text) ?? 0).clamp(0, 255);
     int b = (int.tryParse(bCtrl.text) ?? 0).clamp(0, 255);
-    
+
     // Update controllers to reflect clamping if user typed e.g. 300
     _updateTextIfChanged(rCtrl, r.toString());
     _updateTextIfChanged(gCtrl, g.toString());
@@ -70,7 +70,7 @@ class _RgbInputPickerState extends State<RgbInputPicker> {
 
     Color newColor = Color.fromARGB(255, r, g, b);
     HSVColor newHsv = HSVColor.fromColor(newColor);
-    
+
     if (newHsv != hsvColor) {
       setState(() {
         hsvColor = newHsv;
@@ -100,7 +100,11 @@ class _RgbInputPickerState extends State<RgbInputPicker> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(11),
-                    child: ColorPickerArea(hsvColor, _updateColor, PaletteType.hsv),
+                    child: ColorPickerArea(
+                      hsvColor,
+                      _updateColor,
+                      PaletteType.hsv,
+                    ),
                   ),
                 ),
               ),
@@ -148,8 +152,12 @@ class _RgbInputPickerState extends State<RgbInputPicker> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFFF0000), Color(0xFFFFFF00), Color(0xFF00FF00),
-              Color(0xFF00FFFF), Color(0xFF0000FF), Color(0xFFFF00FF),
+              Color(0xFFFF0000),
+              Color(0xFFFFFF00),
+              Color(0xFF00FF00),
+              Color(0xFF00FFFF),
+              Color(0xFF0000FF),
+              Color(0xFFFF00FF),
               Color(0xFFFF0000),
             ],
           ),
@@ -166,7 +174,9 @@ class _RgbInputPickerState extends State<RgbInputPicker> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(3),
-                  boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black54)],
+                  boxShadow: const [
+                    BoxShadow(blurRadius: 3, color: Colors.black54),
+                  ],
                 ),
               ),
             ),
@@ -204,10 +214,15 @@ class _RgbInputPickerState extends State<RgbInputPicker> {
               ),
               decoration: InputDecoration(
                 contentPadding: EdgeInsets.zero,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.deepPurpleAccent, width: 2),
+                  borderSide: const BorderSide(
+                    color: Colors.deepPurpleAccent,
+                    width: 2,
+                  ),
                 ),
               ),
               onChanged: (_) => _updateFromText(),

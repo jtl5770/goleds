@@ -81,89 +81,139 @@ class _HomeScreenState extends State<HomeScreen> {
       body: isLoading && config == null
           ? const Center(child: CircularProgressIndicator())
           : error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
-                      const SizedBox(height: 16),
-                      Text('Connection Failed', style: Theme.of(context).textTheme.headlineSmall),
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Text(error, textAlign: TextAlign.center),
-                      ),
-                      if (!kIsWeb)
-                        ElevatedButton(
-                          onPressed: _showSettingsDialog,
-                          child: const Text('Check Settings'),
-                        )
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: Colors.redAccent,
                   ),
-                )
-              : config == null
-                  ? const Center(child: Text('No Configuration Loaded'))
-                  : Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: GridView.count(
-                        crossAxisCount: MediaQuery.of(context).size.width > 600 ? 2 : 1,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 3.5,
-                        children: [
-                          ProducerCard(
-                            title: 'Sensor',
-                            icon: Icons.sensors,
-                            isEnabled: config.sensorLED.enabled,
-                            accentColor: Colors.purpleAccent,
-                            onToggle: () => configProvider.toggleProducer('SensorLED', !config.sensorLED.enabled),
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SensorLEDEditor())),
-                          ),
-                          ProducerCard(
-                            title: 'Night Light',
-                            icon: Icons.nightlight_round,
-                            isEnabled: config.nightLED.enabled,
-                            accentColor: Colors.orangeAccent,
-                            onToggle: () => configProvider.toggleProducer('NightLED', !config.nightLED.enabled),
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NightLEDEditor())),
-                          ),
-                          ProducerCard(
-                            title: 'Clock',
-                            icon: Icons.access_time,
-                            isEnabled: config.clockLED.enabled,
-                            accentColor: Colors.blueAccent,
-                            onToggle: () => configProvider.toggleProducer('ClockLED', !config.clockLED.enabled),
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClockLEDEditor())),
-                          ),
-                          ProducerCard(
-                            title: 'Audio VU',
-                            icon: Icons.equalizer,
-                            isEnabled: config.audioLED.enabled,
-                            accentColor: Colors.greenAccent,
-                            onToggle: () => configProvider.toggleProducer('AudioLED', !config.audioLED.enabled),
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AudioLEDEditor())),
-                          ),
-                          ProducerCard(
-                            title: 'Cylon Eye',
-                            icon: Icons.remove_red_eye,
-                            isEnabled: config.cylonLED.enabled,
-                            isDisabled: !config.sensorLED.enabled,
-                            accentColor: Colors.redAccent,
-                            onToggle: () => configProvider.toggleProducer('CylonLED', !config.cylonLED.enabled),
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CylonLEDEditor())),
-                          ),
-                          ProducerCard(
-                            title: 'Multi Blob',
-                            icon: Icons.bubble_chart,
-                            isEnabled: config.multiBlobLED.enabled,
-                            isDisabled: !config.sensorLED.enabled,
-                            accentColor: Colors.pinkAccent,
-                            onToggle: () => configProvider.toggleProducer('MultiBlobLED', !config.multiBlobLED.enabled),
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MultiBlobLEDEditor())),
-                          ),
-                        ],
+                  const SizedBox(height: 16),
+                  Text(
+                    'Connection Failed',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(error, textAlign: TextAlign.center),
+                  ),
+                  if (!kIsWeb)
+                    ElevatedButton(
+                      onPressed: _showSettingsDialog,
+                      child: const Text('Check Settings'),
+                    ),
+                ],
+              ),
+            )
+          : config == null
+          ? const Center(child: Text('No Configuration Loaded'))
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: GridView.count(
+                crossAxisCount: MediaQuery.of(context).size.width > 900
+                    ? 3
+                    : MediaQuery.of(context).size.width > 900
+                    ? 2
+                    : 1,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 12,
+                childAspectRatio: 3.5,
+                children: [
+                  ProducerCard(
+                    title: 'Sensor',
+                    icon: Icons.sensors,
+                    isEnabled: config.sensorLED.enabled,
+                    accentColor: Colors.purpleAccent,
+                    onToggle: () => configProvider.toggleProducer(
+                      'SensorLED',
+                      !config.sensorLED.enabled,
+                    ),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SensorLEDEditor(),
                       ),
                     ),
+                  ),
+                  ProducerCard(
+                    title: 'Night Light',
+                    icon: Icons.nightlight_round,
+                    isEnabled: config.nightLED.enabled,
+                    accentColor: Colors.orangeAccent,
+                    onToggle: () => configProvider.toggleProducer(
+                      'NightLED',
+                      !config.nightLED.enabled,
+                    ),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const NightLEDEditor()),
+                    ),
+                  ),
+                  ProducerCard(
+                    title: 'Clock',
+                    icon: Icons.access_time,
+                    isEnabled: config.clockLED.enabled,
+                    accentColor: Colors.blueAccent,
+                    onToggle: () => configProvider.toggleProducer(
+                      'ClockLED',
+                      !config.clockLED.enabled,
+                    ),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ClockLEDEditor()),
+                    ),
+                  ),
+                  ProducerCard(
+                    title: 'Audio VU',
+                    icon: Icons.equalizer,
+                    isEnabled: config.audioLED.enabled,
+                    accentColor: Colors.greenAccent,
+                    onToggle: () => configProvider.toggleProducer(
+                      'AudioLED',
+                      !config.audioLED.enabled,
+                    ),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AudioLEDEditor()),
+                    ),
+                  ),
+                  ProducerCard(
+                    title: 'Cylon Eye',
+                    icon: Icons.remove_red_eye,
+                    isEnabled: config.cylonLED.enabled,
+                    isDisabled: !config.sensorLED.enabled,
+                    accentColor: Colors.redAccent,
+                    onToggle: () => configProvider.toggleProducer(
+                      'CylonLED',
+                      !config.cylonLED.enabled,
+                    ),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CylonLEDEditor()),
+                    ),
+                  ),
+                  ProducerCard(
+                    title: 'Multi Blob',
+                    icon: Icons.bubble_chart,
+                    isEnabled: config.multiBlobLED.enabled,
+                    isDisabled: !config.sensorLED.enabled,
+                    accentColor: Colors.pinkAccent,
+                    onToggle: () => configProvider.toggleProducer(
+                      'MultiBlobLED',
+                      !config.multiBlobLED.enabled,
+                    ),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const MultiBlobLEDEditor(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }
-

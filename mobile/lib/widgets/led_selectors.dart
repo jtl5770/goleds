@@ -27,7 +27,13 @@ class LedPointSelector extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-            Text('LED #$value', style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+            Text(
+              'LED #$value',
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -35,17 +41,32 @@ class LedPointSelector extends StatelessWidget {
           builder: (context, constraints) {
             final double width = constraints.maxWidth;
             final double usableWidth = width - (2 * horizontalPadding);
-            final double knobPos = (value / (totalLeds - 1)) * usableWidth + horizontalPadding;
+            final double knobPos =
+                (value / (totalLeds - 1)) * usableWidth + horizontalPadding;
 
             return GestureDetector(
               onHorizontalDragUpdate: (details) {
-                double newPos = (knobPos + details.delta.dx).clamp(horizontalPadding, width - horizontalPadding);
-                int newValue = (((newPos - horizontalPadding) / usableWidth) * (totalLeds - 1)).round().clamp(0, totalLeds - 1);
+                double newPos = (knobPos + details.delta.dx).clamp(
+                  horizontalPadding,
+                  width - horizontalPadding,
+                );
+                int newValue =
+                    (((newPos - horizontalPadding) / usableWidth) *
+                            (totalLeds - 1))
+                        .round()
+                        .clamp(0, totalLeds - 1);
                 onChanged(newValue);
               },
               onTapUp: (details) {
-                double newPos = details.localPosition.dx.clamp(horizontalPadding, width - horizontalPadding);
-                int newValue = (((newPos - horizontalPadding) / usableWidth) * (totalLeds - 1)).round().clamp(0, totalLeds - 1);
+                double newPos = details.localPosition.dx.clamp(
+                  horizontalPadding,
+                  width - horizontalPadding,
+                );
+                int newValue =
+                    (((newPos - horizontalPadding) / usableWidth) *
+                            (totalLeds - 1))
+                        .round()
+                        .clamp(0, totalLeds - 1);
                 onChanged(newValue);
               },
               child: SizedBox(
@@ -80,7 +101,7 @@ class LedPointSelector extends StatelessWidget {
                               color: color.withValues(alpha: 0.4),
                               blurRadius: 6,
                               spreadRadius: 2,
-                            )
+                            ),
                           ],
                           border: Border.all(color: Colors.white, width: 2),
                         ),
@@ -139,9 +160,13 @@ class LedRangeSelector extends StatelessWidget {
           builder: (context, constraints) {
             final double width = constraints.maxWidth;
             final double usableWidth = width - (2 * horizontalPadding);
-            
-            double toPos(int val) => (val / (totalLeds - 1)) * usableWidth + horizontalPadding;
-            int toVal(double pos) => (((pos - horizontalPadding) / usableWidth) * (totalLeds - 1)).round().clamp(0, totalLeds - 1);
+
+            double toPos(int val) =>
+                (val / (totalLeds - 1)) * usableWidth + horizontalPadding;
+            int toVal(double pos) =>
+                (((pos - horizontalPadding) / usableWidth) * (totalLeds - 1))
+                    .round()
+                    .clamp(0, totalLeds - 1);
 
             final double startPos = toPos(start);
             final double endPos = toPos(end);
@@ -164,7 +189,7 @@ class LedRangeSelector extends StatelessWidget {
                       ),
                     ),
                   ),
-                  
+
                   // Active Segment
                   Positioned(
                     left: startPos <= endPos ? startPos : endPos,
@@ -173,9 +198,15 @@ class LedRangeSelector extends StatelessWidget {
                       height: 6,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: startPos <= endPos 
-                            ? [Colors.greenAccent.withValues(alpha: 0.5), Colors.redAccent.withValues(alpha: 0.5)]
-                            : [Colors.redAccent.withValues(alpha: 0.5), Colors.greenAccent.withValues(alpha: 0.5)],
+                          colors: startPos <= endPos
+                              ? [
+                                  Colors.greenAccent.withValues(alpha: 0.5),
+                                  Colors.redAccent.withValues(alpha: 0.5),
+                                ]
+                              : [
+                                  Colors.redAccent.withValues(alpha: 0.5),
+                                  Colors.greenAccent.withValues(alpha: 0.5),
+                                ],
                         ),
                       ),
                     ),
@@ -183,24 +214,30 @@ class LedRangeSelector extends StatelessWidget {
 
                   // Start Knob
                   _buildKnob(
-                    position: startPos, 
-                    color: Colors.greenAccent, 
+                    position: startPos,
+                    color: Colors.greenAccent,
                     label: 'S',
                     onDrag: (dx) {
-                      double newPos = (startPos + dx).clamp(horizontalPadding, width - horizontalPadding);
+                      double newPos = (startPos + dx).clamp(
+                        horizontalPadding,
+                        width - horizontalPadding,
+                      );
                       onChanged(toVal(newPos), end);
-                    }
+                    },
                   ),
 
                   // End Knob
                   _buildKnob(
-                    position: endPos, 
-                    color: Colors.redAccent, 
+                    position: endPos,
+                    color: Colors.redAccent,
                     label: 'E',
                     onDrag: (dx) {
-                      double newPos = (endPos + dx).clamp(horizontalPadding, width - horizontalPadding);
+                      double newPos = (endPos + dx).clamp(
+                        horizontalPadding,
+                        width - horizontalPadding,
+                      );
                       onChanged(start, toVal(newPos));
-                    }
+                    },
                   ),
                 ],
               ),
@@ -230,12 +267,12 @@ class LedRangeSelector extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 2),
             boxShadow: [
-               BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-               )
-            ]
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Text(
             label,
@@ -295,9 +332,12 @@ class DbRangeSelector extends StatelessWidget {
             final double width = constraints.maxWidth;
             final double usableWidth = width - (2 * horizontalPadding);
             final double rangeSpan = rangeMax - rangeMin;
-            
-            double toPos(double db) => ((db - rangeMin) / rangeSpan) * usableWidth + horizontalPadding;
-            double toDb(double pos) => ((pos - horizontalPadding) / usableWidth) * rangeSpan + rangeMin;
+
+            double toPos(double db) =>
+                ((db - rangeMin) / rangeSpan) * usableWidth + horizontalPadding;
+            double toDb(double pos) =>
+                ((pos - horizontalPadding) / usableWidth) * rangeSpan +
+                rangeMin;
 
             final double minPos = toPos(minDb);
             final double maxPos = toPos(maxDb);
@@ -320,7 +360,7 @@ class DbRangeSelector extends StatelessWidget {
                       ),
                     ),
                   ),
-                  
+
                   // Active Range
                   Positioned(
                     left: minPos,
@@ -333,28 +373,34 @@ class DbRangeSelector extends StatelessWidget {
 
                   // Min Knob
                   _buildKnob(
-                    position: minPos, 
-                    color: Colors.greenAccent, 
+                    position: minPos,
+                    color: Colors.greenAccent,
                     label: 'MIN',
                     onDrag: (dx) {
-                      double newPos = (minPos + dx).clamp(horizontalPadding, width - horizontalPadding);
+                      double newPos = (minPos + dx).clamp(
+                        horizontalPadding,
+                        width - horizontalPadding,
+                      );
                       double newVal = toDb(newPos).clamp(rangeMin, rangeMax);
-                      if (newVal >= maxDb) newVal = maxDb - 0.5; 
+                      if (newVal >= maxDb) newVal = maxDb - 0.5;
                       onChanged(newVal, maxDb);
-                    }
+                    },
                   ),
 
                   // Max Knob
                   _buildKnob(
-                    position: maxPos, 
-                    color: Colors.redAccent, 
+                    position: maxPos,
+                    color: Colors.redAccent,
                     label: 'MAX',
                     onDrag: (dx) {
-                      double newPos = (maxPos + dx).clamp(horizontalPadding, width - horizontalPadding);
+                      double newPos = (maxPos + dx).clamp(
+                        horizontalPadding,
+                        width - horizontalPadding,
+                      );
                       double newVal = toDb(newPos).clamp(rangeMin, rangeMax);
                       if (newVal <= minDb) newVal = minDb + 0.5;
                       onChanged(minDb, newVal);
-                    }
+                    },
                   ),
                 ],
               ),
@@ -384,12 +430,12 @@ class DbRangeSelector extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 2),
             boxShadow: [
-               BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-               )
-            ]
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Text(
             label,

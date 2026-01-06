@@ -24,7 +24,9 @@ class LedPreview extends StatelessWidget {
       decoration: BoxDecoration(
         color: displayColor,
         shape: BoxShape.circle,
-        border: hasBorder ? Border.all(color: Colors.white, width: size * 0.05) : null,
+        border: hasBorder
+            ? Border.all(color: Colors.white, width: size * 0.05)
+            : null,
         boxShadow: shadows,
       ),
     );
