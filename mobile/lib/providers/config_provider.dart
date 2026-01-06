@@ -99,6 +99,10 @@ class ConfigProvider with ChangeNotifier {
     switch (producerName) {
       case 'SensorLED':
         _config!.sensorLED.enabled = isEnabled;
+        if (!isEnabled) {
+          _config!.cylonLED.enabled = false;
+          _config!.multiBlobLED.enabled = false;
+        }
         break;
       case 'NightLED':
         _config!.nightLED.enabled = isEnabled;

@@ -75,6 +75,13 @@ func setConfigHandler(w http.ResponseWriter, r *http.Request, cfile string) {
 		return
 	}
 
+	// 2a. Validate that read-only hardware settings (LedsTotal) are not being modified.
+	if newRuntimeConfig.LedsTotal != fullConfig.Hardware.Display.LedsTotal {
+		slog.Warn("Attempted modification of read-only LedsTotal", "current", fullConfig.Hardware.Display.LedsTotal, "received", newRuntimeConfig.LedsTotal)
+		http.Error(w, fmt.Sprintf("LedsTotal is read-only and cannot be changed at runtime. Expected %d, got %d", fullConfig.Hardware.Display.LedsTotal, newRuntimeConfig.LedsTotal), http.StatusBadRequest)
+		return
+	}
+
 	// 3. Merge the new runtime settings into the full config object.
 	fullConfig.SensorLED = newRuntimeConfig.SensorLED
 	fullConfig.NightLED = newRuntimeConfig.NightLED
