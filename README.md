@@ -1,11 +1,11 @@
-# Go-LEDS
+# GoLEDS
 
-Go-LEDS is a flexible, concurrent lighting system designed to control LED strips using infrared (IR) sensors. It's built for Raspberry Pi but includes a robust terminal-based simulation (TUI) for development and testing on any platform. The system creates responsive, layered light animations triggered by motion, and includes ambient modes like clocks and audio VU meters.
+GoLEDS is a flexible, concurrent lighting system designed to control LED strips using infrared (IR) sensors. It's built for Raspberry Pi but includes a robust terminal-based simulation (TUI) for development and testing on any platform. The system creates responsive, layered light animations triggered by motion, and includes ambient modes like clocks and audio VU meters.
 
 https://github.com/jtl5770/goleds/assets/24967370/34057911-faef-4403-bd07-7b479bec8213
 
 <!--toc:start-->
-- [Go-LEDS](#go-leds)
+- [GoLEDS](#goleds)
   - [Key Features](#key-features)
   - [How It Works](#how-it-works)
     - [Platform Abstraction](#platform-abstraction)
@@ -15,7 +15,7 @@ https://github.com/jtl5770/goleds/assets/24967370/34057911-faef-4403-bd07-7b479b
     - [2. Configuration](#2-configuration)
     - [3. Building the Application](#3-building-the-application)
     - [4. Calibrating Sensors](#4-calibrating-sensors)
-  - [Go-LEDS Commander (Management App)](#go-leds-commander-management-app)
+  - [GoLEDS Commander (Management App)](#goleds-commander-management-app)
   - [Available Producers](#available-producers)
 <!--toc:end-->
 
@@ -31,7 +31,7 @@ https://github.com/jtl5770/goleds/assets/24967370/34057911-faef-4403-bd07-7b479b
 
 ### Platform Abstraction
 
-Go-LEDS decouples logic from hardware through a `platform.Platform` interface:
+GoLEDS decouples logic from hardware through a `platform.Platform` interface:
 
 *   **`RaspberryPiPlatform`**: Manages physical SPI communication with LED strips (WS2801, APA102) and ADC converters (MCP3008) for sensors.
 *   **`TUIPlatform`**: A terminal-based simulation. It visualizes the LEDs as colored blocks and simulates sensors via keyboard input (keys 1-9).
@@ -77,7 +77,7 @@ sudo chrt 99 ./goleds -real
 
 ### 4. Calibrating Sensors
 
-Fine-tuning the `TriggerValue` is essential. Go-LEDS includes a calibration mode that displays live min/max/mean data for your sensors. Run with both `-real` and `-show-sensors` on the Pi:
+Fine-tuning the `TriggerValue` is essential. GoLEDS includes a calibration mode that displays live min/max/mean data for your sensors. Run with both `-real` and `-show-sensors` on the Pi:
 
 ```bash
 sudo ./goleds -real -show-sensors
@@ -85,9 +85,9 @@ sudo ./goleds -real -show-sensors
 
 ![TUI sensor calibration](images/goleds-tui-sensors.png)
 
-## Go-LEDS Commander (Management App)
+## GoLEDS Commander (Management App)
 
-The project includes **Go-LEDS Commander**, a modern management interface built with Flutter. 
+The project includes **GoLEDS Commander**, a modern management interface built with Flutter. 
 
 *   **Web**: Served directly by the Go server at `http://<device-ip>:8080`.
 *   **Desktop**: Native Linux application (build via `task build-linux`).

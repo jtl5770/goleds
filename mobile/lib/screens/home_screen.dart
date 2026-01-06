@@ -30,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Connect to Go-LEDS'),
+        title: const Text('Connect to GoLEDS'),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
@@ -65,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('GO-LEDS COMMANDER'),
+        title: const Text('GoLEDS Commander'),
         actions: [
           if (!kIsWeb)
             IconButton(

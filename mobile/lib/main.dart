@@ -15,7 +15,7 @@ class GoLedsApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => ConfigProvider(),
       child: MaterialApp(
-        title: 'Go-LEDS Commander',
+        title: 'GoLEDS Commander',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           brightness: Brightness.dark,

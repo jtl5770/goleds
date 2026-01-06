@@ -15,7 +15,7 @@ Logging:
     # Path to the log file. If empty, logging to a file is disabled.
     File: "/var/log/goleds.log"
 
-# Hardware settings for the Go-LEDS system.
+# Hardware settings for the GoLEDS system.
 Hardware:
   # Type of the LED strip. Supported values: "ws2801" or "apa102".
   LEDType: "ws2801"

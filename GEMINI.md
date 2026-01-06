@@ -1,7 +1,7 @@
-# Go-LEDS Project Context
+# GoLEDS Project Context
 
 ## Project Overview
-Go-LEDS is a highly configurable, concurrent lighting system written in Go. It controls LED strips (like WS2801, APA102) based on infrared (IR) sensor inputs. The system is designed for Raspberry Pi but features a robust terminal-based simulation (TUI) for cross-platform development.
+GoLEDS is a highly configurable, concurrent lighting system written in Go. It controls LED strips (like WS2801, APA102) based on infrared (IR) sensor inputs. The system is designed for Raspberry Pi but features a robust terminal-based simulation (TUI) for cross-platform development.
 
 **Key Features:**
 *   **Reactive Lighting:** Animations triggered by IR motion sensors.

@@ -86,20 +86,16 @@ VS_VERSION_INFO VERSIONINFO
  FILESUBTYPE 0x0L
 BEGIN
     BLOCK "StringFileInfo"
-    BEGIN
-        BLOCK "040904e4"
-        BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "mobile" "\0"
-            VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "mobile" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "mobile.exe" "\0"
-            VALUE "ProductName", "mobile" "\0"
-            VALUE "ProductVersion", VERSION_AS_STRING "\0"
-        END
-    END
-    BLOCK "VarFileInfo"
+            BEGIN
+                VALUE "CompanyName", "net.lautenbacher" "\0"
+                VALUE "FileDescription", "GoLEDS Commander" "\0"
+                VALUE "FileVersion", VERSION_AS_STRING "\0"
+                VALUE "InternalName", "goleds_commander" "\0"
+                VALUE "LegalCopyright", "Copyright (C) 2026 net.lautenbacher. All rights reserved." "\0"
+                VALUE "OriginalFilename", "goleds_commander.exe" "\0"
+                VALUE "ProductName", "GoLEDS Commander" "\0"
+                VALUE "ProductVersion", VERSION_AS_STRING "\0"
+            END    BLOCK "VarFileInfo"
     BEGIN
         VALUE "Translation", 0x409, 1252
     END

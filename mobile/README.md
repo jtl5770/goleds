@@ -1,4 +1,4 @@
-# mobile
+# GoLEDS Commander
 
 A new Flutter project.
 
