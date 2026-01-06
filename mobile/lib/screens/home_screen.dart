@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import '../providers/config_provider.dart';
 import '../widgets/producer_card.dart';
@@ -66,10 +67,11 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('GO-LEDS COMMANDER'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: _showSettingsDialog,
-          ),
+          if (!kIsWeb)
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: _showSettingsDialog,
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => configProvider.fetchConfig(),
@@ -90,10 +92,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.all(16.0),
                         child: Text(error, textAlign: TextAlign.center),
                       ),
-                      ElevatedButton(
-                        onPressed: _showSettingsDialog,
-                        child: const Text('Check Settings'),
-                      )
+                      if (!kIsWeb)
+                        ElevatedButton(
+                          onPressed: _showSettingsDialog,
+                          child: const Text('Check Settings'),
+                        )
                     ],
                   ),
                 )
