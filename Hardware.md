@@ -139,15 +139,15 @@ is high).
 
 ### FUTURE
 
-I am trying to learn KiCAD to produce some "real" board. I will make
+I am going to create a real, simplified PCB. I will make
 sure in this new version to support out of the box up to 4 LED
 stripes, but maybe only use one MCP3008 for up to 8 sensors (which
 would allow for an entry and exit sensor per segment in the case all
 four stripes are attached)
 
-At best would be a board in the format of a Raspberry Pi HAT so it
-could just be put on top of the Pi, connected via the expansion
-headers and actually power the Pi via the 5V & GND GPIO pins.
+it will be in the format of a Raspberry Pi HAT so it can be put on top
+of the Pi, connected via the expansion headers and power the Pi via
+the 5V & GND GPIO pins.
 
 
 <!-- Local Variables: --> 
