@@ -1,0 +1,52 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Red Glow -->
+    <radialGradient id="glowRed" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF1744" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#FF1744" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Green Glow -->
+    <radialGradient id="glowGreen" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00E676" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#00E676" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Blue Glow -->
+    <radialGradient id="glowBlue" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2979FF" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#2979FF" stop-opacity="0"/>
+    </radialGradient>
+    <!-- White Glow for main symbol -->
+    <radialGradient id="glowWhite" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="200" fill="#121212"/>
+  
+  <!-- Subtle Background Glow -->
+  <circle cx="512" cy="512" r="400" fill="url(#glowWhite)"/>
+
+  <!-- RGB Glow Auras -->
+  <circle cx="362" cy="780" r="120" fill="url(#glowRed)" opacity="0.4"/>
+  <circle cx="512" cy="780" r="120" fill="url(#glowGreen)" opacity="0.4"/>
+  <circle cx="662" cy="780" r="120" fill="url(#glowBlue)" opacity="0.4"/>
+  
+  <!-- Outer Ring -->
+  <circle cx="512" cy="512" r="420" stroke="#333333" stroke-width="15"/>
+  
+  <!-- Stylized 'G' / Power Symbol -->
+  <path d="M 512 240 A 272 272 0 1 0 784 512" stroke="white" stroke-width="75" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="474.5" y="120" width="75" height="280" rx="37.5" fill="white"/>
+  
+  <!-- Vivid RGB Core Lights -->
+  <circle cx="362" cy="780" r="55" fill="#FF1744"/>
+  <circle cx="512" cy="780" r="55" fill="#00E676"/>
+  <circle cx="662" cy="780" r="55" fill="#2979FF"/>
+  
+  <!-- Highlighting core spots for extra 'pop' -->
+  <circle cx="362" cy="780" r="20" fill="white" opacity="0.3"/>
+  <circle cx="512" cy="780" r="20" fill="white" opacity="0.3"/>
+  <circle cx="662" cy="780" r="20" fill="white" opacity="0.3"/>
+</svg>

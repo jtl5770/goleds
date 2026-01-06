@@ -92,6 +92,16 @@ The `config.yml` is the brain of the operation. Key sections:
     *   Instantiate it in `initialise`.
     *   Add it to `permProd`, `afterProd`, or handle it in `stateManager` depending on when it should run.
 
+## Validation & Dependencies
+
+### Hardware Immutability
+*   **`LedsTotal`**: This field represents the physical number of LEDs and is considered a read-only hardware attribute. The backend (`config/webhandler.go`) explicitly rejects runtime API requests that attempt to modify this value. This prevents validation errors where dependent fields (like `ClockLED` ranges) are validated against a stale hardware configuration.
+
+### Producer Dependencies
+*   **SensorLED Dependency**: The "After Producers" (currently `CylonLED` and `MultiBlobLED`) are logically dependent on the `SensorLED` producer. They only run *after* a sensor event completes.
+    *   **Backend Rule**: `Config.Validate()` enforces that if `CylonLED` or `MultiBlobLED` are enabled, `SensorLED` must also be enabled.
+    *   **UI Behavior**: Both the Web UI and Flutter App implement "Auto-disable" logic. Disabling `SensorLED` automatically disables and unchecks the dependent producers to ensure a valid configuration is sent to the backend.
+
 ## Common Tasks
 *   **Calibrate Sensors:** Run `./goleds_pi -real -show-sensors` on the Pi to see raw ADC values and adjust `TriggerValue` in config.
 *   **Change Colors:** Use the Web UI (`http://localhost:8080` if local) or edit `config.yml`.
