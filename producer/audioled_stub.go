@@ -4,7 +4,6 @@ package producer
 
 import (
 	"log/slog"
-	"sync"
 
 	c "lautenbacher.net/goleds/config"
 	u "lautenbacher.net/goleds/util"
