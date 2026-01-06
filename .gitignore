@@ -1,8 +1,12 @@
 /goleds
 /README.html
 /goleds_pi
+/goleds_commander
+/goleds_commander.apk
 /log
 .aider*
 /.gemini/
 .commit_message.txt
 /config.yml
+/.task/
+/web/

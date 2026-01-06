@@ -115,8 +115,22 @@ transition between effects.
 
 ### 3. Running the Application
 
-First, build the application. A helper script `buildpi.sh` is provided
-for cross-compiling for the Raspberry Pi.
+First, build the application. This project uses [Task](https://taskfile.dev/)
+to manage builds for the server and the cross-platform management app.
+
+To build everything at once (Server, Pi Binary, Web UI, Linux App, and Android APK):
+```bash
+task
+```
+
+Or build specific components:
+```bash
+task build-server   # Build the Go server (goleds) for local dev
+task build-pi       # Cross-compile for Raspberry Pi (goleds_pi)
+task build-web      # Build the Flutter Web UI and deploy to ./web
+task build-linux    # Build the Flutter Linux Desktop app
+task build-android  # Build the Flutter Android APK
+```
 
 #### On Raspberry Pi (Real Hardware)
 
@@ -129,7 +143,7 @@ and interact with actual hardware.
 
 ```bash
 # Run with real-time priority
-sudo chrt 99 /path/to/goleds_pi -real
+sudo chrt 99 ./goleds_pi -real
 ```
 
 #### In TUI Simulation Mode
@@ -139,7 +153,7 @@ flag. This is ideal for developing new producers or testing
 configurations without hardware.
 
 ```bash
-/path/to/goleds
+./goleds
 ```
 
 ![Go-LEDS TUI](images/goleds-tui.png)
@@ -147,7 +161,16 @@ configurations without hardware.
 In the TUI, you can trigger sensors by pressing the corresponding
 number keys (1, 2, 3, etc.).
 
-### 4. Calibrating Sensors
+### 4. Management Application
+
+Go-LEDS includes a modern management application, **Go-LEDS Commander**,
+built with Flutter. It runs as a Web interface (served directly by the
+Go server), as a native Linux desktop app, or as an Android app.
+
+The Flutter source is located in the `mobile/` directory. When built
+via `task build-web`, it replaces the legacy static web interface in
+the `web/` directory.
+
 
 Getting the sensor `TriggerValue` right is crucial for reliable
 operation. The value must be high enough to avoid false triggers from

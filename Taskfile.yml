@@ -1,0 +1,84 @@
+version: '3'
+
+tasks:
+  default:
+    desc: Build everything (Server, Pi Binary, Web, Linux App, Android App)
+    deps: [build-server, build-pi, build-web, build-linux, build-android]
+
+  build-server:
+    desc: Build the Go server for local development
+    sources:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+    generates:
+      - goleds
+    cmds:
+      - go build -o goleds .
+
+  build-pi:
+    desc: Cross-compile the Go server for Raspberry Pi (ARMv7)
+    sources:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+    generates:
+      - goleds_pi
+    env:
+      GOOS: linux
+      GOARCH: arm
+      GOARM: 7
+    cmds:
+      - go build -o goleds_pi .
+      - echo "Raspberry Pi binary built as ./goleds_pi"
+
+  build-web:
+    desc: Build Flutter Web app and deploy to ./web
+    dir: mobile
+    sources:
+      - "lib/**/*.dart"
+      - "pubspec.yaml"
+      - "web/**/*"
+    generates:
+      - "../web/index.html"
+    cmds:
+      - flutter build web --release
+      - rm -rf ../web/*
+      - cp -r build/web/* ../web/
+      - echo "Web build deployed to ./web"
+
+  build-linux:
+    desc: Build Flutter Linux Desktop app
+    dir: mobile
+    sources:
+      - "lib/**/*.dart"
+      - "linux/**/*"
+      - "pubspec.yaml"
+    generates:
+      - "../goleds_commander"
+    cmds:
+      - flutter build linux --release
+      - cp build/linux/x64/release/bundle/goleds_commander ../goleds_commander
+      - echo "Linux binary copied to ./goleds_commander"
+
+  build-android:
+    desc: Build Flutter Android APK
+    dir: mobile
+    sources:
+      - "lib/**/*.dart"
+      - "android/**/*"
+      - "pubspec.yaml"
+    generates:
+      - "../goleds_commander.apk"
+    cmds:
+      - flutter build apk --release
+      - cp build/app/outputs/flutter-apk/app-release.apk ../goleds_commander.apk
+      - echo "APK copied to ./goleds_commander.apk"
+
+  clean:
+    desc: Clean all artifacts
+    cmds:
+      - rm -f goleds goleds_pi goleds_commander goleds_commander.apk
+      - rm -rf web/*
+      - cmd: cd mobile && flutter clean
+        ignore_error: true

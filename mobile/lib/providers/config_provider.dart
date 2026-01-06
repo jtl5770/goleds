@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models.dart';
 import '../api_service.dart';
@@ -9,7 +10,7 @@ class ConfigProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   static const String _urlKey = 'go_leds_base_url';
-  static const String _defaultUrl = 'http://goleds.local:8080';
+  static const String _defaultUrl = kIsWeb ? '' : 'http://goleds.local:8080';
 
   ConfigProvider() : _apiService = ApiService(_defaultUrl) {
     _init();
