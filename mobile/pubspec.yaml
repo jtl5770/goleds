@@ -58,6 +58,11 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/icon.png"
   min_sdk_android: 21 # android min sdk value
+  web:
+    generate: true
+    image_path: "assets/icon.png"
+    background_color: "#0175C2"
+    theme_color: "#0175C2"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
