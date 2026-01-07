@@ -114,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: GridView.count(
                 crossAxisCount: MediaQuery.of(context).size.width > 900
                     ? 3
-                    : MediaQuery.of(context).size.width > 900
+                    : MediaQuery.of(context).size.width > 600
                     ? 2
                     : 1,
                 crossAxisSpacing: 16,
@@ -124,6 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ProducerCard(
                     title: 'Sensor',
                     icon: Icons.sensors,
+                    imagePath: 'assets/images/producer_sensor.png',
                     isEnabled: config.sensorLED.enabled,
                     accentColor: Colors.purpleAccent,
                     onToggle: () => configProvider.toggleProducer(
@@ -140,6 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ProducerCard(
                     title: 'Night Light',
                     icon: Icons.nightlight_round,
+                    imagePath: 'assets/images/producer_night.png',
                     isEnabled: config.nightLED.enabled,
                     accentColor: Colors.orangeAccent,
                     onToggle: () => configProvider.toggleProducer(
@@ -154,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ProducerCard(
                     title: 'Clock',
                     icon: Icons.access_time,
+                    imagePath: 'assets/images/producer_clock.png',
                     isEnabled: config.clockLED.enabled,
                     accentColor: Colors.blueAccent,
                     onToggle: () => configProvider.toggleProducer(
@@ -168,6 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ProducerCard(
                     title: 'Audio VU',
                     icon: Icons.equalizer,
+                    imagePath: 'assets/images/producer_audio.png',
                     isEnabled: config.audioLED.enabled,
                     accentColor: Colors.greenAccent,
                     onToggle: () => configProvider.toggleProducer(
@@ -182,6 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ProducerCard(
                     title: 'Cylon Eye',
                     icon: Icons.remove_red_eye,
+                    imagePath: 'assets/images/producer_cylon.png',
                     isEnabled: config.cylonLED.enabled,
                     isDisabled: !config.sensorLED.enabled,
                     accentColor: Colors.redAccent,
@@ -197,6 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ProducerCard(
                     title: 'Multi Blob',
                     icon: Icons.bubble_chart,
+                    imagePath: 'assets/images/producer_multiblob.png',
                     isEnabled: config.multiBlobLED.enabled,
                     isDisabled: !config.sensorLED.enabled,
                     accentColor: Colors.pinkAccent,

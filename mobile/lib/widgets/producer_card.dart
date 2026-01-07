@@ -8,6 +8,8 @@ class ProducerCard extends StatelessWidget {
   final VoidCallback onToggle;
   final VoidCallback onTap;
   final Color accentColor;
+  final String? imagePath;
+
   const ProducerCard({
     super.key,
     required this.title,
@@ -17,6 +19,7 @@ class ProducerCard extends StatelessWidget {
     required this.onToggle,
     required this.onTap,
     this.accentColor = Colors.cyanAccent,
+    this.imagePath,
   });
 
   @override
@@ -29,6 +32,13 @@ class ProducerCard extends StatelessWidget {
           duration: const Duration(milliseconds: 300),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
+            image: imagePath != null
+                ? DecorationImage(
+                    image: AssetImage(imagePath!),
+                    fit: BoxFit.cover,
+                    opacity: 0.15,
+                  )
+                : null,
             borderRadius: BorderRadius.circular(16),
             border: (isEnabled && !isDisabled)
                 ? Border.all(
