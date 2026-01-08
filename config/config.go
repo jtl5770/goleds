@@ -235,7 +235,7 @@ type MultiBlobLEDConfig struct {
 	Enabled  bool          `yaml:"Enabled"`
 	Duration time.Duration `yaml:"Duration"`
 	Delay    time.Duration `yaml:"Delay"`
-	BlobCfg  []BlobCfg     `yaml:"BlobCfg,flow"`
+	BlobCfg  []BlobCfg     `yaml:"BlobCfg"`
 }
 
 func (c *MultiBlobLEDConfig) Validate(ledsTotal int) error {

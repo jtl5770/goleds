@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
@@ -105,10 +106,41 @@ func setConfigHandler(w http.ResponseWriter, r *http.Request, cfile string) {
 		return
 	}
 
-	// 6. Write the new YAML back to the config file, triggering the reload.
-	if err := os.WriteFile(cfile, yamlData, 0o644); err != nil {
-		slog.Error("Failed to write updated config file", "error", err)
-		http.Error(w, "Failed to save configuration", http.StatusInternalServerError)
+	// 6. Write the new YAML back to the config file atomically.
+	// We create a temp file in the same directory to ensure we can rename it.
+	dir := filepath.Dir(cfile)
+	tmpFile, err := os.CreateTemp(dir, "config.*.yml")
+	if err != nil {
+		slog.Error("Failed to create temp config file", "error", err)
+		http.Error(w, "Failed to initiate save", http.StatusInternalServerError)
+		return
+	}
+	tmpName := tmpFile.Name()
+	
+	// Ensure we cleanup the temp file if something goes wrong before rename
+	defer func() {
+		// If the file still exists (rename didn't happen), remove it
+		if _, err := os.Stat(tmpName); err == nil {
+			os.Remove(tmpName)
+		}
+	}()
+
+	if _, err := tmpFile.Write(yamlData); err != nil {
+		slog.Error("Failed to write to temp config file", "error", err)
+		tmpFile.Close()
+		http.Error(w, "Failed to write configuration", http.StatusInternalServerError)
+		return
+	}
+	if err := tmpFile.Close(); err != nil {
+		slog.Error("Failed to close temp config file", "error", err)
+		http.Error(w, "Failed to complete save", http.StatusInternalServerError)
+		return
+	}
+
+	// Rename strictly replaces the old file atomically (on POSIX)
+	if err := os.Rename(tmpName, cfile); err != nil {
+		slog.Error("Failed to rename temp config file to final destination", "error", err)
+		http.Error(w, "Failed to commit configuration", http.StatusInternalServerError)
 		return
 	}
 

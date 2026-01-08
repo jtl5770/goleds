@@ -7,13 +7,39 @@ void main() {
   runApp(const GoLedsApp());
 }
 
-class GoLedsApp extends StatelessWidget {
+class GoLedsApp extends StatefulWidget {
   const GoLedsApp({super.key});
 
   @override
+  State<GoLedsApp> createState() => _GoLedsAppState();
+}
+
+class _GoLedsAppState extends State<GoLedsApp> with WidgetsBindingObserver {
+  final ConfigProvider _configProvider = ConfigProvider();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _configProvider.fetchConfig();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ConfigProvider(),
+    return ChangeNotifierProvider.value(
+      value: _configProvider,
       child: MaterialApp(
         title: 'GoLEDS Commander',
         debugShowCheckedModeBanner: false,

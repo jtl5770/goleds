@@ -33,18 +33,54 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
         durationSec = m.durationSec;
         delayMs = m.delayMs;
         // Deep copy blobs to allow editing/canceling
-        blobs = m.blobCfg.map((b) => BlobCfg(
-          deltaX: b.deltaX,
-          x: b.x,
-          width: b.width,
-          ledRGB: List.from(b.ledRGB),
-        )).toList();
+        blobs = m.blobCfg
+            .map(
+              (b) => BlobCfg(
+                deltaX: b.deltaX,
+                x: b.x,
+                width: b.width,
+                ledRGB: List.from(b.ledRGB),
+              ),
+            )
+            .toList();
         _initialized = true;
       }
     }
   }
 
   void _save() {
+    if (blobs.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Warning'),
+          content: const Text(
+            'You are about to save an empty list of blobs.\n'
+            'This will remove all existing blobs from the configuration.\n\n'
+            'Are you sure you want to proceed?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () {
+                Navigator.pop(ctx);
+                _performSave();
+              },
+              child: const Text('Overwrite & Clear'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      _performSave();
+    }
+  }
+
+  void _performSave() {
     final provider = context.read<ConfigProvider>();
     final config = provider.config;
     if (config == null) return;
@@ -63,9 +99,19 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
     BlobCfg tempBlob;
     if (index != null) {
       final b = blobs[index];
-      tempBlob = BlobCfg(deltaX: b.deltaX, x: b.x, width: b.width, ledRGB: List.from(b.ledRGB));
+      tempBlob = BlobCfg(
+        deltaX: b.deltaX,
+        x: b.x,
+        width: b.width,
+        ledRGB: List.from(b.ledRGB),
+      );
     } else {
-      tempBlob = BlobCfg(deltaX: 0.5, x: 0, width: 2, ledRGB: [0,0,255]); // Default blue blob
+      tempBlob = BlobCfg(
+        deltaX: 0.5,
+        x: 0,
+        width: 2,
+        ledRGB: [0, 0, 255],
+      ); // Default blue blob
     }
 
     Color tempColor = fromRgbList(tempBlob.ledRGB);
@@ -80,13 +126,16 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                   ConfigSlider(
+                  ConfigSlider(
                     label: 'Speed (DeltaX)',
                     value: tempBlob.deltaX,
                     min: -2.0,
                     max: 2.0,
                     isInt: false,
-                    onChanged: (v) => setState(() => tempBlob.deltaX = double.parse(v.toStringAsFixed(2))),
+                    onChanged: (v) => setState(
+                      () =>
+                          tempBlob.deltaX = double.parse(v.toStringAsFixed(2)),
+                    ),
                     activeColor: Colors.pinkAccent,
                   ),
                   ConfigSlider(
@@ -106,13 +155,16 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
                     activeColor: Colors.pinkAccent,
                   ),
                   const SizedBox(height: 16),
-                  const Text('Blob Color', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Blob Color',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   RgbInputPicker(
                     initialColor: tempColor,
                     onColorChanged: (c) {
-                        tempColor = c;
-                        tempBlob.ledRGB = toRgbList(c);
+                      tempColor = c;
+                      tempBlob.ledRGB = toRgbList(c);
                     },
                   ),
                 ],
@@ -125,7 +177,10 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
                     this.setState(() => blobs.removeAt(index));
                     Navigator.pop(ctx);
                   },
-                  child: const Text('DELETE', style: TextStyle(color: Colors.red)),
+                  child: const Text(
+                    'DELETE',
+                    style: TextStyle(color: Colors.red),
+                  ),
                 ),
               ElevatedButton(
                 onPressed: () {
@@ -142,14 +197,15 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
               ),
             ],
           );
-        }
+        },
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_initialized) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (!_initialized)
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
     return Scaffold(
       appBar: AppBar(
@@ -163,14 +219,18 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
           ConfigSlider(
             label: 'Cycle Duration',
             value: durationSec.toDouble(),
-            min: 10, max: 300, unit: 's',
+            min: 10,
+            max: 300,
+            unit: 's',
             onChanged: (v) => setState(() => durationSec = v.toInt()),
             activeColor: Colors.pinkAccent,
           ),
           ConfigSlider(
             label: 'Step Delay',
             value: delayMs.toDouble(),
-            min: 10, max: 200, unit: 'ms',
+            min: 10,
+            max: 200,
+            unit: 'ms',
             onChanged: (v) => setState(() => delayMs = v.toInt()),
             activeColor: Colors.pinkAccent,
           ),
@@ -196,7 +256,9 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
               child: ListTile(
                 leading: LedPreview(color: color, size: 24),
                 title: Text('Blob $i (Width: ${b.width.toInt()})'),
-                subtitle: Text('Pos: ${b.x.toInt()}, Speed: ${b.deltaX.toStringAsFixed(2)}'),
+                subtitle: Text(
+                  'Pos: ${b.x.toInt()}, Speed: ${b.deltaX.toStringAsFixed(2)}',
+                ),
                 trailing: const Icon(Icons.edit, size: 20),
                 onTap: () => _editBlob(index: i),
               ),
