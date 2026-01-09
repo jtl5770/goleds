@@ -9,6 +9,7 @@ class ProducerCard extends StatelessWidget {
   final VoidCallback onTap;
   final Color accentColor;
   final String? imagePath;
+  final double imageOpacity;
 
   const ProducerCard({
     super.key,
@@ -20,6 +21,7 @@ class ProducerCard extends StatelessWidget {
     required this.onTap,
     this.accentColor = Colors.cyanAccent,
     this.imagePath,
+    this.imageOpacity = 0.25,
   });
 
   @override
@@ -36,7 +38,31 @@ class ProducerCard extends StatelessWidget {
                 ? DecorationImage(
                     image: AssetImage(imagePath!),
                     fit: BoxFit.cover,
-                    opacity: 0.15,
+                    opacity: imageOpacity,
+                    colorFilter: (!isEnabled || isDisabled)
+                        ? const ColorFilter.matrix(<double>[
+                            0.2126,
+                            0.7152,
+                            0.0722,
+                            0,
+                            0,
+                            0.2126,
+                            0.7152,
+                            0.0722,
+                            0,
+                            0,
+                            0.2126,
+                            0.7152,
+                            0.0722,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            1,
+                            0,
+                          ])
+                        : null,
                   )
                 : null,
             borderRadius: BorderRadius.circular(16),
