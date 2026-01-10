@@ -126,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ProducerCard(
                       title: 'Sensor',
                       icon: Icons.sensors,
-                      imagePath: 'assets/images/sensors.png',
+                      imagePath: 'images/sensors.png',
                       isEnabled: config.sensorLED.enabled,
                       accentColor: Colors.purpleAccent,
                       onToggle: () => configProvider.toggleProducer(
@@ -143,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ProducerCard(
                       title: 'Night Light',
                       icon: Icons.nightlight_round,
-                      imagePath: 'assets/images/nightlight.png',
+                      imagePath: 'images/nightlight.png',
                       imageOpacity: 0.4,
                       isEnabled: config.nightLED.enabled,
                       accentColor: Colors.orangeAccent,
@@ -161,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ProducerCard(
                       title: 'Clock',
                       icon: Icons.access_time,
-                      imagePath: 'assets/images/clock.png',
+                      imagePath: 'images/clock.png',
                       isEnabled: config.clockLED.enabled,
                       accentColor: Colors.blueAccent,
                       onToggle: () => configProvider.toggleProducer(
@@ -178,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ProducerCard(
                       title: 'Audio VU',
                       icon: Icons.equalizer,
-                      imagePath: 'assets/images/audio.png',
+                      imagePath: 'images/audio.png',
                       imageOpacity: 0.12,
                       isEnabled: config.audioLED.enabled,
                       accentColor: Colors.greenAccent,
@@ -196,7 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ProducerCard(
                       title: 'Cylon Eye',
                       icon: Icons.remove_red_eye,
-                      imagePath: 'assets/images/cylon.png',
+                      imagePath: 'images/cylon.png',
                       isEnabled: config.cylonLED.enabled,
                       isDisabled: !config.sensorLED.enabled,
                       accentColor: Colors.redAccent,
@@ -214,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ProducerCard(
                       title: 'Multi Blob',
                       icon: Icons.bubble_chart,
-                      imagePath: 'assets/images/blobs.png',
+                      imagePath: 'images/blobs.png',
                       isEnabled: config.multiBlobLED.enabled,
                       isDisabled: !config.sensorLED.enabled,
                       accentColor: Colors.pinkAccent,

@@ -16,8 +16,20 @@ tasks:
     cmds:
       - go build -o goleds .
 
+  generate-icons:
+    desc: Generate app icons from SVG source
+    dir: mobile
+    sources:
+      - "assets/icon.svg"
+    generates:
+      - "assets/icon.png"
+    cmds:
+      - convert -background none -resize 1024x1024 assets/icon.svg assets/icon.png
+      - dart run flutter_launcher_icons
+
   build-web:
     desc: Build Flutter Web app and deploy to ./web
+    deps: [generate-icons]
     dir: mobile
     sources:
       - "lib/**/*.dart"
@@ -35,6 +47,7 @@ tasks:
 
   build-linux:
     desc: Build Flutter Linux Desktop app
+    deps: [generate-icons]
     dir: mobile
     sources:
       - "lib/**/*.dart"
@@ -51,6 +64,7 @@ tasks:
 
   build-android:
     desc: Build Flutter Android APK
+    deps: [generate-icons]
     dir: mobile
     sources:
       - "lib/**/*.dart"
