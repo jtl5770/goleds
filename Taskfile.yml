@@ -38,7 +38,7 @@ tasks:
       - "web/index.html"
       - "goleds_web.tar.gz"
     cmds:
-      - cd mobile && flutter build web --release
+      - cd mobile && flutter build web --release --no-wasm-dry-run
       - rm -rf web/*
       - cp -r mobile/build/web/* web/
       - tar -czf goleds_web.tar.gz web/
