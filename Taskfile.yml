@@ -1,86 +1,90 @@
-version: "3"
+version: '3'
 
 tasks:
-    default:
-        desc: Build everything (Server, Web, Linux App, Android App)
-        deps: [build-server, build-web, build-linux, build-android]
+  default:
+    desc: Build everything (Server, Web, Linux App, Android App)
+    deps: [build-server, build-web, build-linux, build-android]
 
-    build-server:
-        desc: Build the Go server for local development
-        sources:
-            - "**/*.go"
-            - "go.mod"
-            - "go.sum"
-        generates:
-            - goleds
-        cmds:
-            - go build -o goleds .
+  build-server:
+    desc: Build the Go server for local development
+    sources:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+    generates:
+      - goleds
+    cmds:
+      - go build -o goleds .
 
-    generate-icons:
-        desc: Generate app icons from SVG source
-        dir: mobile
-        sources:
-            - "assets/icon.svg"
-        generates:
-            - "assets/icon.png"
-        cmds:
-            - convert -background none -resize 1024x1024 assets/icon.svg assets/icon.png
-            - dart run flutter_launcher_icons
+  generate-icons:
+    desc: Generate app icons from SVG source
+    sources:
+      - "mobile/assets/icon.svg"
+    generates:
+      - "mobile/assets/icon.png"
+    cmds:
+      - convert -background none -resize 1024x1024 mobile/assets/icon.svg mobile/assets/icon.png
+      - cd mobile && dart run flutter_launcher_icons
 
-    build-web:
-        desc: Build Flutter Web app and deploy to ./web
-        deps: [generate-icons]
-        dir: mobile
-        sources:
-            - "lib/**/*.dart"
-            - "pubspec.yaml"
-            - "web/**/*"
-        generates:
-            - "../web/index.html"
-            - "../goleds_web.tar.gz"
-        cmds:
-            - flutter build web --release
-            - rm -rf ../web/*
-            - cp -r build/web/* ../web/
-            - cd .. && tar -czf goleds_web.tar.gz web/
-            - echo "Web build deployed to ./web and archived to ./goleds_web.tar.gz"
+  build-web:
+    desc: Build Flutter Web app and deploy to ./web
+    deps: [generate-icons]
+    sources:
+      - "mobile/lib/**/*.dart"
+      - "mobile/pubspec.yaml"
+      - "mobile/pubspec.lock"
+      - "mobile/web/**/*"
+    generates:
+      - "web/index.html"
+      - "goleds_web.tar.gz"
+    cmds:
+      - cd mobile && flutter build web --release
+      - rm -rf web/*
+      - cp -r mobile/build/web/* web/
+      - tar -czf goleds_web.tar.gz web/
+      - echo "Web build deployed to ./web and archived to ./goleds_web.tar.gz"
 
-    build-linux:
-        desc: Build Flutter Linux Desktop app
-        deps: [generate-icons]
-        dir: mobile
-        sources:
-            - "lib/**/*.dart"
-            - "linux/**/*"
-            - "pubspec.yaml"
-        generates:
-            - "../commander_linux/goleds_commander"
-        cmds:
-            - flutter build linux --release
-            - rm -rf ../commander_linux
-            - mkdir -p ../commander_linux
-            - cp -r build/linux/x64/release/bundle/* ../commander_linux/
-            - echo "Linux app bundle deployed to ./commander_linux/"
+  build-linux:
+    desc: Build Flutter Linux Desktop app
+    deps: [generate-icons]
+    sources:
+      - "mobile/lib/**/*.dart"
+      - "mobile/pubspec.yaml"
+      - "mobile/pubspec.lock"
+      - "mobile/linux/main.cc"
+      - "mobile/linux/my_application.cc"
+      - "mobile/linux/CMakeLists.txt"
+    generates:
+      - "commander_linux/goleds_commander"
+    cmds:
+      - cd mobile && flutter build linux --release
+      - rm -rf commander_linux
+      - mkdir -p commander_linux
+      - cp -r mobile/build/linux/x64/release/bundle/* commander_linux/
+      - echo "Linux app bundle deployed to ./commander_linux/"
 
-    build-android:
-        desc: Build Flutter Android APK
-        deps: [generate-icons]
-        dir: mobile
-        sources:
-            - "lib/**/*.dart"
-            - "android/**/*"
-            - "pubspec.yaml"
-        generates:
-            - "../goleds_commander.apk"
-        cmds:
-            - flutter build apk --release
-            - cp build/app/outputs/flutter-apk/app-release.apk ../goleds_commander.apk
-            - echo "APK copied to ./goleds_commander.apk"
+  build-android:
+    desc: Build Flutter Android APK
+    deps: [generate-icons]
+    sources:
+      - "mobile/lib/**/*.dart"
+      - "mobile/pubspec.yaml"
+      - "mobile/pubspec.lock"
+      - "mobile/android/build.gradle.kts"
+      - "mobile/android/settings.gradle.kts"
+      - "mobile/android/app/build.gradle.kts"
+      - "mobile/android/app/src/**/*"
+    generates:
+      - "goleds_commander.apk"
+    cmds:
+      - cd mobile && flutter build apk --release
+      - cp mobile/build/app/outputs/flutter-apk/app-release.apk goleds_commander.apk
+      - echo "APK copied to ./goleds_commander.apk"
 
-    clean:
-        desc: Clean all artifacts
-        cmds:
-            - rm -f goleds goleds_commander goleds_commander.apk goleds_web.tar.gz
-            - rm -rf web/* commander_linux/
-            - cmd: cd mobile && flutter clean
-              ignore_error: true
+  clean:
+    desc: Clean all artifacts
+    cmds:
+      - rm -f goleds goleds_commander.apk goleds_web.tar.gz
+      - rm -rf web/* commander_linux/
+      - cmd: cd mobile && flutter clean
+        ignore_error: true
