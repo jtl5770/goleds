@@ -21,7 +21,7 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
   late int sampleRate;
   late int updateFreqMs;
   late double minDB, maxDB;
-  int ledsTotal = 100;
+  late int ledsTotal;
 
   bool _initialized = false;
 

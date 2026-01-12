@@ -17,7 +17,7 @@ class _CylonLEDEditorState extends State<CylonLEDEditor> {
   late double step;
   late int width;
   late Color eyeColor;
-  int ledsTotal = 100;
+  late int ledsTotal;
 
   bool _initialized = false;
 

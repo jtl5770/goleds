@@ -18,7 +18,7 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
   late int durationSec;
   late int delayMs;
   late List<BlobCfg> blobs;
-  int ledsTotal = 100;
+  late int ledsTotal;
 
   bool _initialized = false;
 

@@ -19,7 +19,7 @@ class _ClockLEDEditorState extends State<ClockLEDEditor> {
   late int endLedMinute;
   late Color ledHourColor;
   late Color ledMinuteColor;
-  int ledsTotal = 100;
+  late int ledsTotal;
 
   bool _initialized = false;
 
