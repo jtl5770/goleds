@@ -17,6 +17,7 @@ class _CylonLEDEditorState extends State<CylonLEDEditor> {
   late double step;
   late int width;
   late Color eyeColor;
+  int ledsTotal = 100;
 
   bool _initialized = false;
 
@@ -26,6 +27,7 @@ class _CylonLEDEditorState extends State<CylonLEDEditor> {
     if (!_initialized) {
       final config = context.read<ConfigProvider>().config;
       if (config != null) {
+        ledsTotal = config.ledsTotal;
         final c = config.cylonLED;
         durationSec = c.durationSec;
         delayMs = c.delayMs;
@@ -76,7 +78,7 @@ class _CylonLEDEditorState extends State<CylonLEDEditor> {
           
           const SizedBox(height: 16),
           _buildSectionHeader('Appearance'),
-          _buildSlider('Eye Width', width.toDouble(), 1, 100, 'px', (v) => setState(() => width = v.toInt())),
+          _buildSlider('Eye Width', width.toDouble(), 1, (ledsTotal / 2).floorToDouble(), 'px', (v) => setState(() => width = v.toInt())),
           // Step is a double, maybe use a slider with divisions
           _buildSlider('Step Size', step, 0.1, 5.0, '', (v) => setState(() => step = double.parse(v.toStringAsFixed(1)))),
           
