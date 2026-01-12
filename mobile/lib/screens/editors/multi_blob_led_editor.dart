@@ -142,7 +142,7 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
                     label: 'Initial Pos (X)',
                     value: tempBlob.x,
                     min: 0,
-                    max: ledsTotal.toDouble(),
+                    max: ledsTotal.toDouble() - 1,
                     onChanged: (v) => setState(() => tempBlob.x = v),
                     activeColor: Colors.pinkAccent,
                   ),
