@@ -315,7 +315,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 		}
 	}
 
-	// *FUTURE* init more types of ledproducers if needed/wanted
+	// *FUTURE* initialize more types of ledproducers if needed/wanted
 
 	a.shutdownWg.Add(2)
 
@@ -385,7 +385,7 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 			}
 			ledsToSend := ledBufferPool.Get().([]p.Led)
 			p.CombineLeds(allLedRanges, ledsToSend)
-			newLedshash := hashLeds(ledsToSend)
+			newLedshash := hashLEDs(ledsToSend)
 			if newLedshash != oldLedsHash {
 				a.platform.SetLeds(ledsToSend)
 			} else {
@@ -540,9 +540,9 @@ func (a *App) stateManager() {
 	}
 }
 
-// hashLeds computes a hash for the given LED state array.
+// hashLEDs computes a hash for the given LED state array.
 // This is used to detect changes in the LED state and avoid unnecessary updates.
-func hashLeds(leds []p.Led) uint64 {
+func hashLEDs(leds []p.Led) uint64 {
 	h := fnv.New64a() // FNV-1a is a fast, non-cryptographic hash function.
 	for _, led := range leds {
 		h.Write([]byte{byte(led.Red), byte(led.Green), byte(led.Blue)})
