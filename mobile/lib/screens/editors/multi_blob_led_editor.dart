@@ -204,8 +204,9 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_initialized)
+    if (!_initialized) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
       appBar: AppBar(
