@@ -56,10 +56,12 @@ The main loop (`stateManager`) coordinates the "mood" of the system:
 
 ### Building and Running
 **Local Simulation (TUI):**
+
 ```bash
 go build -o goleds
 ./goleds
 ```
+
 *   **Controls:**
     *   `1-9`: Trigger sensors.
     *   `+`/`-`: Adjust simulated trigger threshold.

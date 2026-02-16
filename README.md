@@ -93,7 +93,10 @@ The project includes **GoLEDS Commander**, a modern management interface built w
 *   **Desktop**: Native Linux application (build via `task build-linux`).
 *   **Mobile**: Android APK (build via `task build-android`).
 
-It allows you to toggle producers, adjust colors, and tune timing parameters on the fly with a unified experience across all devices.
+It allows you to toggle producers, adjust colors, and tune timing parameters on the fly
+with a unified experience across all devices.
+
+| ![Home Screen](images/goleds-commander-home.png) | ![AudioLEDProducer](images/goleds-commander-audio.png) | ![MultiBLobProducer](images/goleds-commander-blob.png) |
 
 ## Available Producers
 
