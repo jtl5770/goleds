@@ -167,6 +167,13 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 
 	calibCfg := s.config.Hardware.Sensors.Calibration
 	sensorLedRGB := s.config.SensorLED.LedRGB
+	maxSensorLedComponent := sensorLedRGB[0]
+	if sensorLedRGB[1] > maxSensorLedComponent {
+		maxSensorLedComponent = sensorLedRGB[1]
+	}
+	if sensorLedRGB[2] > maxSensorLedComponent {
+		maxSensorLedComponent = sensorLedRGB[2]
+	}
 	steps := []float64{0.0, 0.33, 0.66, 1.0}
 
 	setAllLeds := func(r, g, b float64) {
@@ -210,6 +217,7 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 			g := sensorLedRGB[1] * step
 			b := sensorLedRGB[2] * step
 			setAllLeds(r, g, b)
+			time.Sleep(150 * time.Millisecond)
 
 			stepStart := time.Now()
 			sensorMins := make(map[string]int)
@@ -250,8 +258,9 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 					break
 				}
 				threshold := sensorPeakSmoothed[name] + calibCfg.Margin
+				normalizedBrightness := step * (maxSensorLedComponent / 255.0)
 				stepCurves[name] = append(stepCurves[name], CalibPoint{
-					Brightness: step,
+					Brightness: normalizedBrightness,
 					Threshold:  threshold,
 				})
 			}
