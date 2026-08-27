@@ -220,13 +220,11 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 			time.Sleep(150 * time.Millisecond)
 
 			stepStart := time.Now()
-			sensorMins := make(map[string]int)
-			sensorMaxs := make(map[string]int)
-			sensorPeakSmoothed := make(map[string]int)
+			smoothedMins := make(map[string]int)
+			smoothedMaxs := make(map[string]int)
 			for name := range s.sensors {
-				sensorMins[name] = 1024
-				sensorMaxs[name] = -1
-				sensorPeakSmoothed[name] = 0
+				smoothedMins[name] = 1024
+				smoothedMaxs[name] = -1
 			}
 
 			for time.Since(stepStart) < calibCfg.StepDuration {
@@ -237,27 +235,24 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 				for name, sensor := range s.sensors {
 					raw := s.readAdc(sensor.spimultiplex, sensor.adcChannel)
 					smoothed := sensor.smoothedValue(raw)
-					if raw < sensorMins[name] {
-						sensorMins[name] = raw
+					if smoothed < smoothedMins[name] {
+						smoothedMins[name] = smoothed
 					}
-					if raw > sensorMaxs[name] {
-						sensorMaxs[name] = raw
-					}
-					if smoothed > sensorPeakSmoothed[name] {
-						sensorPeakSmoothed[name] = smoothed
+					if smoothed > smoothedMaxs[name] {
+						smoothedMaxs[name] = smoothed
 					}
 				}
 				time.Sleep(s.config.Hardware.Sensors.LoopDelay)
 			}
 
 			for name := range s.sensors {
-				variance := sensorMaxs[name] - sensorMins[name]
+				variance := smoothedMaxs[name] - smoothedMins[name]
 				if variance > calibCfg.OutlierThreshold {
 					slog.Warn("Calibration step outlier detected", "sensor", name, "variance", variance, "step", step)
 					failed = true
 					break
 				}
-				threshold := sensorPeakSmoothed[name] + calibCfg.Margin
+				threshold := smoothedMaxs[name] + calibCfg.Margin
 				normalizedBrightness := step * (maxSensorLedComponent / 255.0)
 				stepCurves[name] = append(stepCurves[name], CalibPoint{
 					Brightness: normalizedBrightness,
@@ -405,6 +400,9 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 			slog.Info("Ending SensorDriver go-routine (RPi)")
 			return
 		case <-ticker.C:
+			if s.isCalibrating.Load() {
+				continue
+			}
 			currentBrightness := s.getCurrentMaxBrightness()
 			for name, sensor := range s.sensors {
 				value := sensor.smoothedValue(s.readAdc(sensor.spimultiplex, sensor.adcChannel))
