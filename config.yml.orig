@@ -76,6 +76,16 @@ Hardware:
     # The delay between sensor read cycles. A smaller value means more
     # frequent readings and faster response times.
     LoopDelay: 50ms
+    # Calibration settings for automated dynamic thresholding.
+    Calibration:
+      # Duration to sample each brightness step.
+      StepDuration: 5s
+      # Safety margin added above the measured peak noise.
+      Margin: 15
+      # Maximum allowed reading variance within a step before an anomaly is detected.
+      OutlierThreshold: 50
+      # Delay before restarting calibration after an outlier is detected.
+      RetryDelay: 5s
     # Configuration for each individual sensor.
     SensorCfg:
       # A unique name (UID) for the sensor. This UID is used to associate
@@ -87,13 +97,9 @@ Hardware:
         SpiMultiplex: ADC1
         # The channel (0-7) on the ADC for this sensor.
         AdcChannel: 0
-        # The value the sensor must exceed to register a trigger. This requires
-        # tuning to be sensitive enough without picking up noise. Use the
-        # `-show-sensors` flag to calibrate this value.
-        TriggerValue: 130
-      S1: { LedIndex: 69, SpiMultiplex: ADC1, AdcChannel: 7, TriggerValue: 130 }
-      S2: { LedIndex: 111, SpiMultiplex: ADC2, AdcChannel: 0, TriggerValue: 150 }
-      S3: { LedIndex: 164, SpiMultiplex: ADC2, AdcChannel: 5, TriggerValue: 150 }
+      S1: { LedIndex: 69, SpiMultiplex: ADC1, AdcChannel: 7 }
+      S2: { LedIndex: 111, SpiMultiplex: ADC2, AdcChannel: 0 }
+      S3: { LedIndex: 164, SpiMultiplex: ADC2, AdcChannel: 5 }
 
   # Defines the GPIO pin settings required to activate a specific SPI device.
   # This is the core of the SPI multiplexing configuration.
@@ -222,4 +228,3 @@ CylonLED:
   Width: 7
   # The color of the eye.
   LedRGB: [75, 0, 0]
-

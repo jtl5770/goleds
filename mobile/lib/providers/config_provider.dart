@@ -124,4 +124,15 @@ class ConfigProvider with ChangeNotifier {
 
     updateConfig(_config!);
   }
+
+  Future<bool> calibrateSensors() async {
+    try {
+      await _apiService.calibrateSensors();
+      return true;
+    } catch (e) {
+      _error = "Calibration failed: $e";
+      notifyListeners();
+      return false;
+    }
+  }
 }

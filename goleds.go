@@ -326,6 +326,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	startWeb.Do(func() {
 		http.Handle("/", http.FileServer(http.Dir("./web")))
 		http.HandleFunc("/api/config", c.ConfigHandler(cfile))
+		http.HandleFunc("/api/sensors/calibrate", c.CalibrateHandler(a.platform.Calibrate))
 		go func() {
 			slog.Info("Starting web server", "address", "http://localhost:8080")
 			if err := http.ListenAndServe(fmt.Sprintf(":%d", conf.Hardware.WebserverPort), nil); err != nil {

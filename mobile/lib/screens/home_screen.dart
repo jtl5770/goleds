@@ -73,6 +73,26 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: _showSettingsDialog,
             ),
           IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Calibrate Sensors',
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              messenger.showSnackBar(
+                const SnackBar(content: Text('Starting sensor calibration...')),
+              );
+              final success = await configProvider.calibrateSensors();
+              if (success) {
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('Sensor calibration started.')),
+                );
+              } else {
+                messenger.showSnackBar(
+                  SnackBar(content: Text(configProvider.error ?? 'Calibration failed')),
+                );
+              }
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => configProvider.fetchConfig(),
           ),

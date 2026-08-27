@@ -241,7 +241,7 @@ func (sv *SensorViewer) prepareDisplayStrings() (string, string, string) {
 
 		buft.WriteString(fmt.Sprintf(" [%4.0f|%4.0f|%4.0f] ", min, mean, max))
 		bufm.WriteString(fmt.Sprintf("       %5.1f      ", stdev))
-		bufb.WriteString(fmt.Sprintf("     [blue]%3s:[-] %-3d     ", name, cfg.TriggerValue))
+		bufb.WriteString(fmt.Sprintf("     [blue]%3s[-] (LED %-2d) ", name, cfg.LedIndex))
 	}
 	return buft.String(), bufm.String(), bufb.String()
 }

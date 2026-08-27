@@ -58,4 +58,18 @@ class ApiService {
       rethrow;
     }
   }
+
+  Future<void> calibrateSensors() async {
+    final uri = Uri.parse('$baseUrl/api/sensors/calibrate');
+    try {
+      final response = await http
+          .post(uri)
+          .timeout(const Duration(seconds: 5));
+      if (response.statusCode != 200) {
+        throw Exception('Calibration trigger failed (Status: ${response.statusCode})');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

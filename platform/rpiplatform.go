@@ -115,6 +115,10 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 	s.sensorWg.Add(1)
 	go s.sensorDriver()
 
+	if len(s.sensors) > 0 {
+		go s.Calibrate()
+	}
+
 	close(s.readyChan) // For RPi, we are ready immediately.
 	return nil
 }
@@ -153,6 +157,127 @@ func (s *RaspberryPiPlatform) rpiDisplayFunc(leds []producer.Led) {
 			}
 		}
 	}
+}
+
+func (s *RaspberryPiPlatform) Calibrate() error {
+	if !s.isCalibrating.CompareAndSwap(false, true) {
+		return fmt.Errorf("calibration already in progress")
+	}
+	defer s.isCalibrating.Store(false)
+
+	calibCfg := s.config.Hardware.Sensors.Calibration
+	sensorLedRGB := s.config.SensorLED.LedRGB
+	steps := []float64{0.0, 0.33, 0.66, 1.0}
+
+	setAllLeds := func(r, g, b float64) {
+		leds := make([]producer.Led, s.config.Hardware.Display.LedsTotal)
+		for i := range leds {
+			leds[i] = producer.Led{Red: r, Green: g, Blue: b}
+		}
+		s.rpiDisplayFunc(leds)
+	}
+
+	flashRed := func(times int) {
+		for i := 0; i < times; i++ {
+			setAllLeds(255, 0, 0)
+			time.Sleep(300 * time.Millisecond)
+			setAllLeds(0, 0, 0)
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
+
+	flashBlue := func(times int) {
+		for i := 0; i < times; i++ {
+			setAllLeds(0, 0, 255)
+			time.Sleep(300 * time.Millisecond)
+			setAllLeds(0, 0, 0)
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
+
+	slog.Info("Starting sensor calibration...")
+
+	for {
+		stepCurves := make(map[string][]CalibPoint)
+		for name := range s.sensors {
+			stepCurves[name] = make([]CalibPoint, 0, len(steps))
+		}
+
+		failed := false
+
+		for _, step := range steps {
+			r := sensorLedRGB[0] * step
+			g := sensorLedRGB[1] * step
+			b := sensorLedRGB[2] * step
+			setAllLeds(r, g, b)
+
+			stepStart := time.Now()
+			sensorMins := make(map[string]int)
+			sensorMaxs := make(map[string]int)
+			sensorPeakSmoothed := make(map[string]int)
+			for name := range s.sensors {
+				sensorMins[name] = 1024
+				sensorMaxs[name] = -1
+				sensorPeakSmoothed[name] = 0
+			}
+
+			for time.Since(stepStart) < calibCfg.StepDuration {
+				if s.isShuttingDown {
+					setAllLeds(0, 0, 0)
+					return fmt.Errorf("platform shutting down")
+				}
+				for name, sensor := range s.sensors {
+					raw := s.readAdc(sensor.spimultiplex, sensor.adcChannel)
+					smoothed := sensor.smoothedValue(raw)
+					if raw < sensorMins[name] {
+						sensorMins[name] = raw
+					}
+					if raw > sensorMaxs[name] {
+						sensorMaxs[name] = raw
+					}
+					if smoothed > sensorPeakSmoothed[name] {
+						sensorPeakSmoothed[name] = smoothed
+					}
+				}
+				time.Sleep(s.config.Hardware.Sensors.LoopDelay)
+			}
+
+			for name := range s.sensors {
+				variance := sensorMaxs[name] - sensorMins[name]
+				if variance > calibCfg.OutlierThreshold {
+					slog.Warn("Calibration step outlier detected", "sensor", name, "variance", variance, "step", step)
+					failed = true
+					break
+				}
+				threshold := sensorPeakSmoothed[name] + calibCfg.Margin
+				stepCurves[name] = append(stepCurves[name], CalibPoint{
+					Brightness: step,
+					Threshold:  threshold,
+				})
+			}
+
+			if failed {
+				break
+			}
+		}
+
+		if failed {
+			flashRed(3)
+			time.Sleep(calibCfg.RetryDelay)
+			continue
+		}
+
+		for name, curve := range stepCurves {
+			s.sensors[name].setCalibrationCurve(curve)
+			slog.Info("Calibrated sensor curve", "sensor", name, "curve", curve)
+		}
+		setAllLeds(0, 0, 0)
+		flashBlue(2)
+		slog.Info("Sensor calibration completed successfully.")
+		break
+	}
+
+	return nil
 }
 
 func (s *RaspberryPiPlatform) spiExchangeMultiplex(index string, data []byte) []byte {
@@ -271,11 +396,15 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 			slog.Info("Ending SensorDriver go-routine (RPi)")
 			return
 		case <-ticker.C:
+			currentBrightness := s.getCurrentMaxBrightness()
 			for name, sensor := range s.sensors {
 				value := sensor.smoothedValue(s.readAdc(sensor.spimultiplex, sensor.adcChannel))
 				latestValues[name] = value
-				if value > sensor.triggerValue {
-					s.sensorEvents <- util.NewTrigger(name, value, time.Now())
+				if !s.isCalibrating.Load() {
+					threshold := sensor.thresholdForBrightness(currentBrightness)
+					if value > threshold {
+						s.sensorEvents <- util.NewTrigger(name, value, time.Now())
+					}
 				}
 			}
 

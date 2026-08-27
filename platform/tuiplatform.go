@@ -48,12 +48,23 @@ func (s *TUIPlatform) Ready() <-chan bool {
 	return s.readyChan
 }
 
+func (s *TUIPlatform) Calibrate() error {
+	slog.Info("TUI Platform: Simulated sensor calibration completed.")
+	return nil
+}
+
 func (s *TUIPlatform) Start(pool *sync.Pool) error {
 	s.ledBufferPool = pool
 
 	s.segments = parseDisplaySegments(s.config.Hardware.Display)
 
 	s.initSensors(s.config.Hardware.Sensors)
+	for _, sensor := range s.sensors {
+		sensor.setCalibrationCurve([]CalibPoint{
+			{Brightness: 0.0, Threshold: 100},
+			{Brightness: 1.0, Threshold: 100},
+		})
+	}
 	s.initSimulationTUI(
 		s.ossignalChan,
 		len(s.config.Hardware.Sensors.SensorCfg),
@@ -159,7 +170,7 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 			key := string(event.Rune())
 			if senuid, exist := s.chartosensor[key]; exist {
 				currentTriggerValue := s.tuiTriggerValue
-				minimum := s.sensors[senuid].triggerValue
+				minimum := s.sensors[senuid].thresholdForBrightness(s.getCurrentMaxBrightness())
 				if currentTriggerValue >= minimum {
 					slog.Debug("Triggering sensor", "uid", senuid, "value", currentTriggerValue)
 					s.sensorEvents <- util.NewTrigger(senuid, currentTriggerValue, time.Now())

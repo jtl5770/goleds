@@ -310,13 +310,37 @@ type SensorCfg struct {
 	LedIndex     int    `yaml:"LedIndex"`
 	SpiMultiplex string `yaml:"SpiMultiplex"`
 	AdcChannel   byte   `yaml:"AdcChannel"`
-	TriggerValue int    `yaml:"TriggerValue"`
+}
+
+// CalibrationConfig defines automatic calibration parameters for IR sensors.
+type CalibrationConfig struct {
+	StepDuration     time.Duration `yaml:"StepDuration"`
+	Margin           int           `yaml:"Margin"`
+	OutlierThreshold int           `yaml:"OutlierThreshold"`
+	RetryDelay       time.Duration `yaml:"RetryDelay"`
+}
+
+func (c *CalibrationConfig) Validate() error {
+	if c.StepDuration <= 0 {
+		return fmt.Errorf("StepDuration must be positive")
+	}
+	if c.Margin < 0 {
+		return fmt.Errorf("Margin must be non-negative")
+	}
+	if c.OutlierThreshold <= 0 {
+		return fmt.Errorf("OutlierThreshold must be positive")
+	}
+	if c.RetryDelay < 0 {
+		return fmt.Errorf("RetryDelay must be non-negative")
+	}
+	return nil
 }
 
 // SensorsConfig defines the sensors configuration.
 type SensorsConfig struct {
 	SmoothingSize int                  `yaml:"SmoothingSize"`
 	LoopDelay     time.Duration        `yaml:"LoopDelay"`
+	Calibration   CalibrationConfig    `yaml:"Calibration"`
 	SensorCfg     map[string]SensorCfg `yaml:"SensorCfg"`
 }
 
@@ -386,9 +410,20 @@ func (c *Config) Validate() error {
 	}
 
 	// 3. Sensor Configuration Validation
-	for name, sensorCfg := range c.Hardware.Sensors.SensorCfg {
-		if !isValidIndex(sensorCfg.LedIndex, ledsTotal) {
-			return fmt.Errorf("sensor '%s' has an out-of-bounds LedIndex: %d (LedsTotal=%d)", name, sensorCfg.LedIndex, ledsTotal)
+	if len(c.Hardware.Sensors.SensorCfg) > 0 {
+		if c.Hardware.Sensors.SmoothingSize <= 0 {
+			return fmt.Errorf("Sensors SmoothingSize must be positive")
+		}
+		if c.Hardware.Sensors.LoopDelay <= 0 {
+			return fmt.Errorf("Sensors LoopDelay must be positive")
+		}
+		if err := c.Hardware.Sensors.Calibration.Validate(); err != nil {
+			return fmt.Errorf("Sensors Calibration configuration invalid: %w", err)
+		}
+		for name, sensorCfg := range c.Hardware.Sensors.SensorCfg {
+			if !isValidIndex(sensorCfg.LedIndex, ledsTotal) {
+				return fmt.Errorf("sensor '%s' has an out-of-bounds LedIndex: %d (LedsTotal=%d)", name, sensorCfg.LedIndex, ledsTotal)
+			}
 		}
 	}
 
@@ -480,7 +515,7 @@ func ReadConfig(cfile string) (*Config, error) {
 	}
 
 	if err := conf.Validate(); err != nil {
-		return nil, fmt.Errorf("configuration validation failed: %w", err)
+		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
 
 	slog.Debug("Read config", "config", conf)

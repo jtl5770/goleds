@@ -15,6 +15,13 @@ Hardware:
   Display:
     LedsTotal: 10
   Sensors:
+    SmoothingSize: 3
+    LoopDelay: 50ms
+    Calibration:
+      StepDuration: 5s
+      Margin: 15
+      OutlierThreshold: 50
+      RetryDelay: 5s
     SensorCfg: {}
   SpiMultiplexGPIO: {}
 Logging:

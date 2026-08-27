@@ -26,6 +26,23 @@ func ConfigHandler(cfile string) http.HandlerFunc {
 	}
 }
 
+// CalibrateHandler handles requests to trigger sensor calibration.
+func CalibrateHandler(calibrateFunc func() error) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		slog.Info("Handling POST /api/sensors/calibrate request")
+		go func() {
+			if err := calibrateFunc(); err != nil {
+				slog.Error("Sensor calibration failed", "error", err)
+			}
+		}()
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
 // getConfigHandler reads the current config file, extracts the runtime-safe
 // configuration, and returns it as JSON.
 func getConfigHandler(w http.ResponseWriter, cfile string) {

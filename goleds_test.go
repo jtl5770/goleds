@@ -65,6 +65,14 @@ func (m *MockPlatform) Ready() <-chan bool {
 	return readyChan
 }
 
+func (m *MockPlatform) Calibrate() error {
+	return nil
+}
+
+func (m *MockPlatform) IsCalibrating() bool {
+	return false
+}
+
 func (m *MockPlatform) GetLastLeds() [][]p.Led {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -245,7 +253,7 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	mockPlatform.Start(nil)
 	t.Cleanup(mockPlatform.Stop)
 
-	mockPlatform.sensors["sensor"] = c.SensorCfg{LedIndex: 0, SpiMultiplex: "", AdcChannel: 0, TriggerValue: 0}
+	mockPlatform.sensors["sensor"] = c.SensorCfg{LedIndex: 0, SpiMultiplex: "", AdcChannel: 0}
 
 	mockSensorProducer := NewMockLedProducer("sensor", nil)
 	mockMultiBlobProducer := NewMockLedProducer(MULTI_BLOB_UID, nil)

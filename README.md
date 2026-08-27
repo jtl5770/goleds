@@ -14,7 +14,7 @@ https://github.com/jtl5770/goleds/assets/24967370/34057911-faef-4403-bd07-7b479b
     - [1. Building the Hardware](#1-building-the-hardware)
     - [2. Configuration](#2-configuration)
     - [3. Building the Application](#3-building-the-application)
-    - [4. Calibrating Sensors](#4-calibrating-sensors)
+    - [4. Automatic Sensor Calibration](#4-automatic-sensor-calibration)
   - [GoLEDS Commander (Management App)](#goleds-commander-management-app)
   - [Available Producers](#available-producers)
 <!--toc:end-->
@@ -76,9 +76,16 @@ To build for the hardware, run `go build` directly on your Pi. For best performa
 sudo chrt 99 ./goleds -real
 ```
 
-### 4. Calibrating Sensors
+### 4. Automatic Sensor Calibration
 
-Fine-tuning the `TriggerValue` is essential. GoLEDS includes a calibration mode that displays live min/max/mean data for your sensors. Run with both `-real` and `-show-sensors` on the Pi:
+GoLEDS automatically calibrates IR sensor trigger baselines at startup and adapts thresholds dynamically to current LED brightness:
+
+* **Multi-Step Baseline Sweep**: Upon start, the system measures ambient optical noise across multiple LED brightness steps (0%, 33%, 66%, and 100% of configured `SensorLED` brightness).
+* **Dynamic Threshold Interpolation**: During runtime, trigger thresholds are computed on-the-fly depending on instantaneous peak display brightness, compensating for LED optical reflection into IR sensors.
+* **Outlier Rejection**: If unexpected motion or noise spikes are detected during calibration, the system flashes red, pauses, and restarts the calibration routine until a clean baseline is established. Successful calibration finishes with a short blue confirmation pulse.
+* **On-Demand Recalibration**: Calibration can be triggered at any time via the tune button in the GoLEDS Commander UI or via `POST /api/sensors/calibrate`.
+
+For visual diagnostics, you can still inspect live sensor readings in real-time by running with the `-show-sensors` flag:
 
 ```bash
 sudo ./goleds -real -show-sensors

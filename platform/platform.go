@@ -38,4 +38,10 @@ type Platform interface {
 	// Ready returns a channel that is closed when the platform is fully
 	// initialized and ready for producers to start.
 	Ready() <-chan bool
+
+	// Calibrate performs dynamic sensor calibration.
+	Calibrate() error
+
+	// IsCalibrating reports whether a calibration routine is currently running.
+	IsCalibrating() bool
 }
