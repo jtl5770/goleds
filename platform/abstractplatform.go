@@ -30,9 +30,7 @@ type AbstractPlatform struct {
 	isShuttingDown  atomic.Bool
 	isCalibrating   atomic.Bool
 	brightnessMutex sync.RWMutex
-	currentMaxR     float64
-	currentMaxG     float64
-	currentMaxB     float64
+	currentMaxRed   int
 	ledBufferPool   *sync.Pool
 }
 
@@ -80,16 +78,10 @@ func (s *AbstractPlatform) IsCalibrating() bool {
 	return s.isCalibrating.Load()
 }
 
-func (s *AbstractPlatform) getCurrentMaxRed() float64 {
+func (s *AbstractPlatform) getCurrentMaxRed() int {
 	s.brightnessMutex.RLock()
 	defer s.brightnessMutex.RUnlock()
-	return s.currentMaxR
-}
-
-func (s *AbstractPlatform) getCurrentMaxBrightness() float64 {
-	s.brightnessMutex.RLock()
-	defer s.brightnessMutex.RUnlock()
-	return s.currentMaxB
+	return s.currentMaxRed
 }
 
 func (s *AbstractPlatform) setInShutdown() {
@@ -106,22 +98,14 @@ func (s *AbstractPlatform) displayDriver() {
 		case <-s.ledsEvent.Channel():
 			sumLeds := s.ledsEvent.Value()
 			if !s.isShuttingDown.Load() && !s.isCalibrating.Load() {
-				var maxR, maxG, maxB float64
+				var maxR float64
 				for _, led := range sumLeds {
 					if led.Red > maxR {
 						maxR = led.Red
 					}
-					if led.Green > maxG {
-						maxG = led.Green
-					}
-					if led.Blue > maxB {
-						maxB = led.Blue
-					}
 				}
 				s.brightnessMutex.Lock()
-				s.currentMaxR = maxR / 255.0
-				s.currentMaxG = maxG / 255.0
-				s.currentMaxB = maxB / 255.0
+				s.currentMaxRed = int(math.Round(maxR))
 				s.brightnessMutex.Unlock()
 
 				s.displayFunc(sumLeds)
@@ -133,8 +117,8 @@ func (s *AbstractPlatform) displayDriver() {
 }
 
 type CalibPoint struct {
-	Brightness float64
-	Threshold  int
+	Red       int
+	Threshold int
 }
 
 // sensor struct and related functions
@@ -151,23 +135,33 @@ type sensor struct {
 	capacity     int
 }
 
-func (s *sensor) thresholdForBrightness(b float64) int {
+func (s *sensor) hasCalibration() bool {
+	s.calibMutex.RLock()
+	defer s.calibMutex.RUnlock()
+	return len(s.calibCurve) > 0
+}
+
+func (s *sensor) thresholdForRed(red int) int {
 	s.calibMutex.RLock()
 	defer s.calibMutex.RUnlock()
 	if len(s.calibCurve) == 0 {
-		return 100
+		return math.MaxInt
 	}
-	if b >= s.calibCurve[0].Brightness {
+	if red >= s.calibCurve[0].Red {
 		return s.calibCurve[0].Threshold
 	}
-	if b <= s.calibCurve[len(s.calibCurve)-1].Brightness {
+	if red <= s.calibCurve[len(s.calibCurve)-1].Red {
 		return s.calibCurve[len(s.calibCurve)-1].Threshold
 	}
 	for i := 0; i < len(s.calibCurve)-1; i++ {
 		p1 := s.calibCurve[i]
 		p2 := s.calibCurve[i+1]
-		if b <= p1.Brightness && b >= p2.Brightness {
-			r := (b - p2.Brightness) / (p1.Brightness - p2.Brightness)
+		if red <= p1.Red && red >= p2.Red {
+			span := p1.Red - p2.Red
+			if span == 0 {
+				return p1.Threshold
+			}
+			r := float64(red-p2.Red) / float64(span)
 			return p2.Threshold + int(math.Round(r*float64(p1.Threshold-p2.Threshold)))
 		}
 	}

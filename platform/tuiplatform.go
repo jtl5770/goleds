@@ -55,8 +55,8 @@ func (s *TUIPlatform) Start(pool *sync.Pool) error {
 	s.initSensors(s.config.Hardware.Sensors)
 	for _, sensor := range s.sensors {
 		sensor.setCalibrationCurve([]CalibPoint{
-			{Brightness: 1.0, Threshold: 100},
-			{Brightness: 0.0, Threshold: 100},
+			{Red: 255, Threshold: 100},
+			{Red: 0, Threshold: 100},
 		})
 	}
 	s.initSimulationTUI(
@@ -164,7 +164,7 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 			key := string(event.Rune())
 			if senuid, exist := s.chartosensor[key]; exist {
 				currentTriggerValue := s.tuiTriggerValue
-				minimum := s.sensors[senuid].thresholdForBrightness(s.getCurrentMaxBrightness())
+				minimum := s.sensors[senuid].thresholdForRed(s.getCurrentMaxRed())
 				if currentTriggerValue >= minimum {
 					slog.Debug("Triggering sensor", "uid", senuid, "value", currentTriggerValue)
 					s.sensorEvents <- util.NewTrigger(senuid, currentTriggerValue, time.Now())

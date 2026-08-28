@@ -170,14 +170,12 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 	calibCfg := s.config.Hardware.Sensors.Calibration
 	sensorLedRGB := s.config.SensorLED.LedRGB
 
-	steps := []struct {
-		name  string
-		ratio float64
-	}{
-		{name: "Red-1.00", ratio: 1.00},
-		{name: "Red-0.66", ratio: 0.66},
-		{name: "Red-0.33", ratio: 0.33},
-		{name: "Dark", ratio: 0.0},
+	maxRed := int(math.Round(sensorLedRGB[0]))
+	redSteps := []int{
+		maxRed,
+		int(math.Round(float64(maxRed) * 2.0 / 3.0)),
+		int(math.Round(float64(maxRed) * 1.0 / 3.0)),
+		0,
 	}
 
 	setAllLeds := func(r, g, b float64) {
@@ -211,14 +209,13 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 	for {
 		stepCurves := make(map[string][]CalibPoint)
 		for name := range s.sensors {
-			stepCurves[name] = make([]CalibPoint, 0, len(steps))
+			stepCurves[name] = make([]CalibPoint, 0, len(redSteps))
 		}
 
 		failed := false
 
-		for _, step := range steps {
-			r := sensorLedRGB[0] * step.ratio
-			setAllLeds(r, 0, 0)
+		for _, red := range redSteps {
+			setAllLeds(float64(red), 0, 0)
 			time.Sleep(150 * time.Millisecond)
 
 			stepStart := time.Now()
@@ -253,7 +250,7 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 
 				variance := maxVal - minVal
 				if variance > calibCfg.OutlierThreshold {
-					slog.Warn("Calibration step outlier detected", "sensor", name, "step", step.name, "variance", variance, "min", minVal, "max", maxVal)
+					slog.Warn("Calibration step outlier detected", "sensor", name, "red", red, "variance", variance, "min", minVal, "max", maxVal)
 					failed = true
 					break
 				}
@@ -268,8 +265,7 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 				threshold := maxVal + effectiveMargin
 
 				slog.Info("Calibration measurement",
-					"step", step.name,
-					"ratio", step.ratio,
+					"red", red,
 					"sensor", name,
 					"min", minVal,
 					"median", medianVal,
@@ -280,10 +276,9 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 					"threshold", threshold,
 				)
 
-				normB := step.ratio * (sensorLedRGB[0] / 255.0)
 				stepCurves[name] = append(stepCurves[name], CalibPoint{
-					Brightness: normB,
-					Threshold:  threshold,
+					Red:       red,
+					Threshold: threshold,
 				})
 			}
 
@@ -457,8 +452,8 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 			for name, sensor := range s.sensors {
 				value := sensor.smoothedValue(s.readAdc(sensor.spimultiplex, sensor.adcChannel))
 				latestValues[name] = value
-				if !s.isCalibrating.Load() {
-					threshold := sensor.thresholdForBrightness(r)
+				if !s.isCalibrating.Load() && sensor.hasCalibration() {
+					threshold := sensor.thresholdForRed(r)
 					if value > threshold {
 						s.sensorEvents <- util.NewTrigger(name, value, time.Now())
 					}
