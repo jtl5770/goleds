@@ -23,7 +23,6 @@ type RaspberryPiPlatform struct {
 	sensorViewer    *SensorViewer
 	sensorWg        sync.WaitGroup
 	sensorStopChan  chan bool
-	readyChan       chan bool
 }
 
 type gpiocfg struct {
@@ -33,17 +32,11 @@ type gpiocfg struct {
 }
 
 func NewRaspberryPiPlatform(conf *config.Config) *RaspberryPiPlatform {
-	readyChan := make(chan bool)
 	inst := &RaspberryPiPlatform{
 		sensorStopChan: make(chan bool),
-		readyChan:      readyChan,
 	}
 	inst.AbstractPlatform = newAbstractPlatform(conf, inst.rpiDisplayFunc)
 	return inst
-}
-
-func (s *RaspberryPiPlatform) Ready() <-chan bool {
-	return s.readyChan
 }
 
 // SetSensorViewer attaches an optional TUI viewer for sensor data.

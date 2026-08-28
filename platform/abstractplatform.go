@@ -40,7 +40,12 @@ func newAbstractPlatform(conf *c.Config, displayFunc func([]p.Led)) *AbstractPla
 		sensors:         make(map[string]*sensor),
 		displayFunc:     displayFunc,
 		displayStopChan: make(chan bool),
+		readyChan:       make(chan bool),
 	}
+}
+
+func (s *AbstractPlatform) Ready() <-chan bool {
+	return s.readyChan
 }
 
 func (s *AbstractPlatform) SetLeds(leds []p.Led) {

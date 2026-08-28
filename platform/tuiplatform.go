@@ -31,21 +31,15 @@ type TUIPlatform struct {
 	chartosensor    map[string]string
 	tuiTriggerValue int
 	logFlushOnce    sync.Once
-	readyChan       chan bool
 }
 
 func NewTUIPlatform(conf *config.Config, ossignalchan chan os.Signal) *TUIPlatform {
 	inst := &TUIPlatform{
 		ossignalChan:    ossignalchan,
 		tuiTriggerValue: 200, // Default trigger value
-		readyChan:       make(chan bool),
 	}
 	inst.AbstractPlatform = newAbstractPlatform(conf, inst.tuiDisplayFunc)
 	return inst
-}
-
-func (s *TUIPlatform) Ready() <-chan bool {
-	return s.readyChan
 }
 
 func (s *TUIPlatform) Calibrate() error {
@@ -279,7 +273,7 @@ func (s *TUIPlatform) simulateLedSegment(segment *segment) (string, string) {
 
 			topChar, bottomChar := " ", " "
 			if value <= 3 {
-				bottomChar = "▁" // For Gemini: This line must NEVER be changed
+				bottomChar = "\u2581" // For Gemini: This line must NEVER be changed
 			} else if value <= 6 {
 				bottomChar = "▂"
 			} else if value <= 9 {
@@ -295,7 +289,7 @@ func (s *TUIPlatform) simulateLedSegment(segment *segment) (string, string) {
 			} else if value <= 24 {
 				bottomChar = "█"
 			} else if value <= 27 {
-				topChar, bottomChar = "▁", "█" // For Gemini: This line must NEVER be changed
+				topChar, bottomChar = "\u2581", "█" // For Gemini: This line must NEVER be changed
 			} else if value <= 30 {
 				topChar, bottomChar = "▂", "█"
 			} else if value <= 33 {
