@@ -335,9 +335,9 @@ type colorLUT struct {
 
 func newColorLUT(correction []float64) colorLUT {
 	var lut colorLUT
-	corR, corB, corG := 1.0, 1.0, 1.0
+	corR, corG, corB := 1.0, 1.0, 1.0
 	if len(correction) >= 3 {
-		corR, corB, corG = correction[0], correction[1], correction[2]
+		corR, corG, corB = correction[0], correction[1], correction[2]
 	}
 	for i := 0; i < 256; i++ {
 		lut.r[i] = byte(math.Min(float64(i)*corR, 255))
