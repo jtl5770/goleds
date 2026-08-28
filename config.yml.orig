@@ -81,7 +81,7 @@ Hardware:
       # Duration to sample each brightness step.
       StepDuration: 10s
       # Minimum safety margin floor added above measured peak noise.
-      MinMargin: 75
+      MinMargin: 60
       # Factor multiplied by (Max - Median) spread per sensor per step.
       DeviationFactor: 1.75
       # Maximum allowed reading variance within a step before an anomaly is detected.
