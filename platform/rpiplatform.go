@@ -109,10 +109,6 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 	s.sensorWg.Add(1)
 	go s.sensorDriver()
 
-	if len(s.sensors) > 0 {
-		go s.Calibrate()
-	}
-
 	close(s.readyChan) // For RPi, we are ready immediately.
 	return nil
 }
@@ -166,10 +162,10 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 		name  string
 		ratio float64
 	}{
-		{name: "Dark", ratio: 0.0},
-		{name: "Red-0.33", ratio: 0.33},
-		{name: "Red-0.66", ratio: 0.66},
 		{name: "Red-1.00", ratio: 1.00},
+		{name: "Red-0.66", ratio: 0.66},
+		{name: "Red-0.33", ratio: 0.33},
+		{name: "Dark", ratio: 0.0},
 	}
 
 	setAllLeds := func(r, g, b float64) {
@@ -290,10 +286,16 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 			continue
 		}
 
+		globalCalibMutex.Lock()
 		for name, curve := range stepCurves {
+			sort.Slice(curve, func(i, j int) bool {
+				return curve[i].Brightness < curve[j].Brightness
+			})
 			s.sensors[name].setCalibrationCurve(curve)
+			globalCalibCurves[name] = curve
 			slog.Info("Calibrated sensor curve", "sensor", name, "curve", curve)
 		}
+		globalCalibMutex.Unlock()
 		setAllLeds(0, 0, 0)
 		flashBlue(2)
 		slog.Info("Sensor calibration completed successfully.")

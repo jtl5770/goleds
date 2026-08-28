@@ -109,6 +109,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Trigger initial sensor calibration once on startup
+	if app.platform != nil {
+		go func() {
+			if err := app.platform.Calibrate(); err != nil {
+				slog.Error("Initial sensor calibration failed", "error", err)
+			}
+		}()
+	}
+
 	// Start a watcher to automatically reload on config file changes.
 	reloadEvent := u.NewAtomicEvent[bool]()
 	go watchConfigFile(*cfile, reloadEvent)
@@ -326,7 +335,12 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	startWeb.Do(func() {
 		http.Handle("/", http.FileServer(http.Dir("./web")))
 		http.HandleFunc("/api/config", c.ConfigHandler(cfile))
-		http.HandleFunc("/api/sensors/calibrate", c.CalibrateHandler(a.platform.Calibrate))
+		http.HandleFunc("/api/sensors/calibrate", c.CalibrateHandler(func() error {
+			if a.platform != nil {
+				return a.platform.Calibrate()
+			}
+			return nil
+		}))
 		go func() {
 			slog.Info("Starting web server", "address", "http://localhost:8080")
 			if err := http.ListenAndServe(fmt.Sprintf(":%d", conf.Hardware.WebserverPort), nil); err != nil {

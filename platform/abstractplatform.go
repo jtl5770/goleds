@@ -12,6 +12,11 @@ import (
 	u "lautenbacher.net/goleds/util"
 )
 
+var (
+	globalCalibMutex  sync.RWMutex
+	globalCalibCurves = make(map[string][]CalibPoint)
+)
+
 type AbstractPlatform struct {
 	config          *c.Config
 	ledsEvent       *u.AtomicEvent[[]p.Led]
@@ -186,8 +191,14 @@ func (s *sensor) smoothedValue(value int) int {
 
 func (s *AbstractPlatform) initSensors(sensorConfig c.SensorsConfig) {
 	s.sensors = make(map[string]*sensor, len(sensorConfig.SensorCfg))
+	globalCalibMutex.RLock()
+	defer globalCalibMutex.RUnlock()
 	for uid, cfg := range sensorConfig.SensorCfg {
-		s.sensors[uid] = newSensor(uid, cfg.LedIndex, cfg.SpiMultiplex, cfg.AdcChannel, sensorConfig.SmoothingSize)
+		sn := newSensor(uid, cfg.LedIndex, cfg.SpiMultiplex, cfg.AdcChannel, sensorConfig.SmoothingSize)
+		if curve, ok := globalCalibCurves[uid]; ok {
+			sn.setCalibrationCurve(curve)
+		}
+		s.sensors[uid] = sn
 	}
 }
 
