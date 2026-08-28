@@ -19,6 +19,7 @@ type RaspberryPiPlatform struct {
 	*AbstractPlatform
 	ledDriver       ledDriver
 	spiMutex        sync.Mutex
+	displayMutex    sync.Mutex
 	spimultiplexcfg map[string]gpiocfg
 	sensorViewer    *SensorViewer
 	sensorWg        sync.WaitGroup
@@ -109,6 +110,14 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 	s.sensorWg.Add(1)
 	go s.sensorDriver()
 
+	globalCalibMutex.RLock()
+	hasCurves := len(globalCalibCurves) > 0
+	globalCalibMutex.RUnlock()
+
+	if len(s.sensors) > 0 && !hasCurves {
+		go s.Calibrate()
+	}
+
 	close(s.readyChan) // For RPi, we are ready immediately.
 	return nil
 }
@@ -137,6 +146,9 @@ func (s *RaspberryPiPlatform) Stop() {
 }
 
 func (s *RaspberryPiPlatform) rpiDisplayFunc(leds []producer.Led) {
+	s.displayMutex.Lock()
+	defer s.displayMutex.Unlock()
+
 	for _, segarray := range s.segments {
 		for _, seg := range segarray {
 			seg.setLeds(leds)

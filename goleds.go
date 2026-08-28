@@ -109,15 +109,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Trigger initial sensor calibration once on startup
-	if app.platform != nil {
-		go func() {
-			if err := app.platform.Calibrate(); err != nil {
-				slog.Error("Initial sensor calibration failed", "error", err)
-			}
-		}()
-	}
-
 	// Start a watcher to automatically reload on config file changes.
 	reloadEvent := u.NewAtomicEvent[bool]()
 	go watchConfigFile(*cfile, reloadEvent)
