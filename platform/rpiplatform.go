@@ -328,9 +328,30 @@ type ledDriver interface {
 	write(segment *segment, exchangeFunc func(string, []byte) []byte) error
 }
 
+type colorLUT struct {
+	r [256]byte
+	g [256]byte
+	b [256]byte
+}
+
+func newColorLUT(correction []float64) colorLUT {
+	var lut colorLUT
+	corR, corG, corB := 1.0, 1.0, 1.0
+	if len(correction) >= 3 {
+		corR, corG, corB = correction[0], correction[1], correction[2]
+	}
+	for i := 0; i < 256; i++ {
+		lut.r[i] = byte(math.Min(float64(i)*corR, 255))
+		lut.g[i] = byte(math.Min(float64(i)*corG, 255))
+		lut.b[i] = byte(math.Min(float64(i)*corB, 255))
+	}
+	return lut
+}
+
 type ws2801Driver struct {
 	displayConfig config.DisplayConfig
 	buffer        []byte
+	lut           colorLUT
 }
 
 func newWs2801Driver(displayConfig config.DisplayConfig) *ws2801Driver {
@@ -339,6 +360,7 @@ func newWs2801Driver(displayConfig config.DisplayConfig) *ws2801Driver {
 	return &ws2801Driver{
 		displayConfig: displayConfig,
 		buffer:        make([]byte, maxSize),
+		lut:           newColorLUT(displayConfig.ColorCorrection),
 	}
 }
 
@@ -346,10 +368,10 @@ func (d *ws2801Driver) write(segment *segment, exchangeFunc func(string, []byte)
 	requiredSize := 3 * len(segment.leds)
 	display := d.buffer[:requiredSize]
 
-	for idx := range segment.leds {
-		display[3*idx] = byte(math.Min(float64(segment.leds[idx].Red)*float64(d.displayConfig.ColorCorrection[0]), 255))
-		display[(3*idx)+1] = byte(math.Min(float64(segment.leds[idx].Green)*float64(d.displayConfig.ColorCorrection[1]), 255))
-		display[(3*idx)+2] = byte(math.Min(float64(segment.leds[idx].Blue)*float64(d.displayConfig.ColorCorrection[2]), 255))
+	for idx, led := range segment.leds {
+		display[3*idx] = d.lut.r[byte(led.Red)]
+		display[(3*idx)+1] = d.lut.g[byte(led.Green)]
+		display[(3*idx)+2] = d.lut.b[byte(led.Blue)]
 	}
 	exchangeFunc(segment.spiMultiplex, display)
 	return nil
@@ -358,6 +380,7 @@ func (d *ws2801Driver) write(segment *segment, exchangeFunc func(string, []byte)
 type apa102Driver struct {
 	displayConfig config.DisplayConfig
 	buffer        []byte
+	lut           colorLUT
 }
 
 func newApa102Driver(displayConfig config.DisplayConfig) *apa102Driver {
@@ -367,6 +390,7 @@ func newApa102Driver(displayConfig config.DisplayConfig) *apa102Driver {
 	return &apa102Driver{
 		displayConfig: displayConfig,
 		buffer:        make([]byte, maxSize),
+		lut:           newColorLUT(displayConfig.ColorCorrection),
 	}
 }
 
@@ -384,16 +408,12 @@ func (d *apa102Driver) write(segment *segment, exchangeFunc func(string, []byte)
 
 	// LED data
 	offset := 4
-	for i := range segment.leds {
-		red := byte(math.Min(float64(segment.leds[i].Red)*float64(d.displayConfig.ColorCorrection[0]), 255))
-		green := byte(math.Min(float64(segment.leds[i].Green)*float64(d.displayConfig.ColorCorrection[1]), 255))
-		blue := byte(math.Min(float64(segment.leds[i].Blue)*float64(d.displayConfig.ColorCorrection[2]), 255))
-
+	for _, led := range segment.leds {
 		// protocol: brightness byte, blue, green, red
 		display[offset] = brightness
-		display[offset+1] = blue
-		display[offset+2] = green
-		display[offset+3] = red
+		display[offset+1] = d.lut.b[byte(led.Blue)]
+		display[offset+2] = d.lut.g[byte(led.Green)]
+		display[offset+3] = d.lut.r[byte(led.Red)]
 		offset += 4
 	}
 
