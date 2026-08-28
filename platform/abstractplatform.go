@@ -157,18 +157,18 @@ func (s *sensor) thresholdForBrightness(b float64) int {
 	if len(s.calibCurve) == 0 {
 		return 100
 	}
-	if b <= s.calibCurve[0].Brightness {
+	if b >= s.calibCurve[0].Brightness {
 		return s.calibCurve[0].Threshold
 	}
-	if b >= s.calibCurve[len(s.calibCurve)-1].Brightness {
+	if b <= s.calibCurve[len(s.calibCurve)-1].Brightness {
 		return s.calibCurve[len(s.calibCurve)-1].Threshold
 	}
 	for i := 0; i < len(s.calibCurve)-1; i++ {
 		p1 := s.calibCurve[i]
 		p2 := s.calibCurve[i+1]
-		if b >= p1.Brightness && b <= p2.Brightness {
-			r := (b - p1.Brightness) / (p2.Brightness - p1.Brightness)
-			return p1.Threshold + int(math.Round(r*float64(p2.Threshold-p1.Threshold)))
+		if b <= p1.Brightness && b >= p2.Brightness {
+			r := (b - p2.Brightness) / (p1.Brightness - p2.Brightness)
+			return p2.Threshold + int(math.Round(r*float64(p1.Threshold-p2.Threshold)))
 		}
 	}
 	return s.calibCurve[len(s.calibCurve)-1].Threshold

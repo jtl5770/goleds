@@ -288,9 +288,6 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 
 		globalCalibMutex.Lock()
 		for name, curve := range stepCurves {
-			sort.Slice(curve, func(i, j int) bool {
-				return curve[i].Brightness < curve[j].Brightness
-			})
 			s.sensors[name].setCalibrationCurve(curve)
 			globalCalibCurves[name] = curve
 			slog.Info("Calibrated sensor curve", "sensor", name, "curve", curve)
@@ -338,9 +335,9 @@ type colorLUT struct {
 
 func newColorLUT(correction []float64) colorLUT {
 	var lut colorLUT
-	corR, corG, corB := 1.0, 1.0, 1.0
+	corR, corB, corG := 1.0, 1.0, 1.0
 	if len(correction) >= 3 {
-		corR, corG, corB = correction[0], correction[1], correction[2]
+		corR, corB, corG = correction[0], correction[1], correction[2]
 	}
 	for i := 0; i < 256; i++ {
 		lut.r[i] = byte(math.Min(float64(i)*corR, 255))

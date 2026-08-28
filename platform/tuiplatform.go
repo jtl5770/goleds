@@ -55,8 +55,8 @@ func (s *TUIPlatform) Start(pool *sync.Pool) error {
 	s.initSensors(s.config.Hardware.Sensors)
 	for _, sensor := range s.sensors {
 		sensor.setCalibrationCurve([]CalibPoint{
-			{Brightness: 0.0, Threshold: 100},
 			{Brightness: 1.0, Threshold: 100},
+			{Brightness: 0.0, Threshold: 100},
 		})
 	}
 	s.initSimulationTUI(

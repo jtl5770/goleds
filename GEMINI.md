@@ -113,3 +113,11 @@ The `config.yml` is the brain of the operation. Key sections:
 *   **Concurrency:** The system relies heavily on goroutines and channels. Use `util.AtomicEvent` for passing state between the high-speed display loop and slower logic loops.
 *   **Performance:** On the Pi, `chrt 99` is critical for smooth LED timing, especially with WS2801 chips.
 *   **Audio:** Requires `libportaudio2` installed on the system (`sudo apt install libportaudio2`).
+
+## AI Assistant Rules & Workflows
+
+### Strict Code Modification and Diff Rules
+1. **Explain Before Changing**: Always explain the root cause and proposed changes in plain language before touching any files.
+2. **Never Regenerate Files from Memory**: Before calling any edit tool (`client_edit_file`), you MUST view the exact current state of the file from disk using `client_view_file`.
+3. **Strictly Minimal Edits**: Modify ONLY the exact lines requiring changes. Never reorder fields, alter untouched methods, reformat comments, or change unrelated imports.
+4. **Immediate Diff Verification**: Immediately after applying an edit, run `git diff` to verify that only the intended minimal lines were modified before proceeding.
