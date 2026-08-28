@@ -50,29 +50,34 @@ func NewClockProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], le
 }
 
 func (s *ClockProducer) setTime() {
+	s.ledsMutex.Lock()
 	clear(s.leds)
 	now := time.Now()
 	hour := now.Hour() % 12
 	minute := now.Minute()
-	s.setLed(s.hour_start+int(math.Round(float64(hour*60+minute)*s.hour_dist)), s.hour)
-	s.setLed(s.minute_start+int(math.Round(float64(minute)*s.minute_dist)), s.minute)
+	hIdx := s.hour_start + int(math.Round(float64(hour*60+minute)*s.hour_dist))
+	mIdx := s.minute_start + int(math.Round(float64(minute)*s.minute_dist))
+	if hIdx >= 0 && hIdx < len(s.leds) {
+		s.leds[hIdx] = s.hour
+	}
+	if mIdx >= 0 && mIdx < len(s.leds) {
+		s.leds[mIdx] = s.minute
+	}
+	s.ledsMutex.Unlock()
+	s.ledsChanged.Send(s.GetUID(), s)
 }
 
 func (s *ClockProducer) runner() {
-	defer func() {
-		s.leds = make([]Led, len(s.leds)) // Reset LEDs
-		s.ledsChanged.Send(s.GetUID(), s)
-	}()
+	defer s.ClearLeds()
 
 	s.setTime()
-	s.ledsChanged.Send(s.GetUID(), s)
 
 	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
 			s.setTime()
-			s.ledsChanged.Send(s.GetUID(), s)
 		case <-s.stopchan:
 			return
 		}

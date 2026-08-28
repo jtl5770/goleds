@@ -33,16 +33,16 @@ func NewNightlightProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer
 }
 
 func (s *NightlightProducer) setNightLed(index int) {
+	s.ledsMutex.Lock()
 	for i := range s.leds {
-		s.setLed(i, s.ledNight[index])
+		s.leds[i] = s.ledNight[index]
 	}
+	s.ledsMutex.Unlock()
+	s.ledsChanged.Send(s.GetUID(), s)
 }
 
 func (s *NightlightProducer) runner() {
-	defer func() {
-		s.leds = make([]Led, len(s.leds)) // Reset LEDs
-		s.ledsChanged.Send(s.GetUID(), s)
-	}()
+	defer s.ClearLeds()
 
 	for {
 		now := time.Now()
@@ -54,8 +54,7 @@ func (s *NightlightProducer) runner() {
 		var wakeupAfter time.Duration
 		if now.After(rise) && now.Before(set) {
 			// During the day - between sunrise and sunset
-			s.leds = make([]Led, len(s.leds)) // Reset LEDs
-			s.ledsChanged.Send(s.GetUID(), s)
+			s.ClearLeds()
 			wakeupAfter = set.Sub(now)
 		} else {
 			var waitIntervalDuration time.Duration
@@ -80,7 +79,6 @@ func (s *NightlightProducer) runner() {
 			}
 			// log.Printf("Current NightLED index %d : waitInterval %d : tillNextInterval %d", currInterval, waitIntervalDuration, tillNextInterval)
 			s.setNightLed(currInterval)
-			s.ledsChanged.Send(s.GetUID(), s)
 			// + 1s maybe not needed, but so we are sure to really be
 			// in the next interval
 			wakeupAfter = tillNextInterval + time.Second

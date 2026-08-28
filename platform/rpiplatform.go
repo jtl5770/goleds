@@ -220,7 +220,7 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 			}
 
 			for time.Since(stepStart) < calibCfg.StepDuration {
-				if s.isShuttingDown {
+				if s.isShuttingDown.Load() {
 					setAllLeds(0, 0, 0)
 					return fmt.Errorf("platform shutting down")
 				}

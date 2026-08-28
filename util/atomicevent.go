@@ -3,13 +3,13 @@ package util
 import (
 	"maps"
 	"sync"
+	"sync/atomic"
 )
 
 // AtomicEvent holds a single, latest event and provides non-blocking updates.
 // Only the most recent event is retained.
 type AtomicEvent[T any] struct {
-	mu     sync.Mutex    // Protects access to 'value'
-	value  T             // The latest event
+	ptr    atomic.Pointer[T]
 	notify chan struct{} // Buffered channel of size 1 for notification
 }
 
@@ -22,10 +22,7 @@ func NewAtomicEvent[T any]() *AtomicEvent[T] {
 
 // Send updates with the latest event. It is non-blocking.
 func (ae *AtomicEvent[T]) Send(event T) {
-	ae.mu.Lock()
-	defer ae.mu.Unlock()
-
-	ae.value = event // Always update the latest value
+	ae.ptr.Store(&event) // Atomically store the latest value
 
 	select {
 	case ae.notify <- struct{}{}:
@@ -42,9 +39,12 @@ func (ae *AtomicEvent[T]) Channel() <-chan struct{} {
 
 // Value returns the current latest event.
 func (ae *AtomicEvent[T]) Value() T {
-	ae.mu.Lock()
-	defer ae.mu.Unlock()
-	return ae.value
+	p := ae.ptr.Load()
+	if p == nil {
+		var zero T
+		return zero
+	}
+	return *p
 }
 
 // HasPending checks if a notification is waiting to be consumed.
@@ -53,8 +53,7 @@ func (ae *AtomicEvent[T]) HasPending() bool {
 	return len(ae.notify) > 0
 }
 
-// AtomicSetEvent holds a map of events, allowing for non-blocking updates
-
+// AtomicMapEvent holds a map of events, allowing for non-blocking updates
 type AtomicMapEvent[T any] struct {
 	mu     sync.Mutex    // Protects access to 'value'
 	value  map[string]T  // The latest event

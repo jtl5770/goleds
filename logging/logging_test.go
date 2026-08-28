@@ -11,16 +11,33 @@ import (
 	"time"
 )
 
+type safeBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (s *safeBuffer) Write(p []byte) (n int, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Write(p)
+}
+
+func (s *safeBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.String()
+}
+
 // resetGlobalState resets all global variables to their initial state for test isolation.
 func resetGlobalState() {
-	logBufferMutex.Lock()
-	defer logBufferMutex.Unlock()
-
-	// Stop the flusher if it's running
 	if flusherStopCh != nil {
 		close(flusherStopCh)
+		flusherWg.Wait()
 		flusherStopCh = nil
 	}
+
+	logBufferMutex.Lock()
+	defer logBufferMutex.Unlock()
 
 	// Close any open file handles
 	if fileOutput != nil {
@@ -30,7 +47,7 @@ func resetGlobalState() {
 
 	// Reset writers and flags
 	tuiOutput = nil
-	isBuffering = true // Default state
+	isBuffering.Store(true) // Default state
 
 	// Clear the buffer
 	logBuffer.Reset()
@@ -72,7 +89,7 @@ func TestBufferingAndFlushing(t *testing.T) {
 	logBufferMutex.Unlock()
 
 	// 2. Switch to TUI output
-	var tuiPane bytes.Buffer
+	var tuiPane safeBuffer
 	SetOutput(&tuiPane)
 	slog.Info("Switching to TUI output, should flush the buffer.")
 	// The flusher should now activate and flush the buffer.

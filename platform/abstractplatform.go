@@ -22,8 +22,7 @@ type AbstractPlatform struct {
 	displayWg       sync.WaitGroup
 	displayStopChan chan bool
 	readyChan       chan bool
-	shutdownMutex   sync.RWMutex
-	isShuttingDown  bool
+	isShuttingDown  atomic.Bool
 	isCalibrating   atomic.Bool
 	brightnessMutex sync.RWMutex
 	currentMaxR     float64
@@ -89,9 +88,7 @@ func (s *AbstractPlatform) getCurrentMaxBrightness() float64 {
 }
 
 func (s *AbstractPlatform) setInShutdown() {
-	s.shutdownMutex.Lock()
-	s.isShuttingDown = true
-	s.shutdownMutex.Unlock()
+	s.isShuttingDown.Store(true)
 }
 
 func (s *AbstractPlatform) displayDriver() {
@@ -103,8 +100,7 @@ func (s *AbstractPlatform) displayDriver() {
 			return
 		case <-s.ledsEvent.Channel():
 			sumLeds := s.ledsEvent.Value()
-			s.shutdownMutex.RLock()
-			if !s.isShuttingDown && !s.isCalibrating.Load() {
+			if !s.isShuttingDown.Load() && !s.isCalibrating.Load() {
 				var maxR, maxG, maxB float64
 				for _, led := range sumLeds {
 					if led.Red > maxR {
@@ -125,7 +121,6 @@ func (s *AbstractPlatform) displayDriver() {
 
 				s.displayFunc(sumLeds)
 			}
-			s.shutdownMutex.RUnlock()
 			// Return the buffer to the pool for reuse.
 			s.ledBufferPool.Put(sumLeds)
 		}
@@ -167,8 +162,8 @@ func (s *sensor) thresholdForBrightness(b float64) int {
 		p1 := s.calibCurve[i]
 		p2 := s.calibCurve[i+1]
 		if b >= p1.Brightness && b <= p2.Brightness {
-			ratio := (b - p1.Brightness) / (p2.Brightness - p1.Brightness)
-			return p1.Threshold + int(math.Round(ratio*float64(p2.Threshold-p1.Threshold)))
+			r := (b - p1.Brightness) / (p2.Brightness - p1.Brightness)
+			return p1.Threshold + int(math.Round(r*float64(p2.Threshold-p1.Threshold)))
 		}
 	}
 	return s.calibCurve[len(s.calibCurve)-1].Threshold

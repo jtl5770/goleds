@@ -45,8 +45,7 @@ func (s *CylonProducer) runner() {
 	triggerduration := time.NewTicker(s.duration)
 	tick := time.NewTicker(s.delay)
 	defer func() {
-		s.leds = make([]Led, len(s.leds)) // Reset LEDs
-		s.ledsChanged.Send(s.GetUID(), s)
+		s.ClearLeds()
 		tick.Stop()
 		triggerduration.Stop()
 	}()

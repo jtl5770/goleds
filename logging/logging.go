@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -23,7 +24,7 @@ func (w *logWriter) Write(p []byte) (n int, err error) {
 	logBufferMutex.Unlock()
 
 	// Signal the flusher only if we are not in buffering mode.
-	if !isBuffering {
+	if !isBuffering.Load() {
 		select {
 		case dataAvailableCh <- struct{}{}: // Signal that there is data
 		default: // Do not block if the channel is full
@@ -34,14 +35,15 @@ func (w *logWriter) Write(p []byte) (n int, err error) {
 }
 
 var (
-	logBuffer       bytes.Buffer // Unified buffer
-	logBufferMutex  sync.Mutex   // Mutex for logBuffer
-	originalStdout  int          = -1
-	originalStderr  int          = -1
+	logBuffer       bytes.Buffer  // Unified buffer
+	logBufferMutex  sync.Mutex    // Mutex for logBuffer
+	originalStdout  int           = -1
+	originalStderr  int           = -1
 	initOnce        sync.Once
 	flusherStopCh   chan struct{} // Channel to stop the flusher goroutine
+	flusherWg       sync.WaitGroup
 	fileOutput      *os.File      // The file to write logs to
-	isBuffering     bool          // Global buffering flag
+	isBuffering     atomic.Bool   // Global buffering flag
 	tuiOutput       io.Writer     // The TUI writer
 	dataAvailableCh chan struct{} // Channel to signal new data
 )
@@ -80,7 +82,7 @@ func InitialSetup() error {
 				logBufferMutex.Unlock()
 
 				// Signal the flusher only if we are not in buffering mode.
-				if !isBuffering {
+				if !isBuffering.Load() {
 					select {
 					case dataAvailableCh <- struct{}{}:
 					default:
@@ -100,13 +102,14 @@ func Configure(bufferOutput bool, levelStr, formatStr string, logToFile bool, lo
 	initOnce.Do(func() {
 		dataAvailableCh = make(chan struct{}, 1) // Buffer of 1 is important
 		flusherStopCh = make(chan struct{})
+		flusherWg.Add(1)
 		go startFlusher()
 	})
 
 	logBufferMutex.Lock()
 	defer logBufferMutex.Unlock()
 
-	isBuffering = bufferOutput
+	isBuffering.Store(bufferOutput)
 
 	if !bufferOutput {
 		tuiOutput = os.NewFile(uintptr(originalStdout), "/dev/stdout")
@@ -118,6 +121,7 @@ func Configure(bufferOutput bool, levelStr, formatStr string, logToFile bool, lo
 		fileOutput.Close()
 		fileOutput = nil
 	}
+
 	if logToFile {
 		file, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
 		if err != nil {
@@ -158,7 +162,7 @@ func SetOutput(newTarget io.Writer) {
 	logBufferMutex.Lock()
 	defer logBufferMutex.Unlock()
 	tuiOutput = newTarget
-	isBuffering = false
+	isBuffering.Store(false)
 
 	// Kickstart the flusher to process any buffered logs.
 	select {
@@ -172,7 +176,7 @@ func BufferOutput() {
 	logBufferMutex.Lock()
 	defer logBufferMutex.Unlock()
 	tuiOutput = nil
-	isBuffering = true
+	isBuffering.Store(true)
 }
 
 // Close stops the flusher, performs a final flush, and restores stdout/stderr.
@@ -180,6 +184,7 @@ func Close() error {
 	// Stop the periodic flusher
 	if flusherStopCh != nil {
 		close(flusherStopCh)
+		flusherWg.Wait()
 		flusherStopCh = nil
 	}
 
@@ -224,6 +229,7 @@ func Close() error {
 
 // startFlusher starts a goroutine that periodically flushes the log buffer.
 func startFlusher() {
+	defer flusherWg.Done()
 	for {
 		select {
 		case <-dataAvailableCh:
@@ -239,7 +245,7 @@ func flushBuffer() {
 	logBufferMutex.Lock()
 	defer logBufferMutex.Unlock()
 
-	if isBuffering || logBuffer.Len() == 0 {
+	if isBuffering.Load() || logBuffer.Len() == 0 {
 		return
 	}
 

@@ -49,6 +49,14 @@ func (s *AbstractProducer) setLed(index int, value Led) {
 	s.ledsChanged.Send(s.GetUID(), s)
 }
 
+// ClearLeds zeroes out all LEDs and signals the change in a thread-safe manner.
+func (s *AbstractProducer) ClearLeds() {
+	s.ledsMutex.Lock()
+	clear(s.leds)
+	s.ledsMutex.Unlock()
+	s.ledsChanged.Send(s.GetUID(), s)
+}
+
 // GetLeds copies the current LED state into the provided buffer.
 func (s *AbstractProducer) GetLeds(buffer []Led) {
 	s.ledsMutex.RLock()
