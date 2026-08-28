@@ -18,9 +18,10 @@ Hardware:
     SmoothingSize: 3
     LoopDelay: 50ms
     Calibration:
-      StepDuration: 5s
-      Margin: 15
-      OutlierThreshold: 50
+      StepDuration: 10s
+      MinMargin: 15
+      DeviationFactor: 1.5
+      OutlierThreshold: 150
       RetryDelay: 5s
     SensorCfg: {}
   SpiMultiplexGPIO: {}

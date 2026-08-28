@@ -26,6 +26,8 @@ type AbstractPlatform struct {
 	isShuttingDown  bool
 	isCalibrating   atomic.Bool
 	brightnessMutex sync.RWMutex
+	currentMaxR     float64
+	currentMaxG     float64
 	currentMaxB     float64
 	ledBufferPool   *sync.Pool
 }
@@ -69,6 +71,12 @@ func (s *AbstractPlatform) IsCalibrating() bool {
 	return s.isCalibrating.Load()
 }
 
+func (s *AbstractPlatform) getCurrentMaxRGB() (float64, float64, float64) {
+	s.brightnessMutex.RLock()
+	defer s.brightnessMutex.RUnlock()
+	return s.currentMaxR, s.currentMaxG, s.currentMaxB
+}
+
 func (s *AbstractPlatform) getCurrentMaxBrightness() float64 {
 	s.brightnessMutex.RLock()
 	defer s.brightnessMutex.RUnlock()
@@ -92,19 +100,21 @@ func (s *AbstractPlatform) displayDriver() {
 			sumLeds := s.ledsEvent.Value()
 			s.shutdownMutex.RLock()
 			if !s.isShuttingDown && !s.isCalibrating.Load() {
-				var maxB float64
+				var maxR, maxG, maxB float64
 				for _, led := range sumLeds {
-					if led.Red > maxB {
-						maxB = led.Red
+					if led.Red > maxR {
+						maxR = led.Red
 					}
-					if led.Green > maxB {
-						maxB = led.Green
+					if led.Green > maxG {
+						maxG = led.Green
 					}
 					if led.Blue > maxB {
 						maxB = led.Blue
 					}
 				}
 				s.brightnessMutex.Lock()
+				s.currentMaxR = maxR / 255.0
+				s.currentMaxG = maxG / 255.0
 				s.currentMaxB = maxB / 255.0
 				s.brightnessMutex.Unlock()
 
@@ -122,6 +132,13 @@ type CalibPoint struct {
 	Threshold  int
 }
 
+type SensorCalibration struct {
+	DarkThreshold int
+	RedDeltas     []CalibPoint
+	GreenDeltas   []CalibPoint
+	BlueDeltas    []CalibPoint
+}
+
 // sensor struct and related functions
 type sensor struct {
 	uid          string
@@ -129,11 +146,51 @@ type sensor struct {
 	spimultiplex string
 	adcChannel   byte
 	calibCurve   []CalibPoint
+	calibration  SensorCalibration
 	calibMutex   sync.RWMutex
 	values       []int
 	index        int
 	sum          int
 	capacity     int
+}
+
+func interpolateDelta(curve []CalibPoint, b float64) int {
+	if len(curve) == 0 {
+		return 0
+	}
+	if b <= curve[0].Brightness {
+		return curve[0].Threshold
+	}
+	if b >= curve[len(curve)-1].Brightness {
+		return curve[len(curve)-1].Threshold
+	}
+	for i := 0; i < len(curve)-1; i++ {
+		p1 := curve[i]
+		p2 := curve[i+1]
+		if b >= p1.Brightness && b <= p2.Brightness {
+			ratio := (b - p1.Brightness) / (p2.Brightness - p1.Brightness)
+			return p1.Threshold + int(math.Round(ratio*float64(p2.Threshold-p1.Threshold)))
+		}
+	}
+	return curve[len(curve)-1].Threshold
+}
+
+func (s *sensor) thresholdForRGB(r, g, b float64) int {
+	s.calibMutex.RLock()
+	defer s.calibMutex.RUnlock()
+	if s.calibration.DarkThreshold == 0 && len(s.calibCurve) > 0 {
+		return s.thresholdForBrightness(r)
+	}
+	deltaR := interpolateDelta(s.calibration.RedDeltas, r)
+	deltaG := interpolateDelta(s.calibration.GreenDeltas, g)
+	deltaB := interpolateDelta(s.calibration.BlueDeltas, b)
+	return s.calibration.DarkThreshold + deltaR + deltaG + deltaB
+}
+
+func (s *sensor) setCalibration(calib SensorCalibration) {
+	s.calibMutex.Lock()
+	defer s.calibMutex.Unlock()
+	s.calibration = calib
 }
 
 func (s *sensor) thresholdForBrightness(b float64) int {

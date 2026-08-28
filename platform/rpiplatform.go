@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -159,6 +160,13 @@ func (s *RaspberryPiPlatform) rpiDisplayFunc(leds []producer.Led) {
 	}
 }
 
+type probeStep struct {
+	name    string
+	channel string
+	r, g, b float64
+	ratio   float64
+}
+
 func (s *RaspberryPiPlatform) Calibrate() error {
 	if !s.isCalibrating.CompareAndSwap(false, true) {
 		return fmt.Errorf("calibration already in progress")
@@ -167,14 +175,19 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 
 	calibCfg := s.config.Hardware.Sensors.Calibration
 	sensorLedRGB := s.config.SensorLED.LedRGB
-	maxSensorLedComponent := sensorLedRGB[0]
-	if sensorLedRGB[1] > maxSensorLedComponent {
-		maxSensorLedComponent = sensorLedRGB[1]
+
+	steps := []probeStep{
+		{name: "Dark", channel: "Dark", r: 0, g: 0, b: 0, ratio: 0.0},
+		{name: "Red-0.33", channel: "Red", r: sensorLedRGB[0] * 0.33, g: 0, b: 0, ratio: 0.33},
+		{name: "Red-0.66", channel: "Red", r: sensorLedRGB[0] * 0.66, g: 0, b: 0, ratio: 0.66},
+		{name: "Red-1.00", channel: "Red", r: sensorLedRGB[0] * 1.00, g: 0, b: 0, ratio: 1.00},
+		{name: "Green-0.33", channel: "Green", r: 0, g: sensorLedRGB[1] * 0.33, b: 0, ratio: 0.33},
+		{name: "Green-0.66", channel: "Green", r: 0, g: sensorLedRGB[1] * 0.66, b: 0, ratio: 0.66},
+		{name: "Green-1.00", channel: "Green", r: 0, g: sensorLedRGB[1] * 1.00, b: 0, ratio: 1.00},
+		{name: "Blue-0.33", channel: "Blue", r: 0, g: 0, b: sensorLedRGB[2] * 0.33, ratio: 0.33},
+		{name: "Blue-0.66", channel: "Blue", r: 0, g: 0, b: sensorLedRGB[2] * 0.66, ratio: 0.66},
+		{name: "Blue-1.00", channel: "Blue", r: 0, g: 0, b: sensorLedRGB[2] * 1.00, ratio: 1.00},
 	}
-	if sensorLedRGB[2] > maxSensorLedComponent {
-		maxSensorLedComponent = sensorLedRGB[2]
-	}
-	steps := []float64{0.0, 0.33, 0.66, 1.0}
 
 	setAllLeds := func(r, g, b float64) {
 		leds := make([]producer.Led, s.config.Hardware.Display.LedsTotal)
@@ -205,26 +218,27 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 	slog.Info("Starting sensor calibration...")
 
 	for {
-		stepCurves := make(map[string][]CalibPoint)
+		darkThresholds := make(map[string]int)
+		redDeltas := make(map[string][]CalibPoint)
+		greenDeltas := make(map[string][]CalibPoint)
+		blueDeltas := make(map[string][]CalibPoint)
+
 		for name := range s.sensors {
-			stepCurves[name] = make([]CalibPoint, 0, len(steps))
+			redDeltas[name] = []CalibPoint{{Brightness: 0.0, Threshold: 0}}
+			greenDeltas[name] = []CalibPoint{{Brightness: 0.0, Threshold: 0}}
+			blueDeltas[name] = []CalibPoint{{Brightness: 0.0, Threshold: 0}}
 		}
 
 		failed := false
 
 		for _, step := range steps {
-			r := sensorLedRGB[0] * step
-			g := sensorLedRGB[1] * step
-			b := sensorLedRGB[2] * step
-			setAllLeds(r, g, b)
+			setAllLeds(step.r, step.g, step.b)
 			time.Sleep(150 * time.Millisecond)
 
 			stepStart := time.Now()
-			smoothedMins := make(map[string]int)
-			smoothedMaxs := make(map[string]int)
+			samples := make(map[string][]int)
 			for name := range s.sensors {
-				smoothedMins[name] = 1024
-				smoothedMaxs[name] = -1
+				samples[name] = make([]int, 0, int(calibCfg.StepDuration/s.config.Hardware.Sensors.LoopDelay)+10)
 			}
 
 			for time.Since(stepStart) < calibCfg.StepDuration {
@@ -235,29 +249,76 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 				for name, sensor := range s.sensors {
 					raw := s.readAdc(sensor.spimultiplex, sensor.adcChannel)
 					smoothed := sensor.smoothedValue(raw)
-					if smoothed < smoothedMins[name] {
-						smoothedMins[name] = smoothed
-					}
-					if smoothed > smoothedMaxs[name] {
-						smoothedMaxs[name] = smoothed
-					}
+					samples[name] = append(samples[name], smoothed)
 				}
 				time.Sleep(s.config.Hardware.Sensors.LoopDelay)
 			}
 
 			for name := range s.sensors {
-				variance := smoothedMaxs[name] - smoothedMins[name]
-				if variance > calibCfg.OutlierThreshold {
-					slog.Warn("Calibration step outlier detected", "sensor", name, "variance", variance, "step", step)
+				vals := samples[name]
+				if len(vals) == 0 {
 					failed = true
 					break
 				}
-				threshold := smoothedMaxs[name] + calibCfg.Margin
-				normalizedBrightness := step * (maxSensorLedComponent / 255.0)
-				stepCurves[name] = append(stepCurves[name], CalibPoint{
-					Brightness: normalizedBrightness,
-					Threshold:  threshold,
-				})
+				sort.Ints(vals)
+				minVal := vals[0]
+				maxVal := vals[len(vals)-1]
+				medianVal := vals[len(vals)/2]
+
+				variance := maxVal - minVal
+				if variance > calibCfg.OutlierThreshold {
+					slog.Warn("Calibration step outlier detected", "sensor", name, "step", step.name, "variance", variance, "min", minVal, "max", maxVal)
+					failed = true
+					break
+				}
+
+				spread := maxVal - medianVal
+				calcMargin := int(math.Round(calibCfg.DeviationFactor * float64(spread)))
+				effectiveMargin := calibCfg.MinMargin
+				if calcMargin > effectiveMargin {
+					effectiveMargin = calcMargin
+				}
+
+				threshold := maxVal + effectiveMargin
+
+				var delta int
+				if step.channel == "Dark" {
+					darkThresholds[name] = threshold
+					delta = 0
+				} else {
+					delta = threshold - darkThresholds[name]
+					if delta < 0 {
+						delta = 0
+					}
+				}
+
+				slog.Info("Calibration measurement",
+					"step", step.name,
+					"channel", step.channel,
+					"ratio", step.ratio,
+					"sensor", name,
+					"min", minVal,
+					"median", medianVal,
+					"max", maxVal,
+					"spread", spread,
+					"calcMargin", calcMargin,
+					"effectiveMargin", effectiveMargin,
+					"threshold", threshold,
+					"delta", delta,
+				)
+
+				normB := 0.0
+				switch step.channel {
+				case "Red":
+					normB = step.ratio * (sensorLedRGB[0] / 255.0)
+					redDeltas[name] = append(redDeltas[name], CalibPoint{Brightness: normB, Threshold: delta})
+				case "Green":
+					normB = step.ratio * (sensorLedRGB[1] / 255.0)
+					greenDeltas[name] = append(greenDeltas[name], CalibPoint{Brightness: normB, Threshold: delta})
+				case "Blue":
+					normB = step.ratio * (sensorLedRGB[2] / 255.0)
+					blueDeltas[name] = append(blueDeltas[name], CalibPoint{Brightness: normB, Threshold: delta})
+				}
 			}
 
 			if failed {
@@ -271,9 +332,15 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 			continue
 		}
 
-		for name, curve := range stepCurves {
-			s.sensors[name].setCalibrationCurve(curve)
-			slog.Info("Calibrated sensor curve", "sensor", name, "curve", curve)
+		for name := range s.sensors {
+			calib := SensorCalibration{
+				DarkThreshold: darkThresholds[name],
+				RedDeltas:     redDeltas[name],
+				GreenDeltas:   greenDeltas[name],
+				BlueDeltas:    blueDeltas[name],
+			}
+			s.sensors[name].setCalibration(calib)
+			slog.Info("Calibrated sensor full profile", "sensor", name, "profile", calib)
 		}
 		setAllLeds(0, 0, 0)
 		flashBlue(2)
@@ -403,12 +470,12 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 			if s.isCalibrating.Load() {
 				continue
 			}
-			currentBrightness := s.getCurrentMaxBrightness()
+			r, g, b := s.getCurrentMaxRGB()
 			for name, sensor := range s.sensors {
 				value := sensor.smoothedValue(s.readAdc(sensor.spimultiplex, sensor.adcChannel))
 				latestValues[name] = value
 				if !s.isCalibrating.Load() {
-					threshold := sensor.thresholdForBrightness(currentBrightness)
+					threshold := sensor.thresholdForRGB(r, g, b)
 					if value > threshold {
 						s.sensorEvents <- util.NewTrigger(name, value, time.Now())
 					}

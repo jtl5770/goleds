@@ -79,11 +79,13 @@ Hardware:
     # Calibration settings for automated dynamic thresholding.
     Calibration:
       # Duration to sample each brightness step.
-      StepDuration: 5s
-      # Safety margin added above the measured peak noise.
-      Margin: 15
+      StepDuration: 10s
+      # Minimum safety margin floor added above measured peak noise.
+      MinMargin: 15
+      # Factor multiplied by (Max - Median) spread per sensor per step.
+      DeviationFactor: 1.5
       # Maximum allowed reading variance within a step before an anomaly is detected.
-      OutlierThreshold: 50
+      OutlierThreshold: 150
       # Delay before restarting calibration after an outlier is detected.
       RetryDelay: 5s
     # Configuration for each individual sensor.

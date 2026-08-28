@@ -315,7 +315,8 @@ type SensorCfg struct {
 // CalibrationConfig defines automatic calibration parameters for IR sensors.
 type CalibrationConfig struct {
 	StepDuration     time.Duration `yaml:"StepDuration"`
-	Margin           int           `yaml:"Margin"`
+	MinMargin        int           `yaml:"MinMargin"`
+	DeviationFactor  float64       `yaml:"DeviationFactor"`
 	OutlierThreshold int           `yaml:"OutlierThreshold"`
 	RetryDelay       time.Duration `yaml:"RetryDelay"`
 }
@@ -324,8 +325,11 @@ func (c *CalibrationConfig) Validate() error {
 	if c.StepDuration <= 0 {
 		return fmt.Errorf("StepDuration must be positive")
 	}
-	if c.Margin < 0 {
-		return fmt.Errorf("Margin must be non-negative")
+	if c.MinMargin < 0 {
+		return fmt.Errorf("MinMargin must be non-negative")
+	}
+	if c.DeviationFactor < 0 {
+		return fmt.Errorf("DeviationFactor must be non-negative")
 	}
 	if c.OutlierThreshold <= 0 {
 		return fmt.Errorf("OutlierThreshold must be positive")
