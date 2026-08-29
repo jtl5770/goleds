@@ -290,3 +290,41 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 		t.Error("Expected leds to be written")
 	}
 }
+
+func TestHashLEDs(t *testing.T) {
+	leds1 := []p.Led{
+		{Red: 100, Green: 150, Blue: 200},
+		{Red: 0, Green: 50, Blue: 255},
+	}
+	leds2 := []p.Led{
+		{Red: 100, Green: 150, Blue: 200},
+		{Red: 0, Green: 50, Blue: 255},
+	}
+	leds3 := []p.Led{
+		{Red: 100, Green: 150, Blue: 200},
+		{Red: 0, Green: 51, Blue: 255},
+	}
+
+	h1 := hashLEDs(leds1)
+	h2 := hashLEDs(leds2)
+	h3 := hashLEDs(leds3)
+
+	if h1 != h2 {
+		t.Errorf("Expected identical LED slices to have matching hashes, got %d vs %d", h1, h2)
+	}
+	if h1 == h3 {
+		t.Errorf("Expected different LED slices to have distinct hashes, got identical hash %d", h1)
+	}
+}
+
+func BenchmarkHashLEDs(b *testing.B) {
+	leds := make([]p.Led, 100)
+	for i := range leds {
+		leds[i] = p.Led{Red: float64(i % 256), Green: float64((i * 2) % 256), Blue: float64((i * 3) % 256)}
+	}
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_ = hashLEDs(leds)
+	}
+}

@@ -28,7 +28,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"hash/fnv"
 	"log/slog"
 	"net/http"
 	"os"
@@ -546,12 +545,21 @@ func (a *App) stateManager() {
 	}
 }
 
-// hashLEDs computes a hash for the given LED state array.
-// This is used to detect changes in the LED state and avoid unnecessary updates.
+// hashLEDs computes an inlined 64-bit FNV-1a hash for the given LED state array.
+// This is used to detect changes in the LED state without any heap allocations.
 func hashLEDs(leds []p.Led) uint64 {
-	h := fnv.New64a() // FNV-1a is a fast, non-cryptographic hash function.
+	const (
+		offset64 = 14695981039346656037
+		prime64  = 1099511628211
+	)
+	var h uint64 = offset64
 	for _, led := range leds {
-		h.Write([]byte{byte(led.Red), byte(led.Green), byte(led.Blue)})
+		h ^= uint64(byte(led.Red))
+		h *= prime64
+		h ^= uint64(byte(led.Green))
+		h *= prime64
+		h ^= uint64(byte(led.Blue))
+		h *= prime64
 	}
-	return h.Sum64()
+	return h
 }
