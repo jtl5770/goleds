@@ -170,12 +170,9 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 	calibCfg := s.config.Hardware.Sensors.Calibration
 	sensorLedRGB := s.config.SensorLED.LedRGB
 
-	maxRed := int(math.Round(sensorLedRGB[0]))
-	redSteps := []int{
-		maxRed,
-		int(math.Round(float64(maxRed) * 2.0 / 3.0)),
-		int(math.Round(float64(maxRed) * 1.0 / 3.0)),
-		0,
+	maxRed := sensorLedRGB[0]
+	redSteps := []float64{
+		maxRed, maxRed * 2.0 / 3.0, maxRed * 1.0 / 3.0, 0,
 	}
 
 	setAllLeds := func(r, g, b float64) {
@@ -214,8 +211,8 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 
 		failed := false
 
-		for _, red := range redSteps {
-			setAllLeds(float64(red), 0, 0)
+		for _, val := range redSteps {
+			setAllLeds(val, val, val)
 			time.Sleep(150 * time.Millisecond)
 
 			stepStart := time.Now()
@@ -250,7 +247,7 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 
 				variance := maxVal - minVal
 				if variance > calibCfg.OutlierThreshold {
-					slog.Warn("Calibration step outlier detected", "sensor", name, "red", red, "variance", variance, "min", minVal, "max", maxVal)
+					slog.Warn("Calibration step outlier detected", "sensor", name, "LedVal", val, "variance", variance, "min", minVal, "max", maxVal)
 					failed = true
 					break
 				}
@@ -265,7 +262,7 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 				threshold := maxVal + effectiveMargin
 
 				slog.Info("Calibration measurement",
-					"red", red,
+					"Led Value", val,
 					"sensor", name,
 					"min", minVal,
 					"median", medianVal,
@@ -277,7 +274,7 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 				)
 
 				stepCurves[name] = append(stepCurves[name], CalibPoint{
-					Red:       red,
+					Red:       int(math.Round(val)),
 					Threshold: threshold,
 				})
 			}
