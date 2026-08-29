@@ -41,6 +41,41 @@ func TestWS2801Driver_Write(t *testing.T) {
 	}
 }
 
+func TestWS2801Driver_Write_Reversed(t *testing.T) {
+	displayConfig := config.DisplayConfig{
+		ColorCorrection: []float64{1.0, 1.0, 1.0},
+		LedsTotal:       10,
+	}
+	driver := newWs2801Driver(displayConfig)
+
+	segment := &segment{
+		leds: []producer.Led{
+			{Red: 255, Green: 0, Blue: 0},
+			{Red: 0, Green: 255, Blue: 0},
+			{Red: 0, Green: 0, Blue: 255},
+		},
+		reverse:      true,
+		spiMultiplex: "spi1",
+	}
+
+	var sentData []byte
+	exchangeFunc := func(index string, data []byte) []byte {
+		sentData = data
+		return data
+	}
+
+	err := driver.write(segment, exchangeFunc)
+	if err != nil {
+		t.Fatalf("Write failed: %v", err)
+	}
+
+	// In reverse mode, the 3rd LED (Blue) is written first, then Green, then Red.
+	expected := []byte{0, 0, 255, 0, 255, 0, 255, 0, 0}
+	if !reflect.DeepEqual(sentData, expected) {
+		t.Errorf("Expected data %v, got %v", expected, sentData)
+	}
+}
+
 func TestAPA102Driver_Write(t *testing.T) {
 	displayConfig := config.DisplayConfig{
 		ColorCorrection:   []float64{1.0, 1.0, 1.0},
@@ -78,6 +113,47 @@ func TestAPA102Driver_Write(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, // Start frame
 		0xFF, 0, 0, 255, // LED 1
 		0xFF, 0, 255, 0, // LED 2
+		0xFF, // End frame
+	}
+
+	if !reflect.DeepEqual(sentData, expected) {
+		t.Errorf("Expected data %v, got %v", expected, sentData)
+	}
+}
+
+func TestAPA102Driver_Write_Reversed(t *testing.T) {
+	displayConfig := config.DisplayConfig{
+		ColorCorrection:   []float64{1.0, 1.0, 1.0},
+		APA102_Brightness: 31,
+		LedsTotal:         10,
+	}
+	driver := newApa102Driver(displayConfig)
+
+	segment := &segment{
+		leds: []producer.Led{
+			{Red: 255, Green: 0, Blue: 0},
+			{Red: 0, Green: 255, Blue: 0},
+		},
+		reverse:      true,
+		spiMultiplex: "spi1",
+	}
+
+	var sentData []byte
+	exchangeFunc := func(index string, data []byte) []byte {
+		sentData = data
+		return data
+	}
+
+	err := driver.write(segment, exchangeFunc)
+	if err != nil {
+		t.Fatalf("Write failed: %v", err)
+	}
+
+	// In reverse mode, LED 2 (Green) is written at index 0, LED 1 (Red) at index 1.
+	expected := []byte{
+		0x00, 0x00, 0x00, 0x00, // Start frame
+		0xFF, 0, 255, 0, // LED 2 (Green)
+		0xFF, 0, 0, 255, // LED 1 (Red)
 		0xFF, // End frame
 	}
 

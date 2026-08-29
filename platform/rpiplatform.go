@@ -372,9 +372,13 @@ func (d *ws2801Driver) write(segment *segment, exchangeFunc func(string, []byte)
 	display := d.buffer[:requiredSize]
 
 	for idx, led := range segment.leds {
-		display[3*idx] = d.lut.r[byte(led.Red)]
-		display[(3*idx)+1] = d.lut.g[byte(led.Green)]
-		display[(3*idx)+2] = d.lut.b[byte(led.Blue)]
+		targetIdx := idx
+		if segment.reverse {
+			targetIdx = len(segment.leds) - 1 - idx
+		}
+		display[3*targetIdx] = d.lut.r[byte(led.Red)]
+		display[(3*targetIdx)+1] = d.lut.g[byte(led.Green)]
+		display[(3*targetIdx)+2] = d.lut.b[byte(led.Blue)]
 	}
 	exchangeFunc(segment.spiMultiplex, display)
 	return nil
@@ -410,18 +414,21 @@ func (d *apa102Driver) write(segment *segment, exchangeFunc func(string, []byte)
 	brightness := byte(d.displayConfig.APA102_Brightness) | 0xE0
 
 	// LED data
-	offset := 4
-	for _, led := range segment.leds {
+	for idx, led := range segment.leds {
+		targetIdx := idx
+		if segment.reverse {
+			targetIdx = len(segment.leds) - 1 - idx
+		}
+		offset := 4 + (4 * targetIdx)
 		// protocol: brightness byte, blue, green, red
 		display[offset] = brightness
 		display[offset+1] = d.lut.b[byte(led.Blue)]
 		display[offset+2] = d.lut.g[byte(led.Green)]
 		display[offset+3] = d.lut.r[byte(led.Red)]
-		offset += 4
 	}
 
 	// Frame end: fill the rest of the slice with 0xFF
-	for i := offset; i < requiredSize; i++ {
+	for i := 4 + (4 * len(segment.leds)); i < requiredSize; i++ {
 		display[i] = 0xFF
 	}
 

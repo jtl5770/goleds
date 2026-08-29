@@ -261,7 +261,11 @@ func (s *TUIPlatform) simulateLedSegment(segment *segment) (string, string) {
 	buf1.Grow(len(values) * (len("[-][#000000]") + 1))
 	buf2.Grow(len(values) * (len("[-][#000000]") + 1))
 
-	for _, v := range values {
+	for i := range values {
+		v := values[i]
+		if segment.reverse {
+			v = values[len(values)-1-i]
+		}
 		if v.IsEmpty() {
 			buf1.WriteString(" ")
 			buf2.WriteString(" ")

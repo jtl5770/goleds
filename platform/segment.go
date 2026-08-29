@@ -77,15 +77,10 @@ func newSegment(firstled, lastled int, spimultiplex string, reverse bool, visibl
 	return &inst
 }
 
-// setLeds sets the LEDs for the segment, applying reversal if configured.
+// setLeds sets the LEDs for the segment.
 func (s *segment) setLeds(sumleds []p.Led) {
 	if s.visible {
 		s.leds = sumleds[s.firstLed : s.lastLed+1]
-		if s.reverse {
-			for i, j := 0, len(s.leds)-1; i < j; i, j = i+1, j-1 {
-				s.leds[i], s.leds[j] = s.leds[j], s.leds[i]
-			}
-		}
 	}
 }
 

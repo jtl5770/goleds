@@ -22,7 +22,6 @@ var (
 // and displays the volume on a segment of LEDs.
 type AudioLEDProducer struct {
 	*AbstractProducer
-	ledsChanged   *u.AtomicMapEvent[LedProducer]
 	Device        string
 	startLedLeft  int
 	endLedLeft    int
@@ -41,12 +40,13 @@ type AudioLEDProducer struct {
 	silenceStartTime time.Time
 	silenceStart     bool
 	slowedDown       bool
+	samplesL         []float32
+	samplesR         []float32
 }
 
 // NewAudioLEDProducer creates a new AudioLEDProducer.
 func NewAudioLEDProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, cfg c.AudioLEDConfig) *AudioLEDProducer {
 	p := &AudioLEDProducer{
-		ledsChanged:   ledsChanged,
 		startLedLeft:  cfg.StartLedLeft,
 		endLedLeft:    cfg.EndLedLeft,
 		startLedRight: cfg.StartLedRight,
@@ -63,6 +63,8 @@ func NewAudioLEDProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer],
 	p.maxDB = cfg.MaxDB
 	p.silenceStart = false
 	p.slowedDown = false
+	p.samplesL = make([]float32, cfg.FramesPerBuffer)
+	p.samplesR = make([]float32, cfg.FramesPerBuffer)
 	p.AbstractProducer = NewAbstractProducer(uid, ledsChanged, p.runner, ledsTotal)
 	return p
 }
@@ -131,10 +133,7 @@ func (p *AudioLEDProducer) runner() {
 	defer ticker.Stop()
 
 	// Clean up LEDs on exit
-	defer func() {
-		p.leds = make([]Led, len(p.leds))
-		p.ledsChanged.Send(p.GetUID(), p)
-	}()
+	defer p.ClearLeds()
 
 	p.slowedDown = false
 	p.silenceStart = false
@@ -143,34 +142,21 @@ func (p *AudioLEDProducer) runner() {
 		case <-p.stopchan:
 			return
 		case <-ticker.C:
-			if p.slowedDown {
-				stream, err = portaudio.OpenStream(streamParams, buffer)
-				if err != nil {
-					slog.Error("AudioLEDProducer: failed to open stream", "uid", p.uid, "error", err)
-					return
-				}
-				if err = stream.Start(); err != nil {
-					slog.Error("AudioLEDProducer: failed to start stream", "uid", p.uid, "error", err)
-					return
-				}
-			}
 			if err = stream.Read(); err != nil {
 				// This can happen, e.g., portaudio.InputOverflowed. We can log it but continue.
 			}
 
-			samplesL, samplesR := deInterleave(buffer, inDevice.MaxInputChannels)
-			rmsL := calculateRMS(samplesL)
-			rmsR := calculateRMS(samplesR)
+			p.deInterleaveInto(buffer, inDevice.MaxInputChannels)
+			rmsL := calculateRMS(p.samplesL)
+			rmsR := calculateRMS(p.samplesR)
 			p.checkSilence(rmsL, rmsR, ticker)
-			if p.slowedDown {
-				stream.Stop()
-				stream.Close()
-			}
 
 			dbL := rmsToDB(rmsL)
 			dbR := rmsToDB(rmsR)
+			p.ledsMutex.Lock()
 			p.updateLeds(dbL, p.startLedLeft, p.endLedLeft)
 			p.updateLeds(dbR, p.startLedRight, p.endLedRight)
+			p.ledsMutex.Unlock()
 			p.ledsChanged.Send(p.GetUID(), p)
 		}
 	}
@@ -260,6 +246,23 @@ func (p *AudioLEDProducer) findDevice() (*portaudio.DeviceInfo, error) {
 	return nil, fmt.Errorf("no suitable audio input device found")
 }
 
+// deInterleaveInto converts a buffer of interleaved stereo samples to mono into pre-allocated slices.
+func (p *AudioLEDProducer) deInterleaveInto(in []float32, channels int) {
+	if channels == 1 {
+		copy(p.samplesL, in)
+		copy(p.samplesR, in)
+		return
+	}
+	numSamples := len(in) / channels
+	if numSamples > len(p.samplesL) {
+		numSamples = len(p.samplesL)
+	}
+	for i := range numSamples {
+		p.samplesL[i] = in[channels*i]
+		p.samplesR[i] = in[channels*i+1]
+	}
+}
+
 // deInterleave converts a buffer of interleaved stereo samples to mono.
 func deInterleave(in []float32, channels int) ([]float32, []float32) {
 	if channels == 1 {
@@ -288,5 +291,6 @@ func calculateRMS(samples []float32) float64 {
 // rmsToDB converts an RMS value (0.0-1.0) to a decibel scale.
 func rmsToDB(rms float64) float64 {
 	rms = max(0.0001, rms) // Avoid log(0)
-	return 20 * math.Log10(rms)
+	db := 20 * math.Log10(rms)
+	return db
 }

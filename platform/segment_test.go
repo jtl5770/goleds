@@ -82,14 +82,19 @@ func TestSetLedsReversed(t *testing.T) {
 	s.setLeds(leds)
 
 	expected := []producer.Led{
-		{Red: 5},
-		{Red: 4},
-		{Red: 3},
 		{Red: 2},
+		{Red: 3},
+		{Red: 4},
+		{Red: 5},
 	}
 
 	if !reflect.DeepEqual(s.leds, expected) {
 		t.Errorf("Expected Leds to be %+v, got %+v", expected, s.leds)
+	}
+
+	// Verify that underlying leds slice was NOT mutated in-place
+	if leds[2].Red != 2 || leds[5].Red != 5 {
+		t.Errorf("Original leds slice was unexpectedly modified in-place: %+v", leds)
 	}
 }
 
