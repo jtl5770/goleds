@@ -22,36 +22,33 @@ var (
 // and displays the volume on a segment of LEDs.
 type AudioLEDProducer struct {
 	*AbstractProducer
-	Device        string
-	startLedLeft  int
-	endLedLeft    int
-	startLedRight int
-	endLedRight   int
-	colors        struct {
+	Device          string
+	startLedLeft    int
+	endLedLeft      int
+	startLedRight   int
+	endLedRight     int
+	colors          struct {
 		Green  Led
 		Yellow Led
 		Red    Led
 	}
-	sampleRate       int
-	framesPerBuffer  int
-	updateFreq       time.Duration
-	minDB            float64
-	maxDB            float64
-	silenceStartTime time.Time
-	silenceStart     bool
-	slowedDown       bool
-	samplesL         []float32
-	samplesR         []float32
+	sampleRate      int
+	framesPerBuffer int
+	updateFreq      time.Duration
+	minDB           float64
+	maxDB           float64
+	samplesL        []float32
+	samplesR        []float32
 }
 
 // NewAudioLEDProducer creates a new AudioLEDProducer.
 func NewAudioLEDProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, cfg c.AudioLEDConfig) *AudioLEDProducer {
 	p := &AudioLEDProducer{
-		startLedLeft:  cfg.StartLedLeft,
-		endLedLeft:    cfg.EndLedLeft,
-		startLedRight: cfg.StartLedRight,
-		endLedRight:   cfg.EndLedRight,
-		Device:        cfg.Device,
+		startLedLeft:    cfg.StartLedLeft,
+		endLedLeft:      cfg.EndLedLeft,
+		startLedRight:   cfg.StartLedRight,
+		endLedRight:     cfg.EndLedRight,
+		Device:          cfg.Device,
 	}
 	p.colors.Green = Led{Red: cfg.LedGreen[0], Green: cfg.LedGreen[1], Blue: cfg.LedGreen[2]}
 	p.colors.Yellow = Led{Red: cfg.LedYellow[0], Green: cfg.LedYellow[1], Blue: cfg.LedYellow[2]}
@@ -61,8 +58,6 @@ func NewAudioLEDProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer],
 	p.updateFreq = cfg.UpdateFreq
 	p.minDB = cfg.MinDB
 	p.maxDB = cfg.MaxDB
-	p.silenceStart = false
-	p.slowedDown = false
 	p.samplesL = make([]float32, cfg.FramesPerBuffer)
 	p.samplesR = make([]float32, cfg.FramesPerBuffer)
 	p.AbstractProducer = NewAbstractProducer(uid, ledsChanged, p.runner, ledsTotal)
@@ -129,61 +124,48 @@ func (p *AudioLEDProducer) runner() {
 	}
 	defer stream.Stop()
 
-	ticker := time.NewTicker(p.updateFreq)
-	defer ticker.Stop()
-
 	// Clean up LEDs on exit
 	defer p.ClearLeds()
 
-	p.slowedDown = false
-	p.silenceStart = false
+	isSilent := false
 	for {
 		select {
 		case <-p.stopchan:
 			return
-		case <-ticker.C:
-			if err = stream.Read(); err != nil {
-				// This can happen, e.g., portaudio.InputOverflowed. We can log it but continue.
-			}
-
-			p.deInterleaveInto(buffer, inDevice.MaxInputChannels)
-			rmsL := calculateRMS(p.samplesL)
-			rmsR := calculateRMS(p.samplesR)
-			p.checkSilence(rmsL, rmsR, ticker)
-
-			dbL := rmsToDB(rmsL)
-			dbR := rmsToDB(rmsR)
-			p.ledsMutex.Lock()
-			p.updateLeds(dbL, p.startLedLeft, p.endLedLeft)
-			p.updateLeds(dbR, p.startLedRight, p.endLedRight)
-			p.ledsMutex.Unlock()
-			p.ledsChanged.Send(p.GetUID(), p)
+		default:
 		}
-	}
-}
 
-func (p *AudioLEDProducer) checkSilence(rmsL float64, rmsR float64, ticker *time.Ticker) {
-	if rmsL > 0 || rmsR > 0 {
-		if p.slowedDown {
-			slog.Info("AudioLEDProducer: Audio input detected, back to full loop speed...")
-			p.silenceStart = false
-			p.slowedDown = false
-			ticker.Reset(p.updateFreq)
-		} else if p.silenceStart {
-			// Reset silence start if we detect audio after a period of silence
-			p.silenceStart = false
-		}
-	} else {
-		if !p.silenceStart {
-			p.silenceStart = true
-			p.silenceStartTime = time.Now()
-		} else {
-			if !p.slowedDown && time.Since(p.silenceStartTime) > 10*time.Second {
-				slog.Info("AudioLEDProducer: No audio input detected for 10 seconds, slowing down loop...")
-				ticker.Reset(5 * time.Second)
-				p.slowedDown = true
+		if err = stream.Read(); err != nil {
+			if err != portaudio.InputOverflowed {
+				slog.Debug("AudioLEDProducer: read warning", "error", err)
 			}
 		}
+
+		p.deInterleaveInto(buffer, inDevice.MaxInputChannels)
+		rmsL := calculateRMS(p.samplesL)
+		rmsR := calculateRMS(p.samplesR)
+		dbL := rmsToDB(rmsL)
+		dbR := rmsToDB(rmsR)
+
+		if (rmsL == 0 && rmsR == 0) || (dbL <= p.minDB && dbR <= p.minDB) {
+			if !isSilent {
+				isSilent = true
+				slog.Info("AudioLEDProducer: Silence detected, turning off LEDs")
+				p.ClearLeds()
+			}
+			continue
+		}
+
+		if isSilent {
+			isSilent = false
+			slog.Info("AudioLEDProducer: Audio detected, updating LEDs...")
+		}
+
+		p.ledsMutex.Lock()
+		p.updateLeds(dbL, p.startLedLeft, p.endLedLeft)
+		p.updateLeds(dbR, p.startLedRight, p.endLedRight)
+		p.ledsMutex.Unlock()
+		p.ledsChanged.Send(p.GetUID(), p)
 	}
 }
 
