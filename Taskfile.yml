@@ -81,6 +81,13 @@ tasks:
       - cp mobile/build/app/outputs/flutter-apk/app-release.apk goleds_commander.apk
       - echo "APK copied to ./goleds_commander.apk"
 
+  install-android:
+    desc: Build Android APK and install on connected device via adb
+    deps: [build-android]
+    cmds:
+      - adb install -r goleds_commander.apk
+      - echo "Installed goleds_commander.apk on connected device via adb"
+
   clean:
     desc: Clean all artifacts
     cmds:
