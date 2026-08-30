@@ -41,14 +41,6 @@ func NewAbstractProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer],
 	return &inst
 }
 
-// Sets a single LED at index index to value
-func (s *AbstractProducer) setLed(index int, value Led) {
-	s.ledsMutex.Lock()
-	defer s.ledsMutex.Unlock()
-	s.leds[index] = value
-	s.ledsChanged.Send(s.GetUID(), s)
-}
-
 // ClearLeds zeroes out all LEDs and signals the change in a thread-safe manner.
 func (s *AbstractProducer) ClearLeds() {
 	s.ledsMutex.Lock()

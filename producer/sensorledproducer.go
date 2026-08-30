@@ -101,12 +101,14 @@ func (s *SensorLedProducer) runUpPhase(left, right int) (nleft, nright int, stop
 	defer ticker.Stop()
 
 	for {
+		s.ledsMutex.Lock()
 		if left >= 0 {
-			s.setLed(left, s.ledOn)
+			s.leds[left] = s.ledOn
 		}
 		if right < len(s.leds) {
-			s.setLed(right, s.ledOn)
+			s.leds[right] = s.ledOn
 		}
+		s.ledsMutex.Unlock()
 		s.ledsChanged.Send(s.GetUID(), s)
 
 		if left <= 0 && right >= len(s.leds)-1 {
@@ -172,16 +174,20 @@ func (s *SensorLedProducer) holdPhase() (stopped bool) {
 func (s *SensorLedProducer) runLatchMode() (stopped bool) {
 	slog.Info("Latch Mode Activated", "uid", s.GetUID())
 	// Set all LEDs to the bright latch color
+	s.ledsMutex.Lock()
 	for i := range s.leds {
-		s.setLed(i, s.latchLed)
+		s.leds[i] = s.latchLed
 	}
+	s.ledsMutex.Unlock()
 	s.ledsChanged.Send(s.GetUID(), s)
 
 	// Defer reverting the LEDs to the normal color to simplify exit paths.
 	defer func() {
+		s.ledsMutex.Lock()
 		for i := range s.leds {
-			s.setLed(i, s.ledOn)
+			s.leds[i] = s.ledOn
 		}
+		s.ledsMutex.Unlock()
 		s.ledsChanged.Send(s.GetUID(), s)
 	}()
 
@@ -228,12 +234,14 @@ func (s *SensorLedProducer) runDownPhase(left, right int) (nleft, nright int, sh
 	ticker := t.NewTicker(s.runDownT)
 	defer ticker.Stop()
 	for {
+		s.ledsMutex.Lock()
 		if left <= s.ledIndex && left >= 0 {
-			s.setLed(left, Led{})
+			s.leds[left] = Led{}
 		}
 		if right >= s.ledIndex && right < len(s.leds) {
-			s.setLed(right, Led{})
+			s.leds[right] = Led{}
 		}
+		s.ledsMutex.Unlock()
 		s.ledsChanged.Send(s.GetUID(), s)
 		if left == s.ledIndex && right == s.ledIndex {
 			return left, right, false, false // normal exit
