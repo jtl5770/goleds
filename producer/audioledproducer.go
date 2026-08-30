@@ -150,7 +150,7 @@ func (p *AudioLEDProducer) runner() {
 		if (rmsL == 0 && rmsR == 0) || (dbL <= p.minDB && dbR <= p.minDB) {
 			if !isSilent {
 				isSilent = true
-				slog.Info("AudioLEDProducer: Silence detected, turning off LEDs")
+				slog.Debug("AudioLEDProducer: Silence detected, turning off LEDs")
 				p.ClearLeds()
 			}
 			continue
@@ -158,7 +158,7 @@ func (p *AudioLEDProducer) runner() {
 
 		if isSilent {
 			isSilent = false
-			slog.Info("AudioLEDProducer: Audio detected, updating LEDs...")
+			slog.Debug("AudioLEDProducer: Audio detected, updating LEDs...")
 		}
 
 		p.ledsMutex.Lock()
@@ -217,9 +217,7 @@ func (p *AudioLEDProducer) findDevice() (*portaudio.DeviceInfo, error) {
 		return nil, fmt.Errorf("could not list audio devices: %w", err)
 	}
 
-	// Look for a squeezelite device
 	for _, device := range devices {
-		// log.Printf("AudioLEDProducer: found device: %s", device.Name)
 		if device.MaxInputChannels > 0 && strings.Contains(strings.ToLower(device.Name), p.Device) {
 			return device, nil
 		}
@@ -243,21 +241,6 @@ func (p *AudioLEDProducer) deInterleaveInto(in []float32, channels int) {
 		p.samplesL[i] = in[channels*i]
 		p.samplesR[i] = in[channels*i+1]
 	}
-}
-
-// deInterleave converts a buffer of interleaved stereo samples to mono.
-func deInterleave(in []float32, channels int) ([]float32, []float32) {
-	if channels == 1 {
-		return in, in
-	}
-	numSamples := len(in) / channels
-	outL := make([]float32, numSamples)
-	outR := make([]float32, numSamples)
-	for i := range numSamples {
-		outL[i] = in[channels*i]
-		outR[i] = in[channels*i+1]
-	}
-	return outL, outR
 }
 
 // calculateRMS calculates the Root Mean Square of a slice of audio samples.
