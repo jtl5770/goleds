@@ -122,17 +122,93 @@ func (p *AudioLEDProducer) runner() {
 		slog.Error("AudioLEDProducer: failed to start stream", "uid", p.uid, "error", err)
 		return
 	}
-	defer stream.Stop()
+	streamStarted := true
+	defer func() {
+		if streamStarted {
+			_ = stream.Stop()
+		}
+	}()
 
 	// Clean up LEDs on exit
 	defer p.ClearLeds()
 
-	isSilent := false
+	inSilence := false
+	var silenceStartTime time.Time
+
 	for {
 		select {
 		case <-p.stopchan:
 			return
 		default:
+		}
+
+		if inSilence {
+			// Sleep in silence mode, waking immediately on stopchan
+			select {
+			case <-p.stopchan:
+				return
+			case <-time.After(2 * time.Second):
+			}
+
+			// Probe for audio
+			if !streamStarted {
+				if err := stream.Start(); err != nil {
+					slog.Error("AudioLEDProducer: failed to start stream for probe", "uid", p.uid, "error", err)
+					continue
+				}
+				streamStarted = true
+			}
+
+			// Read 3 consecutive buffers to flush initial latency and detect audio
+			detectedAudio := false
+			var lastDbL, lastDbR float64
+			for probe := 0; probe < 3; probe++ {
+				if err = stream.Read(); err != nil {
+					if err != portaudio.InputOverflowed {
+						slog.Debug("AudioLEDProducer: read warning during probe", "error", err)
+					}
+				}
+				p.deInterleaveInto(buffer, inDevice.MaxInputChannels)
+				rmsL := calculateRMS(p.samplesL)
+				rmsR := calculateRMS(p.samplesR)
+				dbL := rmsToDB(rmsL)
+				dbR := rmsToDB(rmsR)
+
+				if (rmsL > 0 || rmsR > 0) && (dbL > p.minDB || dbR > p.minDB) {
+					detectedAudio = true
+					lastDbL, lastDbR = dbL, dbR
+					break
+				}
+			}
+
+			if detectedAudio {
+				slog.Info("AudioLEDProducer: Audio detected, waking up to full speed...")
+				inSilence = false
+				silenceStartTime = time.Time{}
+				p.ledsMutex.Lock()
+				p.updateLeds(lastDbL, p.startLedLeft, p.endLedLeft)
+				p.updateLeds(lastDbR, p.startLedRight, p.endLedRight)
+				p.ledsMutex.Unlock()
+				p.ledsChanged.Send(p.GetUID(), p)
+			} else {
+				// Still silent, stop stream to save CPU
+				if streamStarted {
+					if err := stream.Stop(); err != nil {
+						slog.Debug("AudioLEDProducer: stop stream warning", "error", err)
+					}
+					streamStarted = false
+				}
+			}
+			continue
+		}
+
+		// Active continuous mode
+		if !streamStarted {
+			if err := stream.Start(); err != nil {
+				slog.Error("AudioLEDProducer: failed to restart stream", "uid", p.uid, "error", err)
+				continue
+			}
+			streamStarted = true
 		}
 
 		if err = stream.Read(); err != nil {
@@ -148,18 +224,28 @@ func (p *AudioLEDProducer) runner() {
 		dbR := rmsToDB(rmsR)
 
 		if (rmsL == 0 && rmsR == 0) || (dbL <= p.minDB && dbR <= p.minDB) {
-			if !isSilent {
-				isSilent = true
-				slog.Debug("AudioLEDProducer: Silence detected, turning off LEDs")
+			if silenceStartTime.IsZero() {
+				silenceStartTime = time.Now()
+			} else if time.Since(silenceStartTime) > 5*time.Second {
+				slog.Info("AudioLEDProducer: No audio detected for 5s, pausing stream...")
+				inSilence = true
+				silenceStartTime = time.Time{}
 				p.ClearLeds()
+				if streamStarted {
+					if err := stream.Stop(); err != nil {
+						slog.Debug("AudioLEDProducer: stop stream warning", "error", err)
+					}
+					streamStarted = false
+				}
+				continue
 			}
+			// While transitioning to silence, clear LEDs
+			p.ClearLeds()
 			continue
 		}
 
-		if isSilent {
-			isSilent = false
-			slog.Debug("AudioLEDProducer: Audio detected, updating LEDs...")
-		}
+		// Active audio: reset silence timer
+		silenceStartTime = time.Time{}
 
 		p.ledsMutex.Lock()
 		p.updateLeds(dbL, p.startLedLeft, p.endLedLeft)
