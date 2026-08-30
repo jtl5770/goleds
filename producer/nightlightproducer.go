@@ -33,6 +33,11 @@ func NewNightlightProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer
 }
 
 func (s *NightlightProducer) setNightLed(index int) {
+	if len(s.ledNight) == 0 {
+		return
+	}
+	index = max(0, min(index, len(s.ledNight)-1))
+
 	s.ledsMutex.Lock()
 	for i := range s.leds {
 		s.leds[i] = s.ledNight[index]
@@ -43,6 +48,10 @@ func (s *NightlightProducer) setNightLed(index int) {
 
 func (s *NightlightProducer) runner() {
 	defer s.ClearLeds()
+
+	if len(s.ledNight) == 0 {
+		return
+	}
 
 	for {
 		now := time.Now()
@@ -63,20 +72,27 @@ func (s *NightlightProducer) runner() {
 			if now.Before(rise) {
 				// in the night after midnight but before sunrise.
 				// The "total" night duration is this days sunrise -
-				// previous days sunset The lenght that each
+				// previous days sunset The length that each
 				// configured LED value should be used is computed by
 				// dividing the night duration by the number of
-				// configured night LED Konfigurations
+				// configured night LED configurations
 				waitIntervalDuration = time.Duration(rise.Sub(set_prev_day).Nanoseconds() / int64(len(s.ledNight)))
+				if waitIntervalDuration <= 0 {
+					waitIntervalDuration = time.Minute
+				}
 				currInterval = int(now.Sub(set_prev_day) / waitIntervalDuration)
 				tillNextInterval = set_prev_day.Add(time.Duration((currInterval + 1)) * waitIntervalDuration).Sub(now)
 			} else {
 				// in the night before midnight - similar as above but
 				// using current days sunset and next days sunrise
 				waitIntervalDuration = time.Duration(rise_next_day.Sub(set).Nanoseconds() / int64(len(s.ledNight)))
+				if waitIntervalDuration <= 0 {
+					waitIntervalDuration = time.Minute
+				}
 				currInterval = int(now.Sub(set) / waitIntervalDuration)
 				tillNextInterval = set.Add(time.Duration((currInterval + 1)) * waitIntervalDuration).Sub(now)
 			}
+			currInterval = max(0, min(currInterval, len(s.ledNight)-1))
 			// log.Printf("Current NightLED index %d : waitInterval %d : tillNextInterval %d", currInterval, waitIntervalDuration, tillNextInterval)
 			s.setNightLed(currInterval)
 			// + 1s maybe not needed, but so we are sure to really be

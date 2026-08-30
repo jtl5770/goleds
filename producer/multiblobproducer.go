@@ -99,7 +99,7 @@ func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer]
 	return inst
 }
 
-func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {
+func (s *MultiBlobProducer) fade_in_or_out(fadein bool) (stopped bool) {
 	intervals := 20
 	delay := 20 * time.Millisecond
 	// The pattern to be faded is in s.leds, but we want a stable base
@@ -108,6 +108,9 @@ func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {
 	baseLeds := make([]Led, len(s.leds))
 	copy(baseLeds, s.leds)
 	s.ledsMutex.RUnlock()
+
+	ticker := time.NewTicker(delay)
+	defer ticker.Stop()
 
 	for counter := 0; counter <= intervals; counter++ {
 		var step int
@@ -128,8 +131,16 @@ func (s *MultiBlobProducer) fade_in_or_out(fadein bool) {
 		}
 		s.ledsMutex.Unlock()
 		s.ledsChanged.Send(s.GetUID(), s) // Send one notification per fade step
-		time.Sleep(delay)
+
+		if counter < intervals {
+			select {
+			case <-ticker.C:
+			case <-s.stopchan:
+				return true
+			}
+		}
 	}
+	return false
 }
 
 func (s *MultiBlobProducer) runner() {
@@ -174,7 +185,9 @@ func (s *MultiBlobProducer) runner() {
 			} else {
 				// The "countup" similar to the "countdown" fade out but fade in
 				// at the start of the blob period
-				s.fade_in_or_out(true)
+				if s.fade_in_or_out(true) {
+					return
+				}
 				countup_run = true
 			}
 			// update last_x value to current x
