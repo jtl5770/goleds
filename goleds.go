@@ -444,7 +444,10 @@ func (a *App) stateManager() {
 	sensorWaiter := func(run uint64) {
 		a.sensorProdWg.Wait()
 		slog.Info("   All SensorLedProducer(s) finished, signalling event", "run", run)
-		sensorProdDoneChan <- run
+		select {
+		case sensorProdDoneChan <- run:
+		case <-a.stopsignal:
+		}
 	}
 
 	for {
@@ -524,7 +527,10 @@ func (a *App) stateManager() {
 			go func() {
 				a.afterProdWg.Wait()
 				slog.Info("      All AfterProdProducer(s) finished, signalling event")
-				afterProdDoneChan <- struct{}{}
+				select {
+				case afterProdDoneChan <- struct{}{}:
+				case <-a.stopsignal:
+				}
 			}()
 
 		case <-afterProdDoneChan:
