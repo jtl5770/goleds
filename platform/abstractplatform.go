@@ -121,34 +121,27 @@ type sensor struct {
 	LedIndex     int
 	spimultiplex string
 	adcChannel   byte
-	calibCurve   []CalibPoint
-	calibMutex   sync.RWMutex
+	calibCurve   atomic.Pointer[[]CalibPoint]
 	values       []int
 	index        int
 	sum          int
 }
 
-func (s *sensor) hasCalibration() bool {
-	s.calibMutex.RLock()
-	defer s.calibMutex.RUnlock()
-	return len(s.calibCurve) > 0
-}
-
 func (s *sensor) thresholdForRed(red int) int {
-	s.calibMutex.RLock()
-	defer s.calibMutex.RUnlock()
-	if len(s.calibCurve) == 0 {
+	ptr := s.calibCurve.Load()
+	if ptr == nil || len(*ptr) == 0 {
 		return math.MaxInt
 	}
-	if red >= s.calibCurve[0].Red {
-		return s.calibCurve[0].Threshold
+	curve := *ptr
+	if red >= curve[0].Red {
+		return curve[0].Threshold
 	}
-	if red <= s.calibCurve[len(s.calibCurve)-1].Red {
-		return s.calibCurve[len(s.calibCurve)-1].Threshold
+	if red <= curve[len(curve)-1].Red {
+		return curve[len(curve)-1].Threshold
 	}
-	for i := 0; i < len(s.calibCurve)-1; i++ {
-		p1 := s.calibCurve[i]
-		p2 := s.calibCurve[i+1]
+	for i := 0; i < len(curve)-1; i++ {
+		p1 := curve[i]
+		p2 := curve[i+1]
 		if red <= p1.Red && red >= p2.Red {
 			span := p1.Red - p2.Red
 			if span == 0 {
@@ -158,14 +151,13 @@ func (s *sensor) thresholdForRed(red int) int {
 			return p2.Threshold + int(math.Round(r*float64(p1.Threshold-p2.Threshold)))
 		}
 	}
-	return s.calibCurve[len(s.calibCurve)-1].Threshold
+	return curve[len(curve)-1].Threshold
 }
 
 func (s *sensor) setCalibrationCurve(curve []CalibPoint) {
-	s.calibMutex.Lock()
-	defer s.calibMutex.Unlock()
-	s.calibCurve = make([]CalibPoint, len(curve))
-	copy(s.calibCurve, curve)
+	newCurve := make([]CalibPoint, len(curve))
+	copy(newCurve, curve)
+	s.calibCurve.Store(&newCurve)
 }
 
 func (s *sensor) smoothedValue(value int) int {

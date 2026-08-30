@@ -456,7 +456,7 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 			for name, sensor := range s.sensors {
 				value := sensor.smoothedValue(s.readAdc(sensor.spimultiplex, sensor.adcChannel))
 				latestValues[name] = value
-				if !s.isCalibrating.Load() && sensor.hasCalibration() {
+				if !s.isCalibrating.Load() {
 					threshold := sensor.thresholdForRed(r)
 					if value > threshold {
 						s.sensorEvents <- util.NewTrigger(name, value, time.Now())
