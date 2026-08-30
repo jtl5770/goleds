@@ -226,11 +226,11 @@ func (p *AudioLEDProducer) runner() {
 		if (rmsL == 0 && rmsR == 0) || (dbL <= p.minDB && dbR <= p.minDB) {
 			if silenceStartTime.IsZero() {
 				silenceStartTime = time.Now()
-			} else if time.Since(silenceStartTime) > 5*time.Second {
-				slog.Info("AudioLEDProducer: No audio detected for 5s, pausing stream...")
+				p.ClearLeds()
+			} else if time.Since(silenceStartTime) > 1*time.Minute {
+				slog.Info("AudioLEDProducer: No audio detected for 1m, pausing stream...")
 				inSilence = true
 				silenceStartTime = time.Time{}
-				p.ClearLeds()
 				if streamStarted {
 					if err := stream.Stop(); err != nil {
 						slog.Debug("AudioLEDProducer: stop stream warning", "error", err)
@@ -239,8 +239,6 @@ func (p *AudioLEDProducer) runner() {
 				}
 				continue
 			}
-			// While transitioning to silence, clear LEDs
-			p.ClearLeds()
 			continue
 		}
 
