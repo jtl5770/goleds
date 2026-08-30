@@ -22,12 +22,12 @@ var (
 // and displays the volume on a segment of LEDs.
 type AudioLEDProducer struct {
 	*AbstractProducer
-	Device          string
-	startLedLeft    int
-	endLedLeft      int
-	startLedRight   int
-	endLedRight     int
-	colors          struct {
+	Device        string
+	startLedLeft  int
+	endLedLeft    int
+	startLedRight int
+	endLedRight   int
+	colors        struct {
 		Green  Led
 		Yellow Led
 		Red    Led
@@ -44,11 +44,11 @@ type AudioLEDProducer struct {
 // NewAudioLEDProducer creates a new AudioLEDProducer.
 func NewAudioLEDProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, cfg c.AudioLEDConfig) *AudioLEDProducer {
 	p := &AudioLEDProducer{
-		startLedLeft:    cfg.StartLedLeft,
-		endLedLeft:      cfg.EndLedLeft,
-		startLedRight:   cfg.StartLedRight,
-		endLedRight:     cfg.EndLedRight,
-		Device:          cfg.Device,
+		startLedLeft:  cfg.StartLedLeft,
+		endLedLeft:    cfg.EndLedLeft,
+		startLedRight: cfg.StartLedRight,
+		endLedRight:   cfg.EndLedRight,
+		Device:        cfg.Device,
 	}
 	p.colors.Green = Led{Red: cfg.LedGreen[0], Green: cfg.LedGreen[1], Blue: cfg.LedGreen[2]}
 	p.colors.Yellow = Led{Red: cfg.LedYellow[0], Green: cfg.LedYellow[1], Blue: cfg.LedYellow[2]}
@@ -186,9 +186,9 @@ func (p *AudioLEDProducer) updateLeds(db float64, startLed int, endLed int) {
 	level := (db - p.minDB) / (p.maxDB - p.minDB)
 	ledsToLight := int(math.Ceil(level * float64(segmentLen)))
 
-	// Define color sections (e.g., 70% green, 20% yellow, 10% red)
-	greenEnd := int(float64(segmentLen) * 0.7)
-	yellowEnd := int(float64(segmentLen) * 0.9)
+	// Define color sections (e.g., 60% green, 25% yellow, 15% red)
+	greenEnd := int(float64(segmentLen) * 0.6)
+	yellowEnd := int(float64(segmentLen) * 0.85)
 
 	for i := range segmentLen {
 		stripIndex := startLed + i
