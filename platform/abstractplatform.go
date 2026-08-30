@@ -132,7 +132,6 @@ type sensor struct {
 	values       []int
 	index        int
 	sum          int
-	capacity     int
 }
 
 func (s *sensor) hasCalibration() bool {
@@ -176,11 +175,14 @@ func (s *sensor) setCalibrationCurve(curve []CalibPoint) {
 }
 
 func (s *sensor) smoothedValue(value int) int {
-	oldValue := s.values[s.index]
-	s.sum = s.sum - oldValue + value
+	n := len(s.values)
+	if n <= 1 {
+		return value
+	}
+	s.sum += value - s.values[s.index]
 	s.values[s.index] = value
-	s.index = (s.index + 1) % s.capacity
-	return int(math.Round(float64(s.sum) / float64(s.capacity)))
+	s.index = (s.index + 1) % n
+	return (s.sum + n/2) / n
 }
 
 func (s *AbstractPlatform) initSensors(sensorConfig c.SensorsConfig) {
@@ -203,6 +205,5 @@ func newSensor(uid string, ledIndex int, spimultiplex string, adcChannel byte, s
 		spimultiplex: spimultiplex,
 		adcChannel:   adcChannel,
 		values:       make([]int, smoothing),
-		capacity:     smoothing,
 	}
 }

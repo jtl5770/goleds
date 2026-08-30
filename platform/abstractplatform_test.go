@@ -7,8 +7,7 @@ import (
 
 func TestSensor_smoothValue(t *testing.T) {
 	s := &sensor{
-		capacity: 5,
-		values:   make([]int, 5),
+		values: make([]int, 5),
 	}
 
 	// Initial values are all 0
