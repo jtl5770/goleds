@@ -1,7 +1,6 @@
 package util
 
 import (
-	"maps"
 	"sync"
 	"sync/atomic"
 )
@@ -88,15 +87,17 @@ func (ae *AtomicMapEvent[T]) Channel() <-chan struct{} {
 	return ae.notify
 }
 
-// ConsumeValues returns a clone of the current event map and clears the internal map.
-// This is a destructive read.
-func (ae *AtomicMapEvent[T]) ConsumeValues() map[string]T {
+// ConsumeValuesInto copies the pending events into the provided dst map,
+// then clears the internal map. The internal map is never exposed.
+func (ae *AtomicMapEvent[T]) ConsumeValuesInto(dst map[string]T) {
 	ae.mu.Lock()
-	defer func() {
-		clear(ae.value)
-		ae.mu.Unlock()
-	}()
-	return maps.Clone(ae.value)
+	defer ae.mu.Unlock()
+
+	clear(dst)
+	for k, v := range ae.value {
+		dst[k] = v
+	}
+	clear(ae.value)
 }
 
 // HasPending checks if a notification is waiting to be consumed.

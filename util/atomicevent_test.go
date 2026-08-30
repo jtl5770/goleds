@@ -131,7 +131,7 @@ func TestNewAtomicMapEvent(t *testing.T) {
 	assert.NotNil(t, ae.value, "value map should be initialized")
 }
 
-func TestAtomicMapEvent_SendAndConsumeValues(t *testing.T) {
+func TestAtomicMapEvent_SendAndConsumeValuesInto(t *testing.T) {
 	ae := NewAtomicMapEvent[int]()
 
 	ae.Send("one", 1)
@@ -145,7 +145,8 @@ func TestAtomicMapEvent_SendAndConsumeValues(t *testing.T) {
 		t.Fatal("should have received a notification")
 	}
 
-	values := ae.ConsumeValues()
+	values := make(map[string]int)
+	ae.ConsumeValuesInto(values)
 	assert.Len(t, values, 2, "should have two values")
 	assert.Equal(t, 1, values["one"])
 	assert.Equal(t, 2, values["two"])
@@ -161,12 +162,12 @@ func TestAtomicMapEvent_SendAndConsumeValues(t *testing.T) {
 	}
 
 	// Consuming again should yield an empty map
-	values = ae.ConsumeValues()
+	ae.ConsumeValuesInto(values)
 	assert.Len(t, values, 0, "should have zero values after consuming")
 
 	// Send again to ensure it still works
 	ae.Send("three", 3)
-	values = ae.ConsumeValues()
+	ae.ConsumeValuesInto(values)
 	assert.Len(t, values, 1)
 	assert.Equal(t, 3, values["three"])
 }
@@ -176,7 +177,8 @@ func TestAtomicMapEvent_SendOverwrites(t *testing.T) {
 	ae.Send("key1", "initial")
 	ae.Send("key1", "overwrite")
 
-	values := ae.ConsumeValues()
+	values := make(map[string]string)
+	ae.ConsumeValuesInto(values)
 	assert.Len(t, values, 1)
 	assert.Equal(t, "overwrite", values["key1"])
 }
@@ -203,11 +205,13 @@ func TestAtomicMapEvent_Concurrency(t *testing.T) {
 	// Wait for notification
 	<-ae.Channel()
 
-	values := ae.ConsumeValues()
+	values := make(map[string]int)
+	ae.ConsumeValuesInto(values)
 	assert.Len(t, values, numGoroutines*numWritesPerGoRoutine)
 
 	// After consuming, should be empty
-	assert.Len(t, ae.ConsumeValues(), 0)
+	ae.ConsumeValuesInto(values)
+	assert.Len(t, values, 0)
 }
 
 func TestAtomicMapEvent_ConcurrentReadWrite(t *testing.T) {
@@ -241,24 +245,28 @@ func TestAtomicMapEvent_ConcurrentReadWrite(t *testing.T) {
 	consumerWg.Add(1)
 	go func() {
 		defer consumerWg.Done()
+		localMap := make(map[string]int)
 		for {
 			select {
 			case <-ae.Channel():
-				processConsumed(ae.ConsumeValues())
+				ae.ConsumeValuesInto(localMap)
+				processConsumed(localMap)
 			case <-consumerDone:
 				// Writers are done. Perform a final drain.
 			finalDrainLoop:
 				for {
 					select {
 					case <-ae.Channel():
-						processConsumed(ae.ConsumeValues())
+						ae.ConsumeValuesInto(localMap)
+						processConsumed(localMap)
 					default:
 						// No more notifications.
 						break finalDrainLoop
 					}
 				}
 				// One final check to be absolutely sure no values were missed.
-				processConsumed(ae.ConsumeValues())
+				ae.ConsumeValuesInto(localMap)
+				processConsumed(localMap)
 				return
 			}
 		}
