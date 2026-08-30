@@ -63,21 +63,20 @@ func (s *CylonProducer) runner() {
 			s.x += float64(s.direction) * s.step
 			left := s.x - float64(s.radius)
 			right := s.x + float64(s.radius)
-			// log.Printf("x: %f, left: %f, right: %f\n", s.x, left, right)
+
 			s.ledsMutex.Lock()
-			for i := range s.leds {
-				if i < int(left) || i > int(right+1) {
-					s.leds[i] = Led{}
+			clear(s.leds)
+			start := max(0, int(math.Floor(left)))
+			end := min(len(s.leds)-1, int(math.Ceil(right+1)))
+			for i := start; i <= end; i++ {
+				if i == int(math.Floor(left)) {
+					f := 1 - (left - float64(i))
+					s.leds[i] = Led{s.color.Red * f, s.color.Green * f, s.color.Blue * f}
+				} else if i == int(math.Floor(right+1)) {
+					f := 1 - (float64(i) - right)
+					s.leds[i] = Led{s.color.Red * f, s.color.Green * f, s.color.Blue * f}
 				} else {
-					if i == int(math.Floor(left)) {
-						f := 1 - (left - float64(i))
-						s.leds[i] = Led{s.color.Red * f, s.color.Green * f, s.color.Blue * f}
-					} else if i == int(math.Floor(right+1)) {
-						f := 1 - (float64(i) - right)
-						s.leds[i] = Led{s.color.Red * f, s.color.Green * f, s.color.Blue * f}
-					} else {
-						s.leds[i] = s.color
-					}
+					s.leds[i] = s.color
 				}
 			}
 			s.ledsMutex.Unlock()
