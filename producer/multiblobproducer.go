@@ -162,10 +162,7 @@ func (s *MultiBlobProducer) runner() {
 
 			// push update event for Leds
 			s.ledsMutex.Lock()
-			// clear slice
-			for i := range s.leds {
-				s.leds[i] = Led{}
-			}
+			clear(s.leds)
 			// combine blobs by applying each one to the producer's led slice
 			for _, blob := range s.allblobs {
 				blob.applyTo(s.leds)

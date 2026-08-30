@@ -27,10 +27,7 @@ func (s *Led) Max(in Led) Led {
 }
 
 func CombineLeds(allLedRanges map[string][]Led, target []Led) {
-	// clear slice
-	for i := range target {
-		target[i] = Led{}
-	}
+	clear(target)
 
 	for _, currleds := range allLedRanges {
 		for j, led := range currleds {
