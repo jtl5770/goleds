@@ -29,8 +29,7 @@ type AbstractPlatform struct {
 	readyChan       chan bool
 	isShuttingDown  atomic.Bool
 	isCalibrating   atomic.Bool
-	brightnessMutex sync.RWMutex
-	currentMaxRed   int
+	currentMaxRed   atomic.Int32
 	ledBufferPool   *sync.Pool
 }
 
@@ -79,9 +78,7 @@ func (s *AbstractPlatform) IsCalibrating() bool {
 }
 
 func (s *AbstractPlatform) getCurrentMaxRed() int {
-	s.brightnessMutex.RLock()
-	defer s.brightnessMutex.RUnlock()
-	return s.currentMaxRed
+	return int(s.currentMaxRed.Load())
 }
 
 func (s *AbstractPlatform) setInShutdown() {
@@ -104,10 +101,7 @@ func (s *AbstractPlatform) displayDriver() {
 						maxR = led.Red
 					}
 				}
-				s.brightnessMutex.Lock()
-				s.currentMaxRed = int(math.Round(maxR))
-				s.brightnessMutex.Unlock()
-
+				s.currentMaxRed.Store(int32(math.Round(maxR)))
 				s.displayFunc(sumLeds)
 			}
 			// Return the buffer to the pool for reuse.

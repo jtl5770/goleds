@@ -408,7 +408,7 @@ func (d *apa102Driver) write(segment *segment, exchangeFunc func(string, []byte)
 	display := d.buffer[:requiredSize]
 
 	// Frame start: 4 zero bytes
-	copy(display[0:4], []byte{0x00, 0x00, 0x00, 0x00})
+	clear(display[0:4])
 
 	// Fixed general brightness
 	brightness := byte(d.displayConfig.APA102_Brightness) | 0xE0
@@ -472,7 +472,7 @@ func (s *RaspberryPiPlatform) sensorDriver() {
 }
 
 func (s *RaspberryPiPlatform) readAdc(multiplex string, channel byte) int {
-	write := []byte{1, (8 + channel) << 4, 0}
-	read := s.spiExchangeMultiplex(multiplex, write)
+	buf := [3]byte{1, (8 + channel) << 4, 0}
+	read := s.spiExchangeMultiplex(multiplex, buf[:])
 	return ((int(read[1]) & 3) << 8) + int(read[2])
 }
