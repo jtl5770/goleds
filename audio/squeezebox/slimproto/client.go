@@ -17,9 +17,20 @@ import (
 
 	"github.com/mewkiz/flac"
 	"github.com/mewkiz/flac/frame"
+	"golang.org/x/sys/unix"
 	"lautenbacher.net/goleds/audio"
 	"lautenbacher.net/goleds/audio/dsp"
 )
+
+// getMonotonicMs returns the system monotonic clock in milliseconds, matching
+// Squeezelite's gettime_ms() and LMS jiffies clock tracking exactly.
+func getMonotonicMs() uint32 {
+	var ts unix.Timespec
+	if err := unix.ClockGettime(unix.CLOCK_MONOTONIC, &ts); err == nil {
+		return uint32(ts.Sec*1000 + ts.Nsec/1000000)
+	}
+	return uint32(time.Now().UnixMilli())
+}
 
 // PlaybackState represents the player's internal state machine matching Squeezelite.
 type PlaybackState int32
@@ -77,6 +88,7 @@ type Client struct {
 	startAt     atomic.Uint32 // target jiffies timestamp for unpause ('u')
 	autoStart   atomic.Uint32 // autostart mode from strm command ('0'..'3')
 	thresholdKB atomic.Uint32 // buffer threshold in KB
+	pauseFrames atomic.Uint64 // sync micro-pause frames requested by LMS
 
 	ringBuffer *AudioRingBuffer
 
@@ -89,7 +101,7 @@ type Client struct {
 }
 
 // NewClient creates a new Squeezelite-compliant SlimProto Client.
-func NewClient(serverAddr string, helo HeloConfig, levels *audio.AtomicLevels) *Client {
+func NewClient(serverAddr string, heloConfig HeloConfig, levels *audio.AtomicLevels) *Client {
 	host, _, err := net.SplitHostPort(serverAddr)
 	if err != nil {
 		host = serverAddr
@@ -102,7 +114,7 @@ func NewClient(serverAddr string, helo HeloConfig, levels *audio.AtomicLevels) *
 	c := &Client{
 		serverAddr: serverAddr,
 		serverHost: host,
-		heloConfig: helo,
+		heloConfig: heloConfig,
 		levels:     levels,
 		ringBuffer: NewAudioRingBuffer(2 * 1024 * 1024), // 2 MB PCM buffer (~12s @ 44.1kHz stereo)
 		ctx:        ctx,
@@ -216,6 +228,11 @@ func (c *Client) Stop() error {
 
 // SendStat sends a 53-byte STAT status packet to LMS with current timing and buffer fullness metrics.
 func (c *Client) SendStat(event [4]byte) error {
+	return c.SendStatWithTimestamp(event, 0)
+}
+
+// SendStatWithTimestamp sends a STAT packet echoing LMS's serverTimestamp for round-trip latency tracking.
+func (c *Client) SendStatWithTimestamp(event [4]byte, serverTimestamp uint32) error {
 	c.mu.Lock()
 	conn := c.conn
 	c.mu.Unlock()
@@ -224,7 +241,7 @@ func (c *Client) SendStat(event [4]byte) error {
 		return errors.New("slimproto not connected")
 	}
 
-	jiffies := uint32(time.Now().UnixMilli())
+	jiffies := getMonotonicMs()
 	sr := c.GetSampleRate()
 	frames := c.framesPlayed.Load()
 	msPlayed := uint32(0)
@@ -236,14 +253,14 @@ func (c *Client) SendStat(event [4]byte) error {
 	bufAvail := uint32(c.ringBuffer.Available())
 	bytesRecv := c.bytesReceived.Load()
 
-	stat := EncodeStat(event, bufCap, bufAvail, bufCap, bufAvail, bytesRecv, jiffies, msPlayed, 0)
+	stat := EncodeStat(event, bufCap, bufAvail, bufCap, bufAvail, bytesRecv, jiffies, msPlayed, serverTimestamp)
 
 	_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
 	_, err := conn.Write(stat)
 	if err != nil {
 		slog.Debug("SlimProto failed to send STAT", "event", string(event[:]), "error", err)
 	} else {
-		slog.Debug("SlimProto sent STAT", "event", string(event[:]), "jiffies", jiffies, "msPlayed", msPlayed, "bufAvail", bufAvail)
+		slog.Debug("SlimProto sent STAT", "event", string(event[:]), "jiffies", jiffies, "msPlayed", msPlayed, "bufAvail", bufAvail, "serverTimestamp", serverTimestamp)
 	}
 	return err
 }
@@ -373,6 +390,7 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 			c.framesPlayed.Store(0)
 			c.setState(StateBuffering)
 		}
+		c.pauseFrames.Store(0)
 		c.autoStart.Store(uint32(strm.AutoStart))
 		c.thresholdKB.Store(uint32(strm.Threshold))
 		c.decoderDone.Store(false)
@@ -401,10 +419,17 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 			c.streamDataWorker(streamCtx, strm)
 		}()
 
-	case 'p': // Pause stream
-		slog.Info("SlimProto strm: PAUSE stream")
-		c.setState(StatePaused)
-		_ = c.SendStat([4]byte{'S', 'T', 'M', 'p'})
+	case 'p': // Pause stream or temporary sync pause
+		intervalMs := strm.ReplayGain
+		if intervalMs > 0 {
+			pauseFrames := (uint64(intervalMs) * uint64(c.GetSampleRate())) / 1000
+			slog.Info("SlimProto strm: SYNC PAUSE (delay frames)", "intervalMs", intervalMs, "pauseFrames", pauseFrames)
+			c.pauseFrames.Store(pauseFrames)
+		} else {
+			slog.Info("SlimProto strm: PAUSE stream")
+			c.setState(StatePaused)
+			_ = c.SendStat([4]byte{'S', 'T', 'M', 'p'})
+		}
 
 	case 'u': // Unpause stream (synchronized group play command)
 		startAt := strm.ReplayGain
@@ -414,14 +439,8 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		// Send resume ack (STMr)
 		_ = c.SendStat([4]byte{'S', 'T', 'M', 'r'})
 
-		currentState := c.GetState()
-		if currentState == StateRunning {
-			// Already running seamlessly; do not disrupt pacing
-			return
-		}
-
-		now := uint32(time.Now().UnixMilli())
-		if startAt == 0 || now >= startAt || startAt > (now+10000) {
+		now := getMonotonicMs()
+		if startAt == 0 || now >= startAt || (startAt > now && (startAt-now) > 10000) {
 			c.setState(StateRunning)
 			_ = c.SendStat([4]byte{'S', 'T', 'M', 's'})
 		} else {
@@ -440,6 +459,7 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		}
 		c.mu.Unlock()
 
+		c.pauseFrames.Store(0)
 		c.ringBuffer.Flush()
 		c.framesPlayed.Store(0)
 		c.setState(StateStopped)
@@ -457,6 +477,7 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		}
 		c.mu.Unlock()
 
+		c.pauseFrames.Store(0)
 		c.ringBuffer.Flush()
 		c.framesPlayed.Store(0)
 		_ = c.SendStat([4]byte{'S', 'T', 'M', 'f'})
@@ -476,8 +497,8 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		}
 		c.framesPlayed.Add(skipFrames)
 
-	case 't': // Timestamp tick
-		_ = c.SendStat([4]byte{'S', 'T', 'M', 't'})
+	case 't': // Timestamp tick with latency tracking
+		_ = c.SendStatWithTimestamp([4]byte{'S', 'T', 'M', 't'}, strm.ReplayGain)
 	}
 }
 
@@ -526,6 +547,9 @@ func (c *Client) streamDataWorker(ctx context.Context, strm *StrmCommand) {
 		}
 		c.mu.Unlock()
 	}()
+
+	// Signal stream connected (STMc) conforming to Squeezelite slimproto.c
+	_ = c.SendStat([4]byte{'S', 'T', 'M', 'c'})
 
 	// Send HTTP GET request
 	if _, err := conn.Write([]byte(strm.HTTPHeader)); err != nil {
@@ -687,7 +711,7 @@ func (c *Client) processFLACFrame(f *frame.Frame, thresholdBytes int, sentSTMl *
 		return false
 	}
 
-	// Trigger buffer loaded (STMl) once threshold is reached
+	// Trigger buffer loaded (STMl) once threshold is reached conforming to Squeezelite slimproto.c:L673
 	if !*sentSTMl && c.ringBuffer.Available() >= thresholdBytes {
 		*sentSTMl = true
 		_ = c.SendStat([4]byte{'S', 'T', 'M', 'l'})
@@ -695,11 +719,11 @@ func (c *Client) processFLACFrame(f *frame.Frame, thresholdBytes int, sentSTMl *
 		currentState := c.GetState()
 		if currentState == StateRunning || currentState == StateStartAt {
 			// Continuous / gapless playback: output is already actively consuming
-			// remaining frames from previous track and transition buffer.
-		} else if autoStart == '1' {
+		} else if autoStart == '1' || autoStart == '3' {
 			c.setState(StateRunning)
 			_ = c.SendStat([4]byte{'S', 'T', 'M', 's'})
 		} else {
+			// autostart == '0' or '2': wait for LMS 'strm u' synchronized unpause
 			c.setState(StateWaitingStart)
 		}
 	}
@@ -722,8 +746,8 @@ func (c *Client) decodePCMStream(ctx context.Context, r io.Reader, thresholdByte
 				autoStart := byte(c.autoStart.Load())
 				currentState := c.GetState()
 				if currentState == StateRunning || currentState == StateStartAt {
-					// Continuous / gapless playback: output is already running
-				} else if autoStart == '1' {
+					// Continuous / gapless playback
+				} else if autoStart == '1' || autoStart == '3' {
 					c.setState(StateRunning)
 					_ = c.SendStat([4]byte{'S', 'T', 'M', 's'})
 				} else {
@@ -748,6 +772,7 @@ func (c *Client) audioConsumerLoop() {
 
 	lastTime := time.Now()
 	chunkBuf := make([]byte, 65536)
+	var frameAccumulator float64
 
 	for {
 		select {
@@ -769,19 +794,35 @@ func (c *Client) audioConsumerLoop() {
 
 			switch state {
 			case StateStartAt:
-				nowMs := uint32(now.UnixMilli())
+				nowMs := getMonotonicMs()
 				startAt := c.startAt.Load()
-				if nowMs >= startAt || startAt > (nowMs+10000) {
+				if nowMs >= startAt || (startAt > nowMs && (startAt-nowMs) > 10000) {
 					c.setState(StateRunning)
 					_ = c.SendStat([4]byte{'S', 'T', 'M', 's'})
 				}
 				c.levels.Set(-100, -100, false)
+				frameAccumulator = 0
 
 			case StateRunning:
-				framesToConsume := int(float64(sr) * dt.Seconds())
-				if framesToConsume <= 0 {
-					framesToConsume = int(sr / 100) // ~10ms fallback
+				pauseFrames := c.pauseFrames.Load()
+				if pauseFrames > 0 {
+					c.levels.Set(-100, -100, false)
+					framesDeducted := uint64(float64(sr) * dt.Seconds())
+					if framesDeducted >= pauseFrames {
+						c.pauseFrames.Store(0)
+					} else {
+						c.pauseFrames.Add(^uint64(framesDeducted - 1))
+					}
+					break
 				}
+
+				frameAccumulator += float64(sr) * dt.Seconds()
+				framesToConsume := int(frameAccumulator)
+				if framesToConsume <= 0 {
+					break
+				}
+				frameAccumulator -= float64(framesToConsume)
+
 				bytesToConsume := framesToConsume * 4 // 16-bit stereo
 
 				if len(chunkBuf) < bytesToConsume {
@@ -805,6 +846,7 @@ func (c *Client) audioConsumerLoop() {
 
 			case StateStopped, StateBuffering, StateWaitingStart, StatePaused:
 				c.levels.Set(-100, -100, false)
+				frameAccumulator = 0
 			}
 		}
 	}
