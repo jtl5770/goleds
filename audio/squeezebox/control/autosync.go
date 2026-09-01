@@ -124,60 +124,99 @@ func (m *AutoSyncManager) evaluatePlayers() {
 	ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
 	defer cancel()
 
+	// 1. Check our own player's status on LMS to see if we are already synced to a group
+	currentMaster := ""
+	ourStatus, err := m.client.GetPlayerStatus(ctx, m.cfg.OurMAC)
+	if err == nil && ourStatus != nil && ourStatus.SyncMaster != "" {
+		currentMaster = ourStatus.SyncMaster
+	}
+	if currentMaster == "" {
+		m.mu.Lock()
+		currentMaster = m.syncedWith
+		m.mu.Unlock()
+	}
+
+	// 2. If currently synced to a player, check if it is actively playing
+	if currentMaster != "" && !strings.EqualFold(currentMaster, m.cfg.OurMAC) {
+		status, err := m.client.GetPlayerStatus(ctx, currentMaster)
+		if err == nil && status != nil {
+			if status.Mode == "play" {
+				// Sticky lock: Current synced master is actively playing music
+				m.mu.Lock()
+				m.syncedWith = currentMaster
+				if status.Name != "" {
+					m.syncedName = status.Name
+				}
+				m.mu.Unlock()
+				return
+			}
+			slog.Debug("AutoSyncManager: Synced master is not actively playing", "master", currentMaster, "mode", status.Mode)
+		}
+	}
+
+	// 3. Discover available players that are actively in "play" mode
 	players, err := m.client.GetPlayers(ctx)
 	if err != nil {
 		slog.Debug("AutoSyncManager: failed to fetch players", "error", err)
 		return
 	}
 
-	m.mu.Lock()
-	currentSynced := m.syncedWith
-	m.mu.Unlock()
-
-	// 1. If currently synced to a player, check its status
-	if currentSynced != "" {
-		status, err := m.client.GetPlayerStatus(ctx, currentSynced)
-		if err == nil {
-			if status.Mode == "play" || status.Mode == "pause" {
-				// Sticky lock: Keep tracking current player
-				return
-			}
-			// Current player stopped
-			slog.Info("AutoSyncManager: Synced player stopped playback", "player", currentSynced)
-		}
-		// Unsync from current player
-		_ = m.client.UnsyncPlayer(ctx, m.cfg.OurMAC)
-		m.mu.Lock()
-		m.syncedWith = ""
-		m.syncedName = ""
-		m.mu.Unlock()
+	type activeCandidate struct {
+		player    PlayerInfo
+		masterMAC string
 	}
+	var activeCandidates []activeCandidate
 
-	// 2. Discover available players that are actively in "play" mode
-	var activeCandidates []PlayerInfo
 	for _, p := range players {
 		if m.isIgnored(p) {
 			continue
 		}
 		status, err := m.client.GetPlayerStatus(ctx, p.PlayerID)
-		if err != nil {
+		if err != nil || status == nil {
 			continue
 		}
 		if status.Mode == "play" {
-			activeCandidates = append(activeCandidates, p)
+			targetMaster := p.PlayerID
+			if status.SyncMaster != "" {
+				targetMaster = status.SyncMaster
+			}
+			activeCandidates = append(activeCandidates, activeCandidate{
+				player:    p,
+				masterMAC: targetMaster,
+			})
 		}
 	}
 
 	if len(activeCandidates) == 0 {
+		// No players are actively playing
+		if currentMaster != "" {
+			// If our current master was stopped/powered off, cleanly unsync
+			m.mu.Lock()
+			m.syncedWith = ""
+			m.syncedName = ""
+			m.mu.Unlock()
+		}
 		return
 	}
 
-	// 3. Pick an active player (randomly if multiple)
+	// 4. Pick an active candidate
 	selected := activeCandidates[rand.Intn(len(activeCandidates))]
-	slog.Info("AutoSyncManager: Automatically syncing to active player", "targetName", selected.Name, "targetMAC", selected.PlayerID)
+	targetMAC := selected.masterMAC
+	targetName := selected.player.Name
 
-	if err := m.client.SyncPlayer(ctx, m.cfg.OurMAC, selected.PlayerID); err != nil {
-		slog.Warn("AutoSyncManager: Failed to sync player", "target", selected.PlayerID, "error", err)
+	// If already synced to this target, nothing to do
+	if strings.EqualFold(currentMaster, targetMAC) {
+		m.mu.Lock()
+		m.syncedWith = targetMAC
+		m.syncedName = targetName
+		m.mu.Unlock()
+		return
+	}
+
+	slog.Info("AutoSyncManager: Automatically syncing to active player", "targetName", targetName, "targetMAC", targetMAC)
+
+	if err := m.client.SyncPlayer(ctx, m.cfg.OurMAC, targetMAC); err != nil {
+		slog.Warn("AutoSyncManager: Failed to sync player", "target", targetMAC, "error", err)
 		return
 	}
 
@@ -186,7 +225,7 @@ func (m *AutoSyncManager) evaluatePlayers() {
 	_ = m.client.SetPlayerPref(ctx, m.cfg.OurMAC, "minSyncAdjust", "5000")
 
 	m.mu.Lock()
-	m.syncedWith = selected.PlayerID
-	m.syncedName = selected.Name
+	m.syncedWith = targetMAC
+	m.syncedName = targetName
 	m.mu.Unlock()
 }

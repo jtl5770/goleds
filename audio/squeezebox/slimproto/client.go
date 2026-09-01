@@ -302,10 +302,12 @@ func (c *Client) heartbeatLoop() {
 	}
 }
 
-func (c *Client) readLoop(conn net.Conn) {
+func (c *Client) readLoop(initialConn net.Conn) {
 	defer c.wg.Done()
 
+	conn := initialConn
 	lenBuf := make([]byte, 2)
+
 	for c.running.Load() {
 		_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 		if _, err := io.ReadFull(conn, lenBuf); err != nil {
@@ -315,8 +317,53 @@ func (c *Client) readLoop(conn net.Conn) {
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 				continue
 			}
-			slog.Debug("SlimProto read length prefix error", "error", err)
-			return
+			slog.Warn("SlimProto read error, attempting reconnect", "server", c.serverAddr, "error", err)
+
+			_ = conn.Close()
+			c.mu.Lock()
+			if c.conn == conn {
+				c.conn = nil
+			}
+			c.mu.Unlock()
+
+			// Reconnect loop with backoff
+			for c.running.Load() {
+				select {
+				case <-c.ctx.Done():
+					return
+				case <-time.After(2 * time.Second):
+				}
+				if !c.running.Load() {
+					return
+				}
+				newConn, err := net.DialTimeout("tcp", c.serverAddr, 3*time.Second)
+				if err != nil {
+					slog.Debug("SlimProto reconnect failed, retrying...", "error", err)
+					continue
+				}
+
+				// Send HELO handshake
+				heloData := EncodeHelo(c.heloConfig)
+				if _, err := newConn.Write(heloData); err != nil {
+					_ = newConn.Close()
+					continue
+				}
+
+				// Send SETD name frame if configured
+				if c.heloConfig.PlayerName != "" {
+					setdData := EncodeSetdName(c.heloConfig.PlayerName)
+					_, _ = newConn.Write(setdData)
+				}
+
+				c.mu.Lock()
+				c.conn = newConn
+				c.mu.Unlock()
+
+				conn = newConn
+				slog.Info("SlimProto reconnected to LMS successfully", "server", c.serverAddr)
+				break
+			}
+			continue
 		}
 
 		totalLen := binary.BigEndian.Uint16(lenBuf)
@@ -327,8 +374,11 @@ func (c *Client) readLoop(conn net.Conn) {
 
 		frameBuf := make([]byte, totalLen)
 		if _, err := io.ReadFull(conn, frameBuf); err != nil {
+			if !c.running.Load() {
+				return
+			}
 			slog.Debug("SlimProto read frame error", "error", err)
-			return
+			continue
 		}
 
 		cmd := string(frameBuf[0:4])

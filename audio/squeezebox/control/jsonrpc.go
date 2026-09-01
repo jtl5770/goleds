@@ -33,15 +33,20 @@ type PlayerInfo struct {
 	Model     string `json:"model"`
 	IsPlayer  int    `json:"isplayer"`
 	Connected int    `json:"connected"`
+	Power     int    `json:"power"`
 }
 
 // PlayerStatus holds the playback state of a player.
 type PlayerStatus struct {
-	PlayerID string  `json:"playerid"`
-	Mode     string  `json:"mode"`     // "play", "pause", "stop"
-	SyncList string  `json:"sync_master"` // Master MAC if synced
-	Time     float64 `json:"time"`     // Current track playback position in seconds
-	Duration float64 `json:"duration"` // Track duration in seconds
+	PlayerID   string  `json:"playerid"`
+	Name       string  `json:"player_name"`
+	Mode       string  `json:"mode"`        // "play", "pause", "stop"
+	Power      int     `json:"power"`       // 1 = on, 0 = off
+	Connected  int     `json:"player_connected"`
+	SyncMaster string  `json:"sync_master"` // Master MAC if synced as slave
+	SyncSlaves string  `json:"sync_slaves"` // Comma-separated slave MACs if master
+	Time       float64 `json:"time"`        // Current track playback position in seconds
+	Duration   float64 `json:"duration"`    // Track duration in seconds
 }
 
 // LMSClient provides methods to query and control LMS via JSON-RPC.
@@ -137,6 +142,9 @@ func (c *LMSClient) GetPlayerStatus(ctx context.Context, playerMAC string) (*Pla
 	cmd := []interface{}{"status", "-", 1, "tags:uB"}
 	if err := c.call(ctx, playerMAC, cmd, &result); err != nil {
 		return nil, err
+	}
+	if result.PlayerID == "" {
+		result.PlayerID = playerMAC
 	}
 	return &result, nil
 }
