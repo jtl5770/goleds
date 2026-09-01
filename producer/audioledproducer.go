@@ -1,28 +1,20 @@
 package producer
 
 import (
-	"fmt"
 	"log/slog"
 	"math"
-	"strings"
-	"sync"
 	"time"
 
-	"github.com/gordonklaus/portaudio"
+	"lautenbacher.net/goleds/audio"
 	c "lautenbacher.net/goleds/config"
 	u "lautenbacher.net/goleds/util"
 )
 
-var (
-	paMutex       sync.Mutex
-	paInitialized bool
-)
-
-// AudioLEDProducer implements a VU meter that reads from an audio input
-// and displays the volume on a segment of LEDs.
+// AudioLEDProducer implements a VU meter that reads atomic audio levels
+// from an AudioProvider and displays the volume on LED segments.
 type AudioLEDProducer struct {
 	*AbstractProducer
-	Device        string
+	provider      audio.AudioProvider
 	startLedLeft  int
 	endLedLeft    int
 	startLedRight int
@@ -32,224 +24,84 @@ type AudioLEDProducer struct {
 		Yellow Led
 		Red    Led
 	}
-	sampleRate      int
-	framesPerBuffer int
-	updateFreq      time.Duration
-	minDB           float64
-	maxDB           float64
-	samplesL        []float32
-	samplesR        []float32
+	updateFreq time.Duration
+	minDB      float64
+	maxDB      float64
 }
 
 // NewAudioLEDProducer creates a new AudioLEDProducer.
-func NewAudioLEDProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, cfg c.AudioLEDConfig) *AudioLEDProducer {
+func NewAudioLEDProducer(
+	uid string,
+	ledsChanged *u.AtomicMapEvent[LedProducer],
+	ledsTotal int,
+	cfg c.AudioLEDConfig,
+	provider audio.AudioProvider,
+) *AudioLEDProducer {
 	p := &AudioLEDProducer{
+		provider:      provider,
 		startLedLeft:  cfg.StartLedLeft,
 		endLedLeft:    cfg.EndLedLeft,
 		startLedRight: cfg.StartLedRight,
 		endLedRight:   cfg.EndLedRight,
-		Device:        cfg.Device,
+		updateFreq:    cfg.UpdateFreq,
+		minDB:         cfg.MinDB,
+		maxDB:         cfg.MaxDB,
 	}
-	p.colors.Green = Led{Red: cfg.LedGreen[0], Green: cfg.LedGreen[1], Blue: cfg.LedGreen[2]}
-	p.colors.Yellow = Led{Red: cfg.LedYellow[0], Green: cfg.LedYellow[1], Blue: cfg.LedYellow[2]}
-	p.colors.Red = Led{Red: cfg.LedRed[0], Green: cfg.LedRed[1], Blue: cfg.LedRed[2]}
-	p.sampleRate = cfg.SampleRate
-	p.framesPerBuffer = cfg.FramesPerBuffer
-	p.updateFreq = cfg.UpdateFreq
-	p.minDB = cfg.MinDB
-	p.maxDB = cfg.MaxDB
-	p.samplesL = make([]float32, cfg.FramesPerBuffer)
-	p.samplesR = make([]float32, cfg.FramesPerBuffer)
+	if len(cfg.LedGreen) >= 3 {
+		p.colors.Green = Led{Red: cfg.LedGreen[0], Green: cfg.LedGreen[1], Blue: cfg.LedGreen[2]}
+	}
+	if len(cfg.LedYellow) >= 3 {
+		p.colors.Yellow = Led{Red: cfg.LedYellow[0], Green: cfg.LedYellow[1], Blue: cfg.LedYellow[2]}
+	}
+	if len(cfg.LedRed) >= 3 {
+		p.colors.Red = Led{Red: cfg.LedRed[0], Green: cfg.LedRed[1], Blue: cfg.LedRed[2]}
+	}
+
+	if p.updateFreq <= 0 {
+		p.updateFreq = 30 * time.Millisecond
+	}
+
 	p.AbstractProducer = NewAbstractProducer(uid, ledsChanged, p.runner, ledsTotal)
 	return p
 }
 
-func (p *AudioLEDProducer) Exit() {
-	p.AbstractProducer.Exit()
-	paMutex.Lock()
-	defer paMutex.Unlock()
-	if paInitialized {
-		if err := portaudio.Terminate(); err != nil {
-			slog.Error("AudioLEDProducer: failed to terminate portaudio", "uid", p.uid, "error", err)
-		} else {
-			slog.Info("AudioLEDProducer: PortAudio terminated.")
-			paInitialized = false
-		}
-	}
-}
-
-// runner is the main processing loop for the producer.
+// runner is the main loop polling the AudioProvider and updating LEDs.
 func (p *AudioLEDProducer) runner() {
-	paMutex.Lock()
-	if !paInitialized {
-		if err := portaudio.Initialize(); err != nil {
-			slog.Error("AudioLEDProducer: failed to initialize portaudio", "uid", p.uid, "error", err)
-			paMutex.Unlock()
-			return
-		}
-		slog.Info("AudioLEDProducer: PortAudio initialized.")
-	}
-	paInitialized = true
-	paMutex.Unlock()
-
-	inDevice, err := p.findDevice()
-	if err != nil {
-		slog.Error("AudioLEDProducer: no device", "uid", p.GetUID(), "error", err)
-		return
-	}
-
-	slog.Info("AudioLEDProducer", "uid", p.GetUID(), "device", inDevice.Name, "sampleRate", p.sampleRate, "framesPerBuffer", p.framesPerBuffer)
-
-	buffer := make([]float32, p.framesPerBuffer*inDevice.MaxInputChannels)
-	streamParams := portaudio.StreamParameters{
-		Input: portaudio.StreamDeviceParameters{
-			Device:   inDevice,
-			Channels: inDevice.MaxInputChannels,
-			Latency:  inDevice.DefaultLowInputLatency,
-		},
-		SampleRate:      float64(p.sampleRate),
-		FramesPerBuffer: p.framesPerBuffer,
-	}
-
-	stream, err := portaudio.OpenStream(streamParams, buffer)
-	if err != nil {
-		slog.Error("AudioLEDProducer: failed to open stream", "uid", p.uid, "error", err)
-		return
-	}
-	defer stream.Close()
-
-	if err := stream.Start(); err != nil {
-		slog.Error("AudioLEDProducer: failed to start stream", "uid", p.uid, "error", err)
-		return
-	}
-	streamStarted := true
-	defer func() {
-		if streamStarted {
-			_ = stream.Stop()
-		}
-	}()
-
-	// Clean up LEDs on exit
 	defer p.ClearLeds()
 
-	inSilence := false
-	var silenceStartTime time.Time
+	if p.provider == nil {
+		slog.Warn("AudioLEDProducer started without AudioProvider", "uid", p.GetUID())
+		return
+	}
 
+	ticker := time.NewTicker(p.updateFreq)
+	defer ticker.Stop()
+
+	tickCount := 0
 	for {
 		select {
 		case <-p.stopchan:
 			return
-		default:
-		}
+		case <-ticker.C:
+			tickCount++
+			leftDB, rightDB, active := p.provider.GetLevels()
 
-		if inSilence {
-			// Sleep in silence mode, waking immediately on stopchan
-			select {
-			case <-p.stopchan:
-				return
-			case <-time.After(2 * time.Second):
+			if tickCount%100 == 1 { // Log periodically
+				slog.Debug("AudioLEDProducer polling levels", "uid", p.GetUID(), "active", active, "leftDB", leftDB, "rightDB", rightDB)
 			}
 
-			// Probe for audio
-			if !streamStarted {
-				if err := stream.Start(); err != nil {
-					slog.Error("AudioLEDProducer: failed to start stream for probe", "uid", p.uid, "error", err)
-					continue
-				}
-				streamStarted = true
-			}
-
-			// Read 3 consecutive buffers to flush initial latency and detect audio
-			detectedAudio := false
-			var lastDbL, lastDbR float64
-			for probe := 0; probe < 3; probe++ {
-				if err = stream.Read(); err != nil {
-					if err != portaudio.InputOverflowed {
-						slog.Debug("AudioLEDProducer: read warning during probe", "error", err)
-					}
-				}
-				p.deInterleaveInto(buffer, inDevice.MaxInputChannels)
-				rmsL := calculateRMS(p.samplesL)
-				rmsR := calculateRMS(p.samplesR)
-				dbL := rmsToDB(rmsL)
-				dbR := rmsToDB(rmsR)
-
-				if (rmsL > 0 || rmsR > 0) && (dbL > p.minDB || dbR > p.minDB) {
-					detectedAudio = true
-					lastDbL, lastDbR = dbL, dbR
-					break
-				}
-			}
-
-			if detectedAudio {
-				slog.Info("AudioLEDProducer: Audio detected, waking up to full speed...")
-				inSilence = false
-				silenceStartTime = time.Time{}
-				p.ledsMutex.Lock()
-				p.updateLeds(lastDbL, p.startLedLeft, p.endLedLeft)
-				p.updateLeds(lastDbR, p.startLedRight, p.endLedRight)
-				p.ledsMutex.Unlock()
-				p.ledsChanged.Send(p.GetUID(), p)
-			} else {
-				// Still silent, stop stream to save CPU
-				if streamStarted {
-					if err := stream.Stop(); err != nil {
-						slog.Debug("AudioLEDProducer: stop stream warning", "error", err)
-					}
-					streamStarted = false
-				}
-			}
-			continue
-		}
-
-		// Active continuous mode
-		if !streamStarted {
-			if err := stream.Start(); err != nil {
-				slog.Error("AudioLEDProducer: failed to restart stream", "uid", p.uid, "error", err)
-				continue
-			}
-			streamStarted = true
-		}
-
-		if err = stream.Read(); err != nil {
-			if err != portaudio.InputOverflowed {
-				slog.Debug("AudioLEDProducer: read warning", "error", err)
-			}
-		}
-
-		p.deInterleaveInto(buffer, inDevice.MaxInputChannels)
-		rmsL := calculateRMS(p.samplesL)
-		rmsR := calculateRMS(p.samplesR)
-		dbL := rmsToDB(rmsL)
-		dbR := rmsToDB(rmsR)
-
-		if (rmsL == 0 && rmsR == 0) || (dbL <= p.minDB && dbR <= p.minDB) {
-			if silenceStartTime.IsZero() {
-				silenceStartTime = time.Now()
+			if !active || (leftDB <= p.minDB && rightDB <= p.minDB) {
 				p.ClearLeds()
-			} else if time.Since(silenceStartTime) > 1*time.Minute {
-				slog.Info("AudioLEDProducer: No audio detected for 1m, pausing stream...")
-				inSilence = true
-				silenceStartTime = time.Time{}
-				if streamStarted {
-					if err := stream.Stop(); err != nil {
-						slog.Debug("AudioLEDProducer: stop stream warning", "error", err)
-					}
-					streamStarted = false
-				}
 				continue
 			}
-			continue
+
+			p.ledsMutex.Lock()
+			p.updateLeds(leftDB, p.startLedLeft, p.endLedLeft)
+			p.updateLeds(rightDB, p.startLedRight, p.endLedRight)
+			p.ledsMutex.Unlock()
+
+			p.ledsChanged.Send(p.GetUID(), p)
 		}
-
-		// Active audio: reset silence timer
-		silenceStartTime = time.Time{}
-
-		p.ledsMutex.Lock()
-		p.updateLeds(dbL, p.startLedLeft, p.endLedLeft)
-		p.updateLeds(dbR, p.startLedRight, p.endLedRight)
-		p.ledsMutex.Unlock()
-		p.ledsChanged.Send(p.GetUID(), p)
 	}
 }
 
@@ -261,6 +113,9 @@ func (p *AudioLEDProducer) updateLeds(db float64, startLed int, endLed int) {
 		startLed, endLed = endLed, startLed
 	}
 	segmentLen := endLed - startLed + 1
+	if segmentLen <= 0 {
+		return
+	}
 
 	// Clamp dB value to the expected range
 	db = min(db, p.maxDB)
@@ -293,53 +148,4 @@ func (p *AudioLEDProducer) updateLeds(db float64, startLed int, endLed int) {
 			p.leds[startLed+i], p.leds[endLed-i] = p.leds[endLed-i], p.leds[startLed+i]
 		}
 	}
-}
-
-func (p *AudioLEDProducer) findDevice() (*portaudio.DeviceInfo, error) {
-	devices, err := portaudio.Devices()
-	if err != nil {
-		return nil, fmt.Errorf("could not list audio devices: %w", err)
-	}
-
-	for _, device := range devices {
-		if device.MaxInputChannels > 0 && strings.Contains(strings.ToLower(device.Name), p.Device) {
-			return device, nil
-		}
-	}
-
-	return nil, fmt.Errorf("no suitable audio input device found")
-}
-
-// deInterleaveInto converts a buffer of interleaved stereo samples to mono into pre-allocated slices.
-func (p *AudioLEDProducer) deInterleaveInto(in []float32, channels int) {
-	if channels == 1 {
-		copy(p.samplesL, in)
-		copy(p.samplesR, in)
-		return
-	}
-	numSamples := len(in) / channels
-	if numSamples > len(p.samplesL) {
-		numSamples = len(p.samplesL)
-	}
-	for i := range numSamples {
-		p.samplesL[i] = in[channels*i]
-		p.samplesR[i] = in[channels*i+1]
-	}
-}
-
-// calculateRMS calculates the Root Mean Square of a slice of audio samples.
-func calculateRMS(samples []float32) float64 {
-	var sumSquare float64
-	for _, sample := range samples {
-		sumSquare += float64(sample * sample)
-	}
-	meanSquare := sumSquare / float64(len(samples))
-	return math.Sqrt(meanSquare)
-}
-
-// rmsToDB converts an RMS value (0.0-1.0) to a decibel scale.
-func rmsToDB(rms float64) float64 {
-	rms = max(0.0001, rms) // Avoid log(0)
-	db := 20 * math.Log10(rms)
-	return db
 }

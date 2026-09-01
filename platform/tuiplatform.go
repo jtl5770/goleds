@@ -157,7 +157,6 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 	s.tviewapp.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyCtrlC:
-			s.tviewapp.Stop()
 			ossignal <- os.Interrupt
 			return nil
 		case tcell.KeyRune:

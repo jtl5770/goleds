@@ -189,8 +189,7 @@ ClockLED:
   LedHour: [50, 30, 0]
   LedMinute: [50, 30, 0]
 
-# AudioLED: A producer connecting to squeezelite (or any other thing
-# producing audio) to show a VU meter
+# AudioLED: A producer connecting to LMS Squeezebox to show a VU meter
 AudioLED:
   Enabled: true 
   # Which LED to use as the "start" of the left channel VU meter.
@@ -201,19 +200,22 @@ AudioLED:
   StartLedRight: 111
   # Which LED to use as the "end" of the right channel VU meter.
   EndLedRight: 164
-  # A (sub-) string used to find the right audio device. "squeezelite"
-  # works perfectly fine on a full default pipewire Fedora.
-  # On RaspberryPi try "pulse".
-  Device: "squeezelite"
   LedGreen: [0, 80, 0]
   LedYellow: [40, 40, 0]
   LedRed: [100, 0, 0]
-  SampleRate: 48000
-  # How often to read out samples and update the LED strip
+  # How often to read out levels and update the LED strip
   UpdateFreq: 30ms
-  FramesPerBuffer: 2048
   MinDB: -60.0
   MaxDB: -3.0
+  Squeezebox:
+    Server: "127.0.0.1"
+    SlimProtoPort: 3483
+    JSONRPCPort: 9000
+    PlayerMAC: "" # Leave empty or "auto" to derive 00:04:20:ee:Y:Z from host MAC
+    PlayerName: "GoLEDs VU"
+    IgnoredPlayers: []
+    AutoSync: true
+    PollInterval: 1500ms
 
 # CylonLED: A simple producer that creates a red "eye" moving back and forth,
 # inspired by Battlestar Galactica's Cylons. A good starting point for

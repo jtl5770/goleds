@@ -37,6 +37,8 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"lautenbacher.net/goleds/audio"
+	"lautenbacher.net/goleds/audio/squeezebox"
 	c "lautenbacher.net/goleds/config"
 	l "lautenbacher.net/goleds/logging"
 	pl "lautenbacher.net/goleds/platform"
@@ -55,16 +57,17 @@ const (
 
 // App holds the global state of the application
 type App struct {
-	ledproducers map[string]p.LedProducer
-	sensorProd   []p.LedProducer
-	afterProd    []p.LedProducer
-	permProd     []p.LedProducer
-	stopsignal   chan struct{}
-	shutdownWg   sync.WaitGroup
-	ossignal     chan os.Signal
-	platform     pl.Platform
-	sensorProdWg sync.WaitGroup
-	afterProdWg  sync.WaitGroup
+	ledproducers  map[string]p.LedProducer
+	sensorProd    []p.LedProducer
+	afterProd     []p.LedProducer
+	permProd      []p.LedProducer
+	stopsignal    chan struct{}
+	shutdownWg    sync.WaitGroup
+	ossignal      chan os.Signal
+	platform      pl.Platform
+	sensorProdWg  sync.WaitGroup
+	afterProdWg   sync.WaitGroup
+	audioProvider audio.AudioProvider
 }
 
 var startWeb sync.Once
@@ -258,6 +261,28 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	<-a.platform.Ready()
 	slog.Info("Platform is ready, starting producers...")
 
+	// Initialize AudioProvider if AudioLED is enabled
+	if conf.AudioLED.Enabled {
+		provider, err := squeezebox.NewSqueezeboxAudioProvider(squeezebox.Config{
+			Server:         conf.AudioLED.Squeezebox.Server,
+			SlimProtoPort:  conf.AudioLED.Squeezebox.SlimProtoPort,
+			JSONRPCPort:    conf.AudioLED.Squeezebox.JSONRPCPort,
+			PlayerMAC:      conf.AudioLED.Squeezebox.PlayerMAC,
+			PlayerName:     conf.AudioLED.Squeezebox.PlayerName,
+			IgnoredPlayers: conf.AudioLED.Squeezebox.IgnoredPlayers,
+			AutoSync:       conf.AudioLED.Squeezebox.AutoSync,
+			PollInterval:   conf.AudioLED.Squeezebox.PollInterval,
+		})
+		if err != nil {
+			slog.Error("Failed to initialize Squeezebox audio provider", "error", err)
+		} else {
+			a.audioProvider = provider
+			if err := a.audioProvider.Start(); err != nil {
+				slog.Error("Failed to start Squeezebox audio provider", "error", err)
+			}
+		}
+	}
+
 	// These producers runs all the time and will be started right away here
 	if conf.NightLED.Enabled {
 		cfg := conf.NightLED
@@ -278,7 +303,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 
 	if conf.AudioLED.Enabled {
 		cfg := conf.AudioLED
-		prodaudio := p.NewAudioLEDProducer(AUDIO_LED_UID, ledReader, ledsTotal, cfg)
+		prodaudio := p.NewAudioLEDProducer(AUDIO_LED_UID, ledReader, ledsTotal, cfg, a.audioProvider)
 		a.ledproducers[AUDIO_LED_UID] = prodaudio
 		a.permProd = append(a.permProd, prodaudio)
 		prodaudio.Start()
@@ -347,6 +372,14 @@ func (a *App) shutdown() {
 	for _, prod := range a.ledproducers {
 		slog.Info("Exiting producer", "uid", prod.GetUID())
 		prod.Exit()
+	}
+
+	if a.audioProvider != nil {
+		slog.Info("Stopping audio provider...")
+		if err := a.audioProvider.Stop(); err != nil {
+			slog.Error("Error stopping audio provider", "error", err)
+		}
+		a.audioProvider = nil
 	}
 
 	slog.Info("Stopping running go-routines...")

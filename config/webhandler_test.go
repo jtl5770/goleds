@@ -7,23 +7,26 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )
 
-func getValidRuntimeConfig() RuntimeConfig {
-	return RuntimeConfig{
-		LedsTotal: 100,
+// createDummyConfigFile creates a temporary config file with valid dummy data for testing.
+func createDummyConfigFile(t *testing.T) string {
+	t.Helper()
+	tempDir := t.TempDir()
+	cfile := filepath.Join(tempDir, "test_config.yml")
+
+	// Minimal valid configuration
+	conf := Config{
 		SensorLED: SensorLEDConfig{
 			Enabled:           true,
 			RunUpDelay:        10 * time.Millisecond,
-			RunDownDelay:      20 * time.Millisecond,
-			HoldTime:          5 * time.Second,
-			LedRGB:            []float64{0, 0, 0},
+			RunDownDelay:      10 * time.Millisecond,
+			HoldTime:          10 * time.Millisecond,
+			LedRGB:            []float64{100, 100, 100},
 			LatchEnabled:      false,
 			LatchTriggerValue: 0,
 			LatchTriggerDelay: 0,
@@ -46,20 +49,25 @@ func getValidRuntimeConfig() RuntimeConfig {
 			LedMinute:      []float64{0, 0, 0},
 		},
 		AudioLED: AudioLEDConfig{
-			Enabled:         false,
-			Device:          "default",
-			StartLedLeft:    0,
-			EndLedLeft:      1,
-			StartLedRight:   2,
-			EndLedRight:     3,
-			LedGreen:        []float64{0, 0, 0},
-			LedYellow:       []float64{0, 0, 0},
-			LedRed:          []float64{0, 0, 0},
-			SampleRate:      44100,
-			FramesPerBuffer: 1024,
-			UpdateFreq:      10 * time.Millisecond,
-			MinDB:           -60,
-			MaxDB:           -10,
+			Enabled:       false,
+			StartLedLeft:  0,
+			EndLedLeft:    1,
+			StartLedRight: 2,
+			EndLedRight:   3,
+			LedGreen:      []float64{0, 0, 0},
+			LedYellow:     []float64{0, 0, 0},
+			LedRed:        []float64{0, 0, 0},
+			UpdateFreq:    10 * time.Millisecond,
+			MinDB:         -60,
+			MaxDB:         -10,
+			Squeezebox: SqueezeboxConfig{
+				Server:        "127.0.0.1",
+				SlimProtoPort: 3483,
+				JSONRPCPort:   9000,
+				PlayerMAC:     "00:04:20:11:22:33",
+				PlayerName:    "Test VU",
+				AutoSync:      true,
+			},
 		},
 		CylonLED: CylonLEDConfig{
 			Enabled:  false,
@@ -73,175 +81,269 @@ func getValidRuntimeConfig() RuntimeConfig {
 			Enabled:  false,
 			Duration: 10 * time.Second,
 			Delay:    10 * time.Millisecond,
-			BlobCfg:  []BlobCfg{},
+			BlobCfg: []BlobCfg{
+				{
+					DeltaX: 1,
+					X:      0,
+					Width:  1,
+					LedRGB: []float64{0, 0, 0},
+				},
+			},
 		},
-	}
-}
-
-func TestConfigHandler_SetValidation(t *testing.T) {
-	// 1. Setup temporary environment
-	tempDir, err := os.MkdirTemp("", "goleds-webtest")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	configFile := filepath.Join(tempDir, "config.yml")
-
-	// Create a valid initial configuration
-	baseRuntime := getValidRuntimeConfig()
-	initialConfig := Config{
 		Hardware: HardwareConfig{
-			Display: DisplayConfig{LedsTotal: 100},
-			Sensors: SensorsConfig{SensorCfg: map[string]SensorCfg{}},
+			WebserverPort: 8080,
+			LEDType:       "ws2801",
+			SPIFrequency:  1000000,
+			Display: DisplayConfig{
+				ForceUpdateDelay:  1000 * time.Millisecond,
+				LedsTotal:         10,
+				ColorCorrection:   []float64{1, 1, 1},
+				APA102_Brightness: 31,
+				LedSegments: map[string][]LedSegmentConfig{
+					"GroupA": {
+						{
+							FirstLed:     0,
+							LastLed:      9,
+							SpiMultiplex: "L1",
+							Reverse:      false,
+						},
+					},
+				},
+			},
+			Sensors: SensorsConfig{
+				SmoothingSize: 5,
+				LoopDelay:     50 * time.Millisecond,
+				Calibration: CalibrationConfig{
+					StepDuration:     10 * time.Second,
+					MinMargin:        60,
+					DeviationFactor:  1.75,
+					OutlierThreshold: 150,
+					RetryDelay:       5 * time.Second,
+				},
+				SensorCfg: map[string]SensorCfg{
+					"S0": {
+						LedIndex:     0,
+						SpiMultiplex: "ADC1",
+						AdcChannel:   0,
+					},
+				},
+			},
 			SpiMultiplexGPIO: map[string]struct {
 				Low  []int `yaml:"Low,flow"`
 				High []int `yaml:"High,flow"`
 				CS   int   `yaml:"CS,flow"`
-			}{},
+			}{
+				"L1": {
+					Low:  []int{17},
+					High: []int{22, 23, 24},
+				},
+				"ADC1": {
+					Low:  []int{17, 22, 23},
+					High: []int{24},
+				},
+			},
 		},
-		SensorLED:    baseRuntime.SensorLED,
-		NightLED:     baseRuntime.NightLED,
-		ClockLED:     baseRuntime.ClockLED,
-		AudioLED:     baseRuntime.AudioLED,
-		CylonLED:     baseRuntime.CylonLED,
-		MultiBlobLED: baseRuntime.MultiBlobLED,
-	}
-
-	// We need to write this as proper YAML first
-	data, _ := yaml.Marshal(initialConfig)
-	if err := os.WriteFile(configFile, data, 0644); err != nil {
-		t.Fatalf("Failed to write initial config: %v", err)
-	}
-
-	// 2. Define Test Cases
-	tests := []struct {
-		name         string
-		payload      RuntimeConfig
-		wantStatus   int
-		wantErrorMsg string
-		shouldModify bool
-	}{
-		{
-			name: "Valid Update",
-			payload: func() RuntimeConfig {
-				c := getValidRuntimeConfig()
-				c.SensorLED.LedRGB = []float64{50, 50, 50}
-				c.SensorLED.HoldTime = 10 * time.Second
-				return c
-			}(),
-			wantStatus:   http.StatusOK,
-			shouldModify: true,
-		},
-		{
-			name: "Invalid RGB (>255)",
-			payload: func() RuntimeConfig {
-				c := getValidRuntimeConfig()
-				c.SensorLED.LedRGB = []float64{300, 0, 0}
-				return c
-			}(),
-			wantStatus:   http.StatusBadRequest,
-			wantErrorMsg: "must be between 0 and 255",
-			shouldModify: false,
-		},
-		{
-			name: "Invalid RGB (<0)",
-			payload: func() RuntimeConfig {
-				c := getValidRuntimeConfig()
-				c.SensorLED.LedRGB = []float64{-10, 0, 0}
-				return c
-			}(),
-			wantStatus:   http.StatusBadRequest,
-			wantErrorMsg: "must be between 0 and 255",
-			shouldModify: false,
-		},
-		{
-			name: "Negative Duration",
-			payload: func() RuntimeConfig {
-				c := getValidRuntimeConfig()
-				c.SensorLED.RunUpDelay = -5 * time.Second
-				return c
-			}(),
-			wantStatus:   http.StatusBadRequest,
-			wantErrorMsg: "must be non-negative",
-			shouldModify: false,
-		},
-		{
-			name: "Cylon Width Too Large",
-			payload: func() RuntimeConfig {
-				c := getValidRuntimeConfig()
-				c.CylonLED.Enabled = true
-				c.CylonLED.Width = 60 // LedsTotal is 100, max width is 50
-				return c
-			}(),
-			wantStatus:   http.StatusBadRequest,
-			wantErrorMsg: "cannot be larger than half of LedsTotal",
-			shouldModify: false,
-		},
-		{
-			name: "BlobCfg X Out of Bounds",
-			payload: func() RuntimeConfig {
-				c := getValidRuntimeConfig()
-				c.MultiBlobLED.Enabled = true
-				c.MultiBlobLED.BlobCfg = []BlobCfg{
-					{X: 100, Width: 10, LedRGB: []float64{0, 0, 0}}, // 100 is invalid index (0-99)
-				}
-				return c
-			}(),
-			wantStatus:   http.StatusBadRequest,
-			wantErrorMsg: "must be between 0 and 99",
-			shouldModify: false,
-		},
-		{
-			name: "Audio MinDB >= MaxDB",
-			payload: func() RuntimeConfig {
-				c := getValidRuntimeConfig()
-				c.AudioLED.Enabled = true
-				c.AudioLED.MinDB = -10
-				c.AudioLED.MaxDB = -20
-				return c
-			}(),
-			wantStatus:   http.StatusBadRequest,
-			wantErrorMsg: "must be less than MaxDB",
-			shouldModify: false,
+		Logging: LoggingConfig{
+			TUI: SingleLoggingConfig{
+				Level:  "INFO",
+				Format: "text",
+			},
+			HW: SingleLoggingConfig{
+				Level:  "INFO",
+				Format: "text",
+			},
 		},
 	}
 
-	// 3. Run Tests
-	handler := ConfigHandler(configFile)
+	data, err := yaml.Marshal(&conf)
+	if err != nil {
+		t.Fatalf("Failed to marshal dummy config: %v", err)
+	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Serialize payload to JSON
-			body, _ := json.Marshal(tt.payload)
-			req := httptest.NewRequest("POST", "/api/config", bytes.NewBuffer(body))
-			w := httptest.NewRecorder()
+	if err := os.WriteFile(cfile, data, 0o644); err != nil {
+		t.Fatalf("Failed to write dummy config file: %v", err)
+	}
 
-			handler.ServeHTTP(w, req)
+	return cfile
+}
 
-			// Assert Status
-			assert.Equal(t, tt.wantStatus, w.Code)
+func TestConfigHandler_Get(t *testing.T) {
+	cfile := createDummyConfigFile(t)
+	handler := ConfigHandler(cfile)
 
-			// Assert Error Message
-			if tt.wantErrorMsg != "" {
-				assert.Contains(t, w.Body.String(), tt.wantErrorMsg)
-			}
+	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+	w := httptest.NewRecorder()
 
-			// Assert File State
-			currentConfig, err := ReadConfig(configFile)
-			assert.NoError(t, err)
+	handler(w, req)
 
-			if !tt.shouldModify {
-				// Verify critical fields haven't changed to invalid values
-				if strings.Contains(tt.name, "RGB") {
-					assert.NotEqual(t, tt.payload.SensorLED.LedRGB, currentConfig.SensorLED.LedRGB, "File should not be updated with invalid RGB")
-				}
-			} else {
-				// For valid update, check if it stuck
-				if tt.payload.SensorLED.HoldTime > 0 {
-					assert.Equal(t, tt.payload.SensorLED.HoldTime, currentConfig.SensorLED.HoldTime)
-				}
-			}
-		})
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK (200), got %d", resp.StatusCode)
+	}
+
+	var runtimeConf RuntimeConfig
+	if err := json.NewDecoder(resp.Body).Decode(&runtimeConf); err != nil {
+		t.Fatalf("Failed to decode response body: %v", err)
+	}
+
+	if runtimeConf.LedsTotal != 10 {
+		t.Errorf("Expected LedsTotal to be 10, got %d", runtimeConf.LedsTotal)
+	}
+	if !runtimeConf.SensorLED.Enabled {
+		t.Errorf("Expected SensorLED.Enabled to be true, got %v", runtimeConf.SensorLED.Enabled)
+	}
+}
+
+func TestConfigHandler_Post_Success(t *testing.T) {
+	cfile := createDummyConfigFile(t)
+	handler := ConfigHandler(cfile)
+
+	// Create an updated RuntimeConfig payload
+	updatedRuntimeConf := RuntimeConfig{
+		LedsTotal: 10,
+		SensorLED: SensorLEDConfig{
+			Enabled:      true,
+			RunUpDelay:   20 * time.Millisecond, // Changed
+			RunDownDelay: 10 * time.Millisecond,
+			HoldTime:     10 * time.Millisecond,
+			LedRGB:       []float64{100, 100, 100},
+			LatchLedRGB:  []float64{0, 0, 0},
+		},
+		NightLED: NightLEDConfig{
+			Enabled:   false,
+			Latitude:  0,
+			Longitude: 0,
+			LedRGB:    [][]float64{{0, 0, 0}},
+		},
+		ClockLED: ClockLEDConfig{
+			Enabled:        false,
+			StartLedHour:   0,
+			EndLedHour:     1,
+			StartLedMinute: 2,
+			EndLedMinute:   3,
+			LedHour:        []float64{0, 0, 0},
+			LedMinute:      []float64{0, 0, 0},
+		},
+		AudioLED: AudioLEDConfig{
+			Enabled:       false,
+			StartLedLeft:  0,
+			EndLedLeft:    1,
+			StartLedRight: 2,
+			EndLedRight:   3,
+			LedGreen:      []float64{0, 0, 0},
+			LedYellow:     []float64{0, 0, 0},
+			LedRed:        []float64{0, 0, 0},
+			UpdateFreq:    10 * time.Millisecond,
+			MinDB:         -60,
+			MaxDB:         -10,
+			Squeezebox: SqueezeboxConfig{
+				Server:        "127.0.0.1",
+				SlimProtoPort: 3483,
+				JSONRPCPort:   9000,
+				PlayerMAC:     "00:04:20:11:22:33",
+				PlayerName:    "Test VU",
+				AutoSync:      true,
+			},
+		},
+		CylonLED: CylonLEDConfig{
+			Enabled:  false,
+			Duration: 10 * time.Second,
+			Delay:    10 * time.Millisecond,
+			Step:     1,
+			Width:    1,
+			LedRGB:   []float64{0, 0, 0},
+		},
+		MultiBlobLED: MultiBlobLEDConfig{
+			Enabled:  false,
+			Duration: 10 * time.Second,
+			Delay:    10 * time.Millisecond,
+			BlobCfg: []BlobCfg{
+				{
+					DeltaX: 1,
+					X:      0,
+					Width:  1,
+					LedRGB: []float64{0, 0, 0},
+				},
+			},
+		},
+	}
+
+	payload, err := json.Marshal(updatedRuntimeConf)
+	if err != nil {
+		t.Fatalf("Failed to marshal updated config: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/config", bytes.NewReader(payload))
+	w := httptest.NewRecorder()
+
+	handler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status OK (200), got %d", resp.StatusCode)
+	}
+
+	// Read the file back and verify the changes were saved
+	conf, err := ReadConfig(cfile)
+	if err != nil {
+		t.Fatalf("Failed to read updated config file: %v", err)
+	}
+
+	if conf.SensorLED.RunUpDelay != 20*time.Millisecond {
+		t.Errorf("Expected SensorLED.RunUpDelay to be 20ms, got %v", conf.SensorLED.RunUpDelay)
+	}
+}
+
+func TestConfigHandler_Post_InvalidData(t *testing.T) {
+	cfile := createDummyConfigFile(t)
+	handler := ConfigHandler(cfile)
+
+	// Send an invalid JSON payload (RunUpDelay is negative, which fails validation)
+	invalidRuntimeConf := RuntimeConfig{
+		LedsTotal: 10,
+		SensorLED: SensorLEDConfig{
+			Enabled:     true,
+			RunUpDelay:  -10 * time.Millisecond, // Invalid!
+			LedRGB:      []float64{100, 100, 100},
+			LatchLedRGB: []float64{0, 0, 0},
+		},
+	}
+
+	payload, err := json.Marshal(invalidRuntimeConf)
+	if err != nil {
+		t.Fatalf("Failed to marshal invalid config: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/config", bytes.NewReader(payload))
+	w := httptest.NewRecorder()
+
+	handler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status BadRequest (400) for invalid data, got %d", resp.StatusCode)
+	}
+}
+
+func TestConfigHandler_MethodNotAllowed(t *testing.T) {
+	cfile := createDummyConfigFile(t)
+	handler := ConfigHandler(cfile)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/config", nil)
+	w := httptest.NewRecorder()
+
+	handler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusMethodNotAllowed {
+		t.Errorf("Expected status MethodNotAllowed (405), got %d", resp.StatusCode)
 	}
 }

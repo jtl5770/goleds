@@ -137,22 +137,32 @@ func (c *ClockLEDConfig) Validate(ledsTotal int) error {
 	return nil
 }
 
+// SqueezeboxConfig holds settings for connecting to Logitech Media Server.
+type SqueezeboxConfig struct {
+	Server         string        `yaml:"Server"`
+	SlimProtoPort  int           `yaml:"SlimProtoPort"`
+	JSONRPCPort    int           `yaml:"JSONRPCPort"`
+	PlayerMAC      string        `yaml:"PlayerMAC"`
+	PlayerName     string        `yaml:"PlayerName"`
+	IgnoredPlayers []string      `yaml:"IgnoredPlayers"`
+	AutoSync       bool          `yaml:"AutoSync"`
+	PollInterval   time.Duration `yaml:"PollInterval"`
+}
+
 // AudioLEDConfig defines the configuration for the AudioLED producer.
 type AudioLEDConfig struct {
-	Enabled         bool          `yaml:"Enabled"`
-	Device          string        `yaml:"Device"`
-	StartLedLeft    int           `yaml:"StartLedLeft"`
-	EndLedLeft      int           `yaml:"EndLedLeft"`
-	StartLedRight   int           `yaml:"StartLedRight"`
-	EndLedRight     int           `yaml:"EndLedRight"`
-	LedGreen        []float64     `yaml:"LedGreen,flow"`
-	LedYellow       []float64     `yaml:"LedYellow,flow"`
-	LedRed          []float64     `yaml:"LedRed,flow"`
-	SampleRate      int           `yaml:"SampleRate"`
-	FramesPerBuffer int           `yaml:"FramesPerBuffer"`
-	UpdateFreq      time.Duration `yaml:"UpdateFreq"`
-	MinDB           float64       `yaml:"MinDB"`
-	MaxDB           float64       `yaml:"MaxDB"`
+	Enabled       bool             `yaml:"Enabled"`
+	StartLedLeft  int              `yaml:"StartLedLeft"`
+	EndLedLeft    int              `yaml:"EndLedLeft"`
+	StartLedRight int              `yaml:"StartLedRight"`
+	EndLedRight   int              `yaml:"EndLedRight"`
+	LedGreen      []float64        `yaml:"LedGreen,flow"`
+	LedYellow     []float64        `yaml:"LedYellow,flow"`
+	LedRed        []float64        `yaml:"LedRed,flow"`
+	UpdateFreq    time.Duration    `yaml:"UpdateFreq"`
+	MinDB         float64          `yaml:"MinDB"`
+	MaxDB         float64          `yaml:"MaxDB"`
+	Squeezebox    SqueezeboxConfig `yaml:"Squeezebox"`
 }
 
 func (c *AudioLEDConfig) Validate(ledsTotal int) error {
@@ -176,12 +186,6 @@ func (c *AudioLEDConfig) Validate(ledsTotal int) error {
 	}
 	if err := validateRGB(c.LedRed); err != nil {
 		return fmt.Errorf("LedRed invalid: %w", err)
-	}
-	if c.SampleRate <= 0 {
-		return fmt.Errorf("SampleRate must be positive")
-	}
-	if c.FramesPerBuffer <= 0 {
-		return fmt.Errorf("FramesPerBuffer must be positive")
 	}
 	if c.UpdateFreq < 0 {
 		return fmt.Errorf("UpdateFreq must be non-negative")
@@ -243,7 +247,7 @@ func (c *MultiBlobLEDConfig) Validate(ledsTotal int) error {
 		return fmt.Errorf("Duration must be non-negative")
 	}
 	if c.Delay < 0 {
-		return fmt.Errorf("Delay must be non-negative")
+		return fmt.Errorf("Delay must be positive")
 	}
 	for i, b := range c.BlobCfg {
 		if err := b.Validate(ledsTotal); err != nil {
@@ -507,21 +511,20 @@ func ReadConfig(cfile string) (*Config, error) {
 		}
 	}
 
-	f, err := os.Open(cfile)
+	data, err := os.ReadFile(cfile)
 	if err != nil {
+		slog.Error("Can't open config file", "file", cfile, "error", err)
 		return nil, err
 	}
-	defer f.Close()
-	decoder := yaml.NewDecoder(f)
-	err = decoder.Decode(&conf)
-	if err != nil {
+	if err := yaml.Unmarshal(data, &conf); err != nil {
+		slog.Error("Can't parse config file", "file", cfile, "error", err)
 		return nil, err
 	}
 
 	if err := conf.Validate(); err != nil {
-		return nil, fmt.Errorf("config validation failed: %w", err)
+		slog.Error("Config validation failed", "error", err)
+		return nil, err
 	}
 
-	slog.Debug("Read config", "config", conf)
 	return &conf, nil
 }
