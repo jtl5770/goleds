@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -149,6 +151,27 @@ type SqueezeboxConfig struct {
 	PollInterval   time.Duration `yaml:"PollInterval"`
 }
 
+func (c *SqueezeboxConfig) Validate() error {
+	if c.Server == "" {
+		return fmt.Errorf("Server address cannot be empty")
+	}
+	if c.SlimProtoPort < 0 || c.SlimProtoPort > 65535 {
+		return fmt.Errorf("SlimProtoPort must be between 0 and 65535, got %d", c.SlimProtoPort)
+	}
+	if c.JSONRPCPort < 0 || c.JSONRPCPort > 65535 {
+		return fmt.Errorf("JSONRPCPort must be between 0 and 65535, got %d", c.JSONRPCPort)
+	}
+	if c.PlayerMAC != "" && !strings.EqualFold(strings.TrimSpace(c.PlayerMAC), "auto") {
+		if _, err := net.ParseMAC(strings.TrimSpace(c.PlayerMAC)); err != nil {
+			return fmt.Errorf("PlayerMAC '%s' is not a valid MAC address: %w", c.PlayerMAC, err)
+		}
+	}
+	if c.PollInterval < 0 {
+		return fmt.Errorf("PollInterval must be non-negative")
+	}
+	return nil
+}
+
 // AudioLEDConfig defines the configuration for the AudioLED producer.
 type AudioLEDConfig struct {
 	Enabled       bool             `yaml:"Enabled"`
@@ -198,6 +221,11 @@ func (c *AudioLEDConfig) Validate(ledsTotal int) error {
 	}
 	if c.MinDB >= c.MaxDB {
 		return fmt.Errorf("MinDB (%f) must be less than MaxDB (%f)", c.MinDB, c.MaxDB)
+	}
+	if c.Enabled {
+		if err := c.Squeezebox.Validate(); err != nil {
+			return fmt.Errorf("Squeezebox configuration invalid: %w", err)
+		}
 	}
 	return nil
 }

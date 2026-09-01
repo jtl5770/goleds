@@ -183,9 +183,57 @@ class ClockLEDConfig {
   }
 }
 
+class SqueezeboxConfig {
+  String server;
+  int slimProtoPort;
+  int jsonrpcPort;
+  String playerMAC;
+  String playerName;
+  List<String> ignoredPlayers;
+  bool autoSync;
+  int pollIntervalMs;
+
+  SqueezeboxConfig({
+    required this.server,
+    required this.slimProtoPort,
+    required this.jsonrpcPort,
+    required this.playerMAC,
+    required this.playerName,
+    required this.ignoredPlayers,
+    required this.autoSync,
+    required this.pollIntervalMs,
+  });
+
+  factory SqueezeboxConfig.fromJson(Map<String, dynamic> json) {
+    return SqueezeboxConfig(
+      server: json['Server'] ?? '',
+      slimProtoPort: json['SlimProtoPort'] ?? 3483,
+      jsonrpcPort: json['JSONRPCPort'] ?? 9000,
+      playerMAC: json['PlayerMAC'] ?? '',
+      playerName: json['PlayerName'] ?? '',
+      ignoredPlayers:
+          (json['IgnoredPlayers'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      autoSync: json['AutoSync'] ?? false,
+      pollIntervalMs: _parseDurationToMs(json['PollInterval']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Server': server,
+      'SlimProtoPort': slimProtoPort,
+      'JSONRPCPort': jsonrpcPort,
+      'PlayerMAC': playerMAC,
+      'PlayerName': playerName,
+      'IgnoredPlayers': ignoredPlayers,
+      'AutoSync': autoSync,
+      'PollInterval': pollIntervalMs * 1000000,
+    };
+  }
+}
+
 class AudioLEDConfig {
   bool enabled;
-  String device;
   int startLedLeft;
   int endLedLeft;
   int startLedRight;
@@ -193,15 +241,13 @@ class AudioLEDConfig {
   List<double> ledGreen;
   List<double> ledYellow;
   List<double> ledRed;
-  int sampleRate;
-  int framesPerBuffer;
   int updateFreqMs;
   double minDB;
   double maxDB;
+  SqueezeboxConfig squeezebox;
 
   AudioLEDConfig({
     required this.enabled,
-    required this.device,
     required this.startLedLeft,
     required this.endLedLeft,
     required this.startLedRight,
@@ -209,17 +255,15 @@ class AudioLEDConfig {
     required this.ledGreen,
     required this.ledYellow,
     required this.ledRed,
-    required this.sampleRate,
-    required this.framesPerBuffer,
     required this.updateFreqMs,
     required this.minDB,
     required this.maxDB,
+    required this.squeezebox,
   });
 
   factory AudioLEDConfig.fromJson(Map<String, dynamic> json) {
     return AudioLEDConfig(
       enabled: json['Enabled'] ?? false,
-      device: json['Device'] ?? '',
       startLedLeft: json['StartLedLeft'] ?? 0,
       endLedLeft: json['EndLedLeft'] ?? 0,
       startLedRight: json['StartLedRight'] ?? 0,
@@ -227,18 +271,16 @@ class AudioLEDConfig {
       ledGreen: _parseDoubleList(json['LedGreen']),
       ledYellow: _parseDoubleList(json['LedYellow']),
       ledRed: _parseDoubleList(json['LedRed']),
-      sampleRate: json['SampleRate'] ?? 0,
-      framesPerBuffer: json['FramesPerBuffer'] ?? 0,
       updateFreqMs: _parseDurationToMs(json['UpdateFreq']),
-      minDB: (json['MinDB'] ?? 0).toDouble(),
-      maxDB: (json['MaxDB'] ?? 0).toDouble(),
+      minDB: (json['MinDB'] ?? -60.0).toDouble(),
+      maxDB: (json['MaxDB'] ?? -3.0).toDouble(),
+      squeezebox: SqueezeboxConfig.fromJson(json['Squeezebox'] ?? {}),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'Enabled': enabled,
-      'Device': device,
       'StartLedLeft': startLedLeft,
       'EndLedLeft': endLedLeft,
       'StartLedRight': startLedRight,
@@ -246,11 +288,10 @@ class AudioLEDConfig {
       'LedGreen': ledGreen,
       'LedYellow': ledYellow,
       'LedRed': ledRed,
-      'SampleRate': sampleRate,
-      'FramesPerBuffer': framesPerBuffer,
       'UpdateFreq': updateFreqMs * 1000000,
       'MinDB': minDB,
       'MaxDB': maxDB,
+      'Squeezebox': squeezebox.toJson(),
     };
   }
 }
@@ -371,23 +412,6 @@ List<double> _parseDoubleList(dynamic json) {
 
 int _parseDurationToMs(dynamic val) {
   if (val == null) return 0;
-  // This assumes the Go server sends the value in nanoseconds (which standard Go json encoding for Duration does)
-  // OR as a string like "10ms".
-  // Go's standard json.Marshal encodes time.Duration as int64 nanoseconds.
-  // HOWEVER, go-yaml might be involved or custom marshalling.
-  // BUT the webhandler in Go reads using yaml but writes using json.
-  // Standard json.Marshal of time.Duration is nanoseconds.
-  // Wait, in `config.go`, structs have `yaml` tags.
-  // In `webhandler.go`: `json.NewEncoder(w).Encode(runtimeConfig)`.
-  // Standard Go `json` package encodes `time.Duration` as **nanoseconds** (integer).
-  // BUT the `yaml.v3` decoder reads strings like "10ms".
-  // The user sees "10ms" in config.yml.
-  // Let's verify what the Go server sends.
-  // Standard library `json` encodes duration as integer (nanoseconds).
-  //
-  // IF the struct fields are just `time.Duration`, JSON output is `10000000` for 10ms.
-  //
-  // Let's assume nanoseconds.
   if (val is num) {
     return (val / 1000000).round();
   }

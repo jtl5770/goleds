@@ -356,17 +356,26 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		if c.streamCancel != nil {
 			c.streamCancel()
 		}
+		if c.streamConn != nil {
+			_ = c.streamConn.Close()
+			c.streamConn = nil
+		}
 		streamCtx, cancel := context.WithCancel(c.ctx)
 		c.streamCtx = streamCtx
 		c.streamCancel = cancel
 		c.mu.Unlock()
 
-		c.ringBuffer.Flush()
-		c.framesPlayed.Store(0)
+		currentState := c.GetState()
+		isTransition := (currentState == StateRunning || currentState == StateStartAt)
+
+		if !isTransition {
+			c.ringBuffer.Flush()
+			c.framesPlayed.Store(0)
+			c.setState(StateBuffering)
+		}
 		c.autoStart.Store(uint32(strm.AutoStart))
 		c.thresholdKB.Store(uint32(strm.Threshold))
 		c.decoderDone.Store(false)
-		c.setState(StateBuffering)
 
 		// Send flush ack (STMf)
 		_ = c.SendStat([4]byte{'S', 'T', 'M', 'f'})
@@ -405,6 +414,12 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		// Send resume ack (STMr)
 		_ = c.SendStat([4]byte{'S', 'T', 'M', 'r'})
 
+		currentState := c.GetState()
+		if currentState == StateRunning {
+			// Already running seamlessly; do not disrupt pacing
+			return
+		}
+
 		now := uint32(time.Now().UnixMilli())
 		if startAt == 0 || now >= startAt || startAt > (now+10000) {
 			c.setState(StateRunning)
@@ -419,6 +434,10 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		if c.streamCancel != nil {
 			c.streamCancel()
 		}
+		if c.streamConn != nil {
+			_ = c.streamConn.Close()
+			c.streamConn = nil
+		}
 		c.mu.Unlock()
 
 		c.ringBuffer.Flush()
@@ -428,6 +447,16 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 
 	case 'f': // Flush buffers
 		slog.Debug("SlimProto strm: FLUSH buffers")
+		c.mu.Lock()
+		if c.streamCancel != nil {
+			c.streamCancel()
+		}
+		if c.streamConn != nil {
+			_ = c.streamConn.Close()
+			c.streamConn = nil
+		}
+		c.mu.Unlock()
+
 		c.ringBuffer.Flush()
 		c.framesPlayed.Store(0)
 		_ = c.SendStat([4]byte{'S', 'T', 'M', 'f'})
@@ -459,39 +488,38 @@ type countingReader struct {
 
 func (cr *countingReader) Read(p []byte) (int, error) {
 	n, err := cr.r.Read(p)
-	if n > 0 && cr.counter != nil {
+	if n > 0 {
 		cr.counter.Add(uint64(n))
 	}
 	return n, err
 }
 
 func (c *Client) streamDataWorker(ctx context.Context, strm *StrmCommand) {
-	streamHost := c.serverHost
-	if strm.ServerIP != nil && !strm.ServerIP.IsUnspecified() && strm.ServerIP.String() != "0.0.0.0" {
-		streamHost = strm.ServerIP.String()
+	targetIP := strm.ServerIP.String()
+	if strm.ServerIP == nil || strm.ServerIP.IsUnspecified() || targetIP == "0.0.0.0" {
+		targetIP = c.serverHost
 	}
-	port := strm.ServerPort
-	if port == 0 {
-		port = 9000
+	targetPort := strm.ServerPort
+	if targetPort == 0 {
+		targetPort = 9000
 	}
 
-	addr := fmt.Sprintf("%s:%d", streamHost, port)
-	slog.Info("SlimProto opening audio HTTP stream connection", "targetAddr", addr)
+	streamAddr := fmt.Sprintf("%s:%d", targetIP, targetPort)
+	slog.Info("SlimProto connecting to audio stream", "addr", streamAddr)
 
-	conn, err := net.DialTimeout("tcp", addr, 3*time.Second)
+	dialer := net.Dialer{Timeout: 5 * time.Second}
+	conn, err := dialer.DialContext(ctx, "tcp", streamAddr)
 	if err != nil {
-		slog.Error("SlimProto failed to connect to audio data stream", "addr", addr, "error", err)
+		slog.Error("SlimProto stream dial failed", "addr", streamAddr, "error", err)
 		return
 	}
-
-	_ = c.SendStat([4]byte{'S', 'T', 'M', 'c'}) // Stream connected (STMc)
 
 	c.mu.Lock()
 	c.streamConn = conn
 	c.mu.Unlock()
 
 	defer func() {
-		conn.Close()
+		_ = conn.Close()
 		c.mu.Lock()
 		if c.streamConn == conn {
 			c.streamConn = nil
@@ -548,8 +576,10 @@ func (c *Client) streamDataWorker(ctx context.Context, strm *StrmCommand) {
 		c.decodeFLACStream(ctx, bufReader, countingStream, thresholdBytes)
 	}
 
-	c.decoderDone.Store(true)
-	_ = c.SendStat([4]byte{'S', 'T', 'M', 'd'}) // Decoder done (STMd)
+	if ctx.Err() == nil {
+		c.decoderDone.Store(true)
+		_ = c.SendStat([4]byte{'S', 'T', 'M', 'd'}) // Decoder done (STMd)
+	}
 }
 
 func (c *Client) decodeFLACStream(ctx context.Context, bufReader *bufio.Reader, r io.Reader, thresholdBytes int) {
@@ -662,7 +692,11 @@ func (c *Client) processFLACFrame(f *frame.Frame, thresholdBytes int, sentSTMl *
 		*sentSTMl = true
 		_ = c.SendStat([4]byte{'S', 'T', 'M', 'l'})
 		autoStart := byte(c.autoStart.Load())
-		if autoStart == '1' {
+		currentState := c.GetState()
+		if currentState == StateRunning || currentState == StateStartAt {
+			// Continuous / gapless playback: output is already actively consuming
+			// remaining frames from previous track and transition buffer.
+		} else if autoStart == '1' {
 			c.setState(StateRunning)
 			_ = c.SendStat([4]byte{'S', 'T', 'M', 's'})
 		} else {
@@ -686,7 +720,10 @@ func (c *Client) decodePCMStream(ctx context.Context, r io.Reader, thresholdByte
 				sentSTMl = true
 				_ = c.SendStat([4]byte{'S', 'T', 'M', 'l'})
 				autoStart := byte(c.autoStart.Load())
-				if autoStart == '1' {
+				currentState := c.GetState()
+				if currentState == StateRunning || currentState == StateStartAt {
+					// Continuous / gapless playback: output is already running
+				} else if autoStart == '1' {
 					c.setState(StateRunning)
 					_ = c.SendStat([4]byte{'S', 'T', 'M', 's'})
 				} else {

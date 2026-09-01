@@ -79,11 +79,17 @@ AudioLED:
   LedGreen: [0, 0, 0]
   LedYellow: [0, 0, 0]
   LedRed: [0, 0, 0]
-  SampleRate: 44100
-  FramesPerBuffer: 1024
   UpdateFreq: 10ms
   MinDB: -60
   MaxDB: -10
+  Squeezebox:
+    Server: "127.0.0.1"
+    SlimProtoPort: 3483
+    JSONRPCPort: 9000
+    PlayerMAC: "00:04:20:11:22:33"
+    PlayerName: "Test VU"
+    AutoSync: true
+    PollInterval: 1500ms
 `
 
 const validCylonLED = `
@@ -194,4 +200,45 @@ func TestReadConfig_InvalidBlobX(t *testing.T) {
 	_, err := ReadConfig(configFile)
 	assert.Error(t, err, "ReadConfig should return an error for Blob X out of bounds")
 	assert.Contains(t, err.Error(), "must be between 0 and 9", "Error message should indicate invalid X range")
+}
+
+func TestSqueezeboxConfig_Validation(t *testing.T) {
+	// Valid configuration
+	validCfg := SqueezeboxConfig{
+		Server:        "192.168.1.100",
+		SlimProtoPort: 3483,
+		JSONRPCPort:   9000,
+		PlayerMAC:     "00:04:20:aa:bb:cc",
+		PlayerName:    "Living Room VU",
+		AutoSync:      true,
+		PollInterval:  1500 * time.Millisecond,
+	}
+	assert.NoError(t, validCfg.Validate())
+
+	// Empty server
+	emptyServerCfg := validCfg
+	emptyServerCfg.Server = ""
+	assert.Error(t, emptyServerCfg.Validate())
+	assert.Contains(t, emptyServerCfg.Validate().Error(), "Server address cannot be empty")
+
+	// Invalid SlimProto port
+	badPortCfg := validCfg
+	badPortCfg.SlimProtoPort = 70000
+	assert.Error(t, badPortCfg.Validate())
+
+	// Invalid MAC
+	badMACCfg := validCfg
+	badMACCfg.PlayerMAC = "invalid-mac"
+	assert.Error(t, badMACCfg.Validate())
+	assert.Contains(t, badMACCfg.Validate().Error(), "not a valid MAC address")
+
+	// "auto" MAC is valid
+	autoMACCfg := validCfg
+	autoMACCfg.PlayerMAC = "auto"
+	assert.NoError(t, autoMACCfg.Validate())
+
+	// Negative poll interval
+	negPollCfg := validCfg
+	negPollCfg.PollInterval = -100 * time.Millisecond
+	assert.Error(t, negPollCfg.Validate())
 }

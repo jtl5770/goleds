@@ -108,3 +108,43 @@ func TestSlimProto_ClientHandshake(t *testing.T) {
 
 	_ = client.Stop()
 }
+
+func TestSlimProto_TrackTransitionPreservesBuffer(t *testing.T) {
+	cfg := HeloConfig{
+		MAC:      net.HardwareAddr{0x00, 0x04, 0x20, 0xaa, 0xbb, 0xcc},
+		DeviceID: 12,
+	}
+	levels := audio.NewAtomicLevels()
+	client := NewClient("127.0.0.1:3483", cfg, levels)
+
+	// Pre-fill buffer with sample data and set state to Running
+	sampleData := make([]byte, 1024)
+	for i := range sampleData {
+		sampleData[i] = byte(i % 256)
+	}
+	_, _ = client.ringBuffer.Write(sampleData)
+	client.setState(StateRunning)
+
+	// Simulate incoming 'strm s' for next track transition (e.g. gapless)
+	strm := &StrmCommand{
+		SubCommand: 's',
+		AutoStart:  '2',
+		Format:     'f',
+		ServerIP:   net.ParseIP("127.0.0.1"),
+		ServerPort: 9000,
+	}
+	client.handleStrm(strm)
+
+	// State should remain StateRunning
+	if client.GetState() != StateRunning {
+		t.Errorf("Expected state to remain StateRunning, got %v", client.GetState())
+	}
+
+	// Buffer should NOT be flushed
+	if client.ringBuffer.Available() == 0 {
+		t.Errorf("Expected ring buffer to preserve remaining track data, but it was empty")
+	}
+
+	// Cleanup
+	_ = client.Stop()
+}
