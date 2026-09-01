@@ -203,6 +203,10 @@ AudioLED:
   LedGreen: [0, 80, 0]
   LedYellow: [40, 40, 0]
   LedRed: [100, 0, 0]
+  # Peak hold and falloff indicator settings
+  PeakHoldEnabled: true
+  PeakHoldTime: 60ms
+  PeakDecayRate: 20.0 # LEDs per second
   # How often to read out levels and update the LED strip
   UpdateFreq: 30ms
   MinDB: -60.0

@@ -174,18 +174,21 @@ func (c *SqueezeboxConfig) Validate() error {
 
 // AudioLEDConfig defines the configuration for the AudioLED producer.
 type AudioLEDConfig struct {
-	Enabled       bool             `yaml:"Enabled"`
-	StartLedLeft  int              `yaml:"StartLedLeft"`
-	EndLedLeft    int              `yaml:"EndLedLeft"`
-	StartLedRight int              `yaml:"StartLedRight"`
-	EndLedRight   int              `yaml:"EndLedRight"`
-	LedGreen      []float64        `yaml:"LedGreen,flow"`
-	LedYellow     []float64        `yaml:"LedYellow,flow"`
-	LedRed        []float64        `yaml:"LedRed,flow"`
-	UpdateFreq    time.Duration    `yaml:"UpdateFreq"`
-	MinDB         float64          `yaml:"MinDB"`
-	MaxDB         float64          `yaml:"MaxDB"`
-	Squeezebox    SqueezeboxConfig `yaml:"Squeezebox"`
+	Enabled         bool             `yaml:"Enabled"`
+	StartLedLeft    int              `yaml:"StartLedLeft"`
+	EndLedLeft      int              `yaml:"EndLedLeft"`
+	StartLedRight   int              `yaml:"StartLedRight"`
+	EndLedRight     int              `yaml:"EndLedRight"`
+	LedGreen        []float64        `yaml:"LedGreen,flow"`
+	LedYellow       []float64        `yaml:"LedYellow,flow"`
+	LedRed          []float64        `yaml:"LedRed,flow"`
+	PeakHoldEnabled bool             `yaml:"PeakHoldEnabled"`
+	PeakHoldTime    time.Duration    `yaml:"PeakHoldTime"`
+	PeakDecayRate   float64          `yaml:"PeakDecayRate"`
+	UpdateFreq      time.Duration    `yaml:"UpdateFreq"`
+	MinDB           float64          `yaml:"MinDB"`
+	MaxDB           float64          `yaml:"MaxDB"`
+	Squeezebox      SqueezeboxConfig `yaml:"Squeezebox"`
 }
 
 func (c *AudioLEDConfig) Validate(ledsTotal int) error {
@@ -209,6 +212,12 @@ func (c *AudioLEDConfig) Validate(ledsTotal int) error {
 	}
 	if err := validateRGB(c.LedRed); err != nil {
 		return fmt.Errorf("LedRed invalid: %w", err)
+	}
+	if c.PeakHoldTime < 0 {
+		return fmt.Errorf("PeakHoldTime must be non-negative")
+	}
+	if c.PeakDecayRate < 0 {
+		return fmt.Errorf("PeakDecayRate must be non-negative")
 	}
 	if c.UpdateFreq < 0 {
 		return fmt.Errorf("UpdateFreq must be non-negative")

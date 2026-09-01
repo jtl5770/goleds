@@ -241,6 +241,9 @@ class AudioLEDConfig {
   List<double> ledGreen;
   List<double> ledYellow;
   List<double> ledRed;
+  bool peakHoldEnabled;
+  int peakHoldTimeMs;
+  double peakDecayRate;
   int updateFreqMs;
   double minDB;
   double maxDB;
@@ -255,6 +258,9 @@ class AudioLEDConfig {
     required this.ledGreen,
     required this.ledYellow,
     required this.ledRed,
+    this.peakHoldEnabled = true,
+    this.peakHoldTimeMs = 60,
+    this.peakDecayRate = 20.0,
     required this.updateFreqMs,
     required this.minDB,
     required this.maxDB,
@@ -271,6 +277,9 @@ class AudioLEDConfig {
       ledGreen: _parseDoubleList(json['LedGreen']),
       ledYellow: _parseDoubleList(json['LedYellow']),
       ledRed: _parseDoubleList(json['LedRed']),
+      peakHoldEnabled: json['PeakHoldEnabled'] ?? true,
+      peakHoldTimeMs: json['PeakHoldTime'] != null ? _parseDurationToMs(json['PeakHoldTime']) : 60,
+      peakDecayRate: (json['PeakDecayRate'] ?? 20.0).toDouble(),
       updateFreqMs: _parseDurationToMs(json['UpdateFreq']),
       minDB: (json['MinDB'] ?? -60.0).toDouble(),
       maxDB: (json['MaxDB'] ?? -3.0).toDouble(),
@@ -288,6 +297,9 @@ class AudioLEDConfig {
       'LedGreen': ledGreen,
       'LedYellow': ledYellow,
       'LedRed': ledRed,
+      'PeakHoldEnabled': peakHoldEnabled,
+      'PeakHoldTime': peakHoldTimeMs * 1000000,
+      'PeakDecayRate': peakDecayRate,
       'UpdateFreq': updateFreqMs * 1000000,
       'MinDB': minDB,
       'MaxDB': maxDB,
