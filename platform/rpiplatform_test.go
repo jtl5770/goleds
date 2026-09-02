@@ -161,3 +161,50 @@ func TestAPA102Driver_Write_Reversed(t *testing.T) {
 		t.Errorf("Expected data %v, got %v", expected, sentData)
 	}
 }
+
+func BenchmarkWS2801Driver_Write(b *testing.B) {
+	displayConfig := config.DisplayConfig{
+		ColorCorrection: []float64{1.0, 0.9, 0.8},
+		LedsTotal:       300,
+	}
+	driver := newWs2801Driver(displayConfig)
+	seg := &segment{
+		leds:         make([]producer.Led, 300),
+		reverse:      true,
+		spiMultiplex: "spi1",
+	}
+	for i := range seg.leds {
+		seg.leds[i] = producer.Led{Red: float64(i % 255), Green: float64((i * 2) % 255), Blue: 100}
+	}
+	noopExchange := func(index string, data []byte) []byte { return data }
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_ = driver.write(seg, noopExchange)
+	}
+}
+
+func BenchmarkAPA102Driver_Write(b *testing.B) {
+	displayConfig := config.DisplayConfig{
+		ColorCorrection:   []float64{1.0, 0.9, 0.8},
+		APA102_Brightness: 31,
+		LedsTotal:         300,
+	}
+	driver := newApa102Driver(displayConfig)
+	seg := &segment{
+		leds:         make([]producer.Led, 300),
+		reverse:      true,
+		spiMultiplex: "spi1",
+	}
+	for i := range seg.leds {
+		seg.leds[i] = producer.Led{Red: float64(i % 255), Green: float64((i * 2) % 255), Blue: 100}
+	}
+	noopExchange := func(index string, data []byte) []byte { return data }
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_ = driver.write(seg, noopExchange)
+	}
+}

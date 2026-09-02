@@ -368,17 +368,26 @@ func newWs2801Driver(displayConfig config.DisplayConfig) *ws2801Driver {
 }
 
 func (d *ws2801Driver) write(segment *segment, exchangeFunc func(string, []byte) []byte) error {
-	requiredSize := 3 * len(segment.leds)
+	leds := segment.leds
+	n := len(leds)
+	requiredSize := 3 * n
 	display := d.buffer[:requiredSize]
 
-	for idx, led := range segment.leds {
-		targetIdx := idx
-		if segment.reverse {
-			targetIdx = len(segment.leds) - 1 - idx
+	if segment.reverse {
+		for idx, led := range leds {
+			targetIdx := n - 1 - idx
+			offset := 3 * targetIdx
+			display[offset] = d.lut.r[byte(led.Red)]
+			display[offset+1] = d.lut.g[byte(led.Green)]
+			display[offset+2] = d.lut.b[byte(led.Blue)]
 		}
-		display[3*targetIdx] = d.lut.r[byte(led.Red)]
-		display[(3*targetIdx)+1] = d.lut.g[byte(led.Green)]
-		display[(3*targetIdx)+2] = d.lut.b[byte(led.Blue)]
+	} else {
+		for idx, led := range leds {
+			offset := 3 * idx
+			display[offset] = d.lut.r[byte(led.Red)]
+			display[offset+1] = d.lut.g[byte(led.Green)]
+			display[offset+2] = d.lut.b[byte(led.Blue)]
+		}
 	}
 	exchangeFunc(segment.spiMultiplex, display)
 	return nil
@@ -402,9 +411,10 @@ func newApa102Driver(displayConfig config.DisplayConfig) *apa102Driver {
 }
 
 func (d *apa102Driver) write(segment *segment, exchangeFunc func(string, []byte) []byte) error {
-	// Calculate required size for the current segment
-	frameEndLength := (len(segment.leds) / 16) + 1
-	requiredSize := 4 + (4 * len(segment.leds)) + frameEndLength
+	leds := segment.leds
+	n := len(leds)
+	frameEndLength := (n / 16) + 1
+	requiredSize := 4 + (4 * n) + frameEndLength
 	display := d.buffer[:requiredSize]
 
 	// Frame start: 4 zero bytes
@@ -413,22 +423,27 @@ func (d *apa102Driver) write(segment *segment, exchangeFunc func(string, []byte)
 	// Fixed general brightness
 	brightness := byte(d.displayConfig.APA102_Brightness) | 0xE0
 
-	// LED data
-	for idx, led := range segment.leds {
-		targetIdx := idx
-		if segment.reverse {
-			targetIdx = len(segment.leds) - 1 - idx
+	if segment.reverse {
+		for idx, led := range leds {
+			targetIdx := n - 1 - idx
+			offset := 4 + (4 * targetIdx)
+			display[offset] = brightness
+			display[offset+1] = d.lut.b[byte(led.Blue)]
+			display[offset+2] = d.lut.g[byte(led.Green)]
+			display[offset+3] = d.lut.r[byte(led.Red)]
 		}
-		offset := 4 + (4 * targetIdx)
-		// protocol: brightness byte, blue, green, red
-		display[offset] = brightness
-		display[offset+1] = d.lut.b[byte(led.Blue)]
-		display[offset+2] = d.lut.g[byte(led.Green)]
-		display[offset+3] = d.lut.r[byte(led.Red)]
+	} else {
+		for idx, led := range leds {
+			offset := 4 + (4 * idx)
+			display[offset] = brightness
+			display[offset+1] = d.lut.b[byte(led.Blue)]
+			display[offset+2] = d.lut.g[byte(led.Green)]
+			display[offset+3] = d.lut.r[byte(led.Red)]
+		}
 	}
 
 	// Frame end: fill the rest of the slice with 0xFF
-	for i := 4 + (4 * len(segment.leds)); i < requiredSize; i++ {
+	for i := 4 + (4 * n); i < requiredSize; i++ {
 		display[i] = 0xFF
 	}
 
