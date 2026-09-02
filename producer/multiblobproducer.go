@@ -13,13 +13,14 @@ import (
 )
 
 type Blob struct {
-	uid    string
-	led    Led
-	last_x float64
-	x      float64
-	width  float64
-	delta  float64
-	dir    float64
+	uid      string
+	led      Led
+	last_x   float64
+	x        float64
+	width    float64
+	delta    float64
+	dir      float64
+	collided bool
 }
 
 func NewBlob(uid string, ledRGB []float64, x, width, deltaX float64) *Blob {
@@ -61,11 +62,28 @@ func (s *Blob) applyTo(leds []Led) {
 	end := int(math.Ceil(s.x)) + bound
 	end = min(end, ledsTotal)
 
-	for i := start; i < end; i++ {
-		y := math.Exp(-1 * (math.Pow(float64(i)-s.x, 2) / s.width))
-		// No need to check for small y here, the loop bounds already handle it.
-		blobLed := Led{s.led.Red * y, s.led.Green * y, s.led.Blue * y}
-		leds[i] = leds[i].Max(blobLed)
+	if start >= end {
+		return
+	}
+
+	invWidth := 1.0 / s.width
+	sub := leds[start:end]
+	for i := range sub {
+		dist := float64(start+i) - s.x
+		y := math.Exp(-(dist * dist) * invWidth)
+		r := s.led.Red * y
+		g := s.led.Green * y
+		b := s.led.Blue * y
+
+		if r > sub[i].Red {
+			sub[i].Red = r
+		}
+		if g > sub[i].Green {
+			sub[i].Green = g
+		}
+		if b > sub[i].Blue {
+			sub[i].Blue = b
+		}
 	}
 }
 
@@ -75,15 +93,17 @@ func (s *Blob) switchDirection() {
 
 type MultiBlobProducer struct {
 	*AbstractProducer
-	allblobs map[string]*Blob
-	duration time.Duration
-	delay    time.Duration
+	allblobs   map[string]*Blob
+	checkinter []*Blob
+	duration   time.Duration
+	delay      time.Duration
 }
 
 func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, duration, delay time.Duration, blobCfg []c.BlobCfg, endwg *sync.WaitGroup) *MultiBlobProducer {
 	inst := &MultiBlobProducer{
-		duration: duration,
-		delay:    delay,
+		duration:   duration,
+		delay:      delay,
+		checkinter: make([]*Blob, 0, len(blobCfg)),
 	}
 	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
 	if endwg != nil {
@@ -169,7 +189,7 @@ func (s *MultiBlobProducer) runner() {
 			}
 
 			// detect & handle collision
-			detectAndHandleCollisions(s.allblobs, len(s.leds))
+			s.checkinter = detectAndHandleCollisions(s.allblobs, s.checkinter, len(s.leds))
 
 			// push update event for Leds
 			s.ledsMutex.Lock()
@@ -198,17 +218,17 @@ func (s *MultiBlobProducer) runner() {
 	}
 }
 
-func detectAndHandleCollisions(blobs map[string]*Blob, ledsTotal int) {
-	max := float64(ledsTotal)
-	var checkinter []*Blob
-	collblobs := make(map[string]*Blob)
+func detectAndHandleCollisions(blobs map[string]*Blob, checkinter []*Blob, ledsTotal int) []*Blob {
+	maxVal := float64(ledsTotal)
+	checkinter = checkinter[:0]
 
 	for _, blob := range blobs {
-		if ((blob.x > max) && (blob.dir > 0)) ||
+		blob.collided = false
+		if ((blob.x > maxVal) && (blob.dir > 0)) ||
 			((blob.x < 0) && (blob.dir < 0)) {
 			// log.Println(fmt.Sprintf("%s hit boundary. x=%f ", blob.uid, blob.x))
 			blob.switchDirection()
-			collblobs[blob.uid] = blob
+			blob.collided = true
 		} else {
 			// we will look only for collisions between blobs which
 			// are not right now also hitting the stripe boundaries to
@@ -225,17 +245,21 @@ func detectAndHandleCollisions(blobs map[string]*Blob, ledsTotal int) {
 			for j := i + 1; j < size; j++ {
 				blob_b := checkinter[j]
 				if detectBlobColl(blob_a, blob_b) {
-					collblobs[blob_a.uid] = blob_a
-					collblobs[blob_b.uid] = blob_b
+					blob_a.collided = true
+					blob_b.collided = true
 				}
 			}
 		}
-		// for all blobs that take part in a collision we set their x
-		// value back to the last know value
-		for _, blob := range collblobs {
+	}
+	// for all blobs that take part in a collision we set their x
+	// value back to the last know value
+	for _, blob := range blobs {
+		if blob.collided {
 			blob.x = blob.last_x
+			blob.collided = false
 		}
 	}
+	return checkinter
 }
 
 func detectBlobColl(blob_a *Blob, blob_b *Blob) bool {

@@ -101,7 +101,7 @@ func TestDetectAndHandleCollisions_Boundary(t *testing.T) {
 	blobRight := NewBlob("blobRight", []float64{255, 0, 0}, float64(ledsTotal)+1, 1.0, 0.1)
 	blobRight.dir = 1 // Moving right
 	blobs := map[string]*Blob{"blobRight": blobRight}
-	detectAndHandleCollisions(blobs, ledsTotal)
+	detectAndHandleCollisions(blobs, nil, ledsTotal)
 	assert.Equal(t, float64(-1), blobRight.dir, "Blob hitting right boundary should reverse direction")
 	assert.Equal(t, float64(ledsTotal)+1, blobRight.x, "Blob x should be reverted to last_x")
 
@@ -109,7 +109,7 @@ func TestDetectAndHandleCollisions_Boundary(t *testing.T) {
 	blobLeft := NewBlob("blobLeft", []float64{0, 255, 0}, -1.0, 1.0, -0.1)
 	blobLeft.dir = -1 // Moving left
 	blobs = map[string]*Blob{"blobLeft": blobLeft}
-	detectAndHandleCollisions(blobs, ledsTotal)
+	detectAndHandleCollisions(blobs, nil, ledsTotal)
 	assert.Equal(t, float64(1), blobLeft.dir, "Blob hitting left boundary should reverse direction")
 	assert.Equal(t, -1.0, blobLeft.x, "Blob x should be reverted to last_x")
 
@@ -117,7 +117,33 @@ func TestDetectAndHandleCollisions_Boundary(t *testing.T) {
 	blobNoHit := NewBlob("blobNoHit", []float64{0, 0, 255}, 5.0, 1.0, 0.1)
 	blobNoHit.dir = 1
 	blobs = map[string]*Blob{"blobNoHit": blobNoHit}
-	detectAndHandleCollisions(blobs, ledsTotal)
+	detectAndHandleCollisions(blobs, nil, ledsTotal)
 	assert.Equal(t, float64(1), blobNoHit.dir, "Blob not hitting boundary should not change direction")
 	assert.Equal(t, 5.0, blobNoHit.x, "Blob x should not be reverted")
+}
+
+func BenchmarkBlob_ApplyTo(b *testing.B) {
+	blob := NewBlob("test_blob", []float64{255, 128, 64}, 50.0, 4.0, 0.2)
+	leds := make([]Led, 300)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		blob.applyTo(leds)
+	}
+}
+
+func BenchmarkDetectAndHandleCollisions(b *testing.B) {
+	blobs := map[string]*Blob{
+		"b1": NewBlob("b1", []float64{255, 0, 0}, 10.0, 2.0, 0.5),
+		"b2": NewBlob("b2", []float64{0, 255, 0}, 10.2, 2.0, -0.5),
+		"b3": NewBlob("b3", []float64{0, 0, 255}, 50.0, 2.0, 0.5),
+	}
+	checkinter := make([]*Blob, 0, len(blobs))
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		checkinter = detectAndHandleCollisions(blobs, checkinter, 300)
+	}
 }
