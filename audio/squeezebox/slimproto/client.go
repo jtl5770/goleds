@@ -1,13 +1,8 @@
 package slimproto
 
 import (
-	"bufio"
-	"bytes"
 	"context"
-	"encoding/binary"
-	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net"
 	"strings"
@@ -15,22 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/mewkiz/flac"
-	"github.com/mewkiz/flac/frame"
-	"golang.org/x/sys/unix"
 	"lautenbacher.net/goleds/audio"
-	"lautenbacher.net/goleds/audio/dsp"
 )
-
-// getMonotonicMs returns the system monotonic clock in milliseconds, matching
-// Squeezelite's gettime_ms() and LMS jiffies clock tracking exactly.
-func getMonotonicMs() uint32 {
-	var ts unix.Timespec
-	if err := unix.ClockGettime(unix.CLOCK_MONOTONIC, &ts); err == nil {
-		return uint32(ts.Sec*1000 + ts.Nsec/1000000)
-	}
-	return uint32(time.Now().UnixMilli())
-}
 
 // PlaybackState represents the player's internal state machine matching Squeezelite.
 type PlaybackState int32
@@ -63,20 +44,23 @@ func (s PlaybackState) String() string {
 	}
 }
 
-// Client handles the SlimProto TCP connection, HTTP audio streaming, FLAC/PCM decoding,
+// Client coordinates SlimProto transport, audio fetching, codec decoding,
 // and real-time paced audio level visualization for GoLEDs conforming to Squeezelite.
 type Client struct {
-	serverAddr string
 	serverHost string
 	heloConfig HeloConfig
 	levels     *audio.AtomicLevels
 
-	conn       net.Conn
-	streamConn net.Conn
-	mu         sync.Mutex
-	wg         sync.WaitGroup
+	transport   *TCPTransport
+	fetcher     StreamFetcher
+	flacDecoder *FLACDecoder
+	pcmDecoder  *PCMDecoder
+	ringBuffer  *AudioRingBuffer
+	clock       Clock
+	consumer    *PacedConsumer
 
-	streamCtx    context.Context
+	mu           sync.Mutex
+	wg           sync.WaitGroup
 	streamCancel context.CancelFunc
 	streamWg     sync.WaitGroup
 
@@ -90,18 +74,15 @@ type Client struct {
 	thresholdKB atomic.Uint32 // buffer threshold in KB
 	pauseFrames atomic.Int64  // sync micro-pause frames requested by LMS
 
-	ringBuffer *AudioRingBuffer
-
 	bytesReceived atomic.Uint64
 	framesPlayed  atomic.Uint64
 	sampleRate    atomic.Uint32
 	channels      atomic.Uint32
 
-	pcmFrameBuf []byte
 	decoderDone atomic.Bool
 }
 
-// NewClient creates a new Squeezelite-compliant SlimProto Client.
+// NewClient creates a new Squeezelite-compliant SlimProto Client orchestrator.
 func NewClient(serverAddr string, heloConfig HeloConfig, levels *audio.AtomicLevels) *Client {
 	host, _, err := net.SplitHostPort(serverAddr)
 	if err != nil {
@@ -111,16 +92,37 @@ func NewClient(serverAddr string, heloConfig HeloConfig, levels *audio.AtomicLev
 		levels = audio.NewAtomicLevels()
 	}
 
+	rb := NewAudioRingBuffer(2 * 1024 * 1024) // 2 MB PCM buffer (~12s @ 44.1kHz stereo)
+	clock := NewSystemClock()
 	ctx, cancel := context.WithCancel(context.Background())
+
 	c := &Client{
-		serverAddr: serverAddr,
-		serverHost: host,
-		heloConfig: heloConfig,
-		levels:     levels,
-		ringBuffer: NewAudioRingBuffer(2 * 1024 * 1024), // 2 MB PCM buffer (~12s @ 44.1kHz stereo)
-		ctx:        ctx,
-		ctxCancel:  cancel,
+		serverHost:  host,
+		heloConfig:  heloConfig,
+		levels:      levels,
+		fetcher:     NewHTTPStreamer(5 * time.Second),
+		flacDecoder: NewFLACDecoder(),
+		pcmDecoder:  NewPCMDecoder(),
+		ringBuffer:  rb,
+		clock:       clock,
+		ctx:         ctx,
+		ctxCancel:   cancel,
 	}
+
+	c.consumer = NewPacedConsumer(PacedConsumerConfig{
+		TickInterval: 10 * time.Millisecond,
+		RingBuffer:   rb,
+		Levels:       levels,
+		Clock:        clock,
+		Callbacks:    c,
+	})
+
+	c.transport = NewTCPTransport(TransportConfig{
+		ServerAddr: serverAddr,
+		HeloConfig: heloConfig,
+		Handler:    c,
+	})
+
 	c.sampleRate.Store(44100)
 	c.channels.Store(2)
 	c.state.Store(int32(StateStopped))
@@ -141,49 +143,92 @@ func (c *Client) GetState() PlaybackState {
 	return PlaybackState(c.state.Load())
 }
 
-// setState sets the playback state atomically and logs the transition.
-func (c *Client) setState(s PlaybackState) {
+// SetState sets the playback state atomically and logs the transition.
+func (c *Client) SetState(s PlaybackState) {
 	old := PlaybackState(c.state.Swap(int32(s)))
 	if old != s {
 		slog.Info("SlimProto state transition", "from", old.String(), "to", s.String())
 	}
 }
 
+// GetStartAt returns the target jiffies start timestamp for unpause.
+func (c *Client) GetStartAt() uint32 {
+	return c.startAt.Load()
+}
+
+// GetPauseFrames returns the remaining micro-pause frames.
+func (c *Client) GetPauseFrames() int64 {
+	return c.pauseFrames.Load()
+}
+
+// DeductPauseFrames decrements the micro-pause frame counter.
+func (c *Client) DeductPauseFrames(frames int64) {
+	if frames >= c.pauseFrames.Load() {
+		c.pauseFrames.Store(0)
+	} else {
+		c.pauseFrames.Add(-frames)
+	}
+}
+
+// AddFramesPlayed increments the cumulative frames played metric.
+func (c *Client) AddFramesPlayed(frames uint64) {
+	c.framesPlayed.Add(frames)
+}
+
+// IsDecoderDone returns true if the input stream reached EOF.
+func (c *Client) IsDecoderDone() bool {
+	return c.decoderDone.Load()
+}
+
+// OnSampleRateChanged is invoked by Decoders when stream parameters are detected.
+func (c *Client) OnSampleRateChanged(sr uint32, channels uint32) {
+	if sr > 0 {
+		c.sampleRate.Store(sr)
+	}
+	if channels > 0 {
+		c.channels.Store(channels)
+	}
+}
+
+// OnThresholdReached is invoked by Decoders once buffer threshold is loaded.
+func (c *Client) OnThresholdReached() {
+	_ = c.SendStat([4]byte{'S', 'T', 'M', 'l'})
+	autoStart := byte(c.autoStart.Load())
+	currentState := c.GetState()
+	if currentState == StateRunning || currentState == StateStartAt {
+		// Continuous / gapless playback: output is already actively consuming
+	} else if autoStart == '1' || autoStart == '3' {
+		c.SetState(StateRunning)
+		_ = c.SendStat([4]byte{'S', 'T', 'M', 's'})
+	} else {
+		// autostart == '0' or '2': wait for LMS 'strm u' synchronized unpause
+		c.SetState(StateWaitingStart)
+	}
+}
+
 // Start connects to the LMS SlimProto server and starts network and audio loops.
 func (c *Client) Start() error {
-	conn, err := net.DialTimeout("tcp", c.serverAddr, 3*time.Second)
-	if err != nil {
-		return fmt.Errorf("slimproto dial %s: %w", c.serverAddr, err)
+	if err := c.transport.Start(); err != nil {
+		return err
 	}
 
 	c.mu.Lock()
-	c.conn = conn
+	if c.ctx == nil || c.ctx.Err() != nil {
+		c.ctx, c.ctxCancel = context.WithCancel(context.Background())
+	}
 	c.mu.Unlock()
 
 	c.running.Store(true)
 
-	// Send HELO handshake
-	heloData := EncodeHelo(c.heloConfig)
-	if _, err := conn.Write(heloData); err != nil {
-		conn.Close()
-		return fmt.Errorf("slimproto send helo: %w", err)
-	}
-
-	// Send SETD name frame if configured
-	if c.heloConfig.PlayerName != "" {
-		setdData := EncodeSetdName(c.heloConfig.PlayerName)
-		_, _ = conn.Write(setdData)
-	}
-
-	slog.Info("SlimProto connected to LMS and sent HELO/SETD",
-		"server", c.serverAddr,
-		"mac", c.heloConfig.MAC.String(),
-		"name", c.heloConfig.PlayerName)
-
-	c.wg.Add(3)
-	go c.readLoop(conn)
-	go c.heartbeatLoop()
-	go c.audioConsumerLoop()
+	c.wg.Add(2)
+	go func() {
+		defer c.wg.Done()
+		c.heartbeatLoop()
+	}()
+	go func() {
+		defer c.wg.Done()
+		c.consumer.Run(c.ctx)
+	}()
 
 	return nil
 }
@@ -194,33 +239,20 @@ func (c *Client) Stop() error {
 		return nil
 	}
 
+	c.mu.Lock()
 	if c.ctxCancel != nil {
 		c.ctxCancel()
 	}
-
-	c.mu.Lock()
 	if c.streamCancel != nil {
 		c.streamCancel()
 	}
-	if c.conn != nil {
-		_ = c.conn.SetDeadline(time.Now())
-		_ = c.conn.Close()
-	}
-	if c.streamConn != nil {
-		_ = c.streamConn.SetDeadline(time.Now())
-		_ = c.streamConn.Close()
-	}
 	c.mu.Unlock()
 
+	_ = c.transport.Stop()
 	c.ringBuffer.Close()
 
 	c.streamWg.Wait()
 	c.wg.Wait()
-
-	c.mu.Lock()
-	c.conn = nil
-	c.streamConn = nil
-	c.mu.Unlock()
 
 	c.levels.Set(-100, -100, false)
 	slog.Info("SlimProto client stopped")
@@ -234,15 +266,7 @@ func (c *Client) SendStat(event [4]byte) error {
 
 // SendStatWithTimestamp sends a STAT packet echoing LMS's serverTimestamp for round-trip latency tracking.
 func (c *Client) SendStatWithTimestamp(event [4]byte, serverTimestamp uint32) error {
-	c.mu.Lock()
-	conn := c.conn
-	c.mu.Unlock()
-
-	if conn == nil {
-		return errors.New("slimproto not connected")
-	}
-
-	jiffies := getMonotonicMs()
+	jiffies := c.clock.NowMonotonicMs()
 	sr := c.GetSampleRate()
 	frames := c.framesPlayed.Load()
 	msPlayed := uint32(0)
@@ -255,9 +279,7 @@ func (c *Client) SendStatWithTimestamp(event [4]byte, serverTimestamp uint32) er
 	bytesRecv := c.bytesReceived.Load()
 
 	stat := EncodeStat(event, bufCap, bufAvail, bufCap, bufAvail, bytesRecv, jiffies, msPlayed, serverTimestamp)
-
-	_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
-	_, err := conn.Write(stat)
+	err := c.transport.Write(stat)
 	if err != nil {
 		slog.Debug("SlimProto failed to send STAT", "event", string(event[:]), "error", err)
 	} else {
@@ -268,15 +290,8 @@ func (c *Client) SendStatWithTimestamp(event [4]byte, serverTimestamp uint32) er
 
 // SendResp relays raw HTTP response headers received from the audio streaming server back to LMS.
 func (c *Client) SendResp(headers string) error {
-	c.mu.Lock()
-	conn := c.conn
-	c.mu.Unlock()
-	if conn == nil {
-		return errors.New("slimproto not connected")
-	}
 	resp := EncodeResp(headers)
-	_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
-	_, err := conn.Write(resp)
+	err := c.transport.Write(resp)
 	if err != nil {
 		slog.Debug("SlimProto failed to send RESP", "error", err)
 	} else {
@@ -286,7 +301,6 @@ func (c *Client) SendResp(headers string) error {
 }
 
 func (c *Client) heartbeatLoop() {
-	defer c.wg.Done()
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
@@ -303,93 +317,8 @@ func (c *Client) heartbeatLoop() {
 	}
 }
 
-func (c *Client) readLoop(initialConn net.Conn) {
-	defer c.wg.Done()
-
-	conn := initialConn
-	lenBuf := make([]byte, 2)
-
-	for c.running.Load() {
-		_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-		if _, err := io.ReadFull(conn, lenBuf); err != nil {
-			if !c.running.Load() {
-				return
-			}
-			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-				continue
-			}
-			slog.Warn("SlimProto read error, attempting reconnect", "server", c.serverAddr, "error", err)
-
-			_ = conn.Close()
-			c.mu.Lock()
-			if c.conn == conn {
-				c.conn = nil
-			}
-			c.mu.Unlock()
-
-			// Reconnect loop with backoff
-			for c.running.Load() {
-				select {
-				case <-c.ctx.Done():
-					return
-				case <-time.After(2 * time.Second):
-				}
-				if !c.running.Load() {
-					return
-				}
-				newConn, err := net.DialTimeout("tcp", c.serverAddr, 3*time.Second)
-				if err != nil {
-					slog.Debug("SlimProto reconnect failed, retrying...", "error", err)
-					continue
-				}
-
-				// Send HELO handshake
-				heloData := EncodeHelo(c.heloConfig)
-				if _, err := newConn.Write(heloData); err != nil {
-					_ = newConn.Close()
-					continue
-				}
-
-				// Send SETD name frame if configured
-				if c.heloConfig.PlayerName != "" {
-					setdData := EncodeSetdName(c.heloConfig.PlayerName)
-					_, _ = newConn.Write(setdData)
-				}
-
-				c.mu.Lock()
-				c.conn = newConn
-				c.mu.Unlock()
-
-				conn = newConn
-				slog.Info("SlimProto reconnected to LMS successfully", "server", c.serverAddr)
-				break
-			}
-			continue
-		}
-
-		totalLen := binary.BigEndian.Uint16(lenBuf)
-		if totalLen < 4 {
-			slog.Warn("SlimProto received message too short", "length", totalLen)
-			continue
-		}
-
-		frameBuf := make([]byte, totalLen)
-		if _, err := io.ReadFull(conn, frameBuf); err != nil {
-			if !c.running.Load() {
-				return
-			}
-			slog.Debug("SlimProto read frame error", "error", err)
-			continue
-		}
-
-		cmd := string(frameBuf[0:4])
-		payload := frameBuf[4:]
-
-		c.handleCommand(cmd, payload)
-	}
-}
-
-func (c *Client) handleCommand(cmd string, payload []byte) {
+// HandleCommand implements CommandHandler dispatched by TCPTransport.
+func (c *Client) HandleCommand(cmd string, payload []byte) {
 	switch cmd {
 	case "strm":
 		strm, err := ParseStrm(payload)
@@ -424,12 +353,7 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		if c.streamCancel != nil {
 			c.streamCancel()
 		}
-		if c.streamConn != nil {
-			_ = c.streamConn.Close()
-			c.streamConn = nil
-		}
 		streamCtx, cancel := context.WithCancel(c.ctx)
-		c.streamCtx = streamCtx
 		c.streamCancel = cancel
 		c.mu.Unlock()
 
@@ -439,7 +363,7 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		if !isTransition {
 			c.ringBuffer.Flush()
 			c.framesPlayed.Store(0)
-			c.setState(StateBuffering)
+			c.SetState(StateBuffering)
 		}
 		c.pauseFrames.Store(0)
 		c.autoStart.Store(uint32(strm.AutoStart))
@@ -478,7 +402,7 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 			c.pauseFrames.Store(int64(pauseFrames))
 		} else {
 			slog.Info("SlimProto strm: PAUSE stream")
-			c.setState(StatePaused)
+			c.SetState(StatePaused)
 			_ = c.SendStat([4]byte{'S', 'T', 'M', 'p'})
 		}
 
@@ -490,12 +414,12 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		// Send resume ack (STMr)
 		_ = c.SendStat([4]byte{'S', 'T', 'M', 'r'})
 
-		now := getMonotonicMs()
+		now := c.clock.NowMonotonicMs()
 		if startAt == 0 || now >= startAt || (startAt > now && (startAt-now) > 10000) {
-			c.setState(StateRunning)
+			c.SetState(StateRunning)
 			_ = c.SendStat([4]byte{'S', 'T', 'M', 's'})
 		} else {
-			c.setState(StateStartAt)
+			c.SetState(StateStartAt)
 		}
 
 	case 'q': // Quit / stop stream
@@ -504,16 +428,12 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		if c.streamCancel != nil {
 			c.streamCancel()
 		}
-		if c.streamConn != nil {
-			_ = c.streamConn.Close()
-			c.streamConn = nil
-		}
 		c.mu.Unlock()
 
 		c.pauseFrames.Store(0)
 		c.ringBuffer.Flush()
 		c.framesPlayed.Store(0)
-		c.setState(StateStopped)
+		c.SetState(StateStopped)
 		_ = c.SendStat([4]byte{'S', 'T', 'M', 'f'})
 
 	case 'f': // Flush buffers
@@ -521,10 +441,6 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		c.mu.Lock()
 		if c.streamCancel != nil {
 			c.streamCancel()
-		}
-		if c.streamConn != nil {
-			_ = c.streamConn.Close()
-			c.streamConn = nil
 		}
 		c.mu.Unlock()
 
@@ -553,86 +469,20 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 	}
 }
 
-type countingReader struct {
-	r       io.Reader
-	counter *atomic.Uint64
-}
-
-func (cr *countingReader) Read(p []byte) (int, error) {
-	n, err := cr.r.Read(p)
-	if n > 0 {
-		cr.counter.Add(uint64(n))
-	}
-	return n, err
-}
-
 func (c *Client) streamDataWorker(ctx context.Context, strm *StrmCommand) {
-	targetIP := strm.ServerIP.String()
-	if strm.ServerIP == nil || strm.ServerIP.IsUnspecified() || targetIP == "0.0.0.0" {
-		targetIP = c.serverHost
-	}
-	targetPort := strm.ServerPort
-	if targetPort == 0 {
-		targetPort = 9000
-	}
-
-	streamAddr := fmt.Sprintf("%s:%d", targetIP, targetPort)
-	slog.Info("SlimProto connecting to audio stream", "addr", streamAddr)
-
-	dialer := net.Dialer{Timeout: 5 * time.Second}
-	conn, err := dialer.DialContext(ctx, "tcp", streamAddr)
+	meta, err := c.fetcher.Fetch(ctx, strm.ServerIP, strm.ServerPort, c.serverHost, strm.HTTPHeader, &c.bytesReceived)
 	if err != nil {
-		slog.Error("SlimProto stream dial failed", "addr", streamAddr, "error", err)
+		slog.Error("SlimProto stream fetch failed", "error", err)
 		return
 	}
-
-	c.mu.Lock()
-	c.streamConn = conn
-	c.mu.Unlock()
-
-	defer func() {
-		_ = conn.Close()
-		c.mu.Lock()
-		if c.streamConn == conn {
-			c.streamConn = nil
-		}
-		c.mu.Unlock()
-	}()
+	defer meta.Conn.Close()
 
 	// Signal stream connected (STMc) conforming to Squeezelite slimproto.c
 	_ = c.SendStat([4]byte{'S', 'T', 'M', 'c'})
 
-	// Send HTTP GET request
-	if _, err := conn.Write([]byte(strm.HTTPHeader)); err != nil {
-		slog.Error("SlimProto failed to write HTTP stream header", "error", err)
-		return
-	}
-
-	bufReader := bufio.NewReader(conn)
-
-	// Read full raw HTTP response headers up to \r\n\r\n conforming to Squeezelite stream.c
-	var headerBytes []byte
-	for {
-		line, err := bufReader.ReadString('\n')
-		if err != nil {
-			slog.Error("SlimProto failed reading HTTP response headers", "error", err)
-			return
-		}
-		headerBytes = append(headerBytes, []byte(line)...)
-		if line == "\r\n" || line == "\n" {
-			break
-		}
-		if len(headerBytes) > 8192 {
-			slog.Error("SlimProto HTTP response headers exceeded 8KB")
-			return
-		}
-	}
-
 	// Relay full raw HTTP response headers back to LMS via RESP packet
-	_ = c.SendResp(string(headerBytes))
+	_ = c.SendResp(meta.Headers)
 	_ = c.SendStat([4]byte{'S', 'T', 'M', 'h'}) // HTTP headers received (STMh)
-
-	countingStream := &countingReader{r: bufReader, counter: &c.bytesReceived}
 
 	// Calculate threshold in bytes
 	threshKB := c.thresholdKB.Load()
@@ -641,268 +491,23 @@ func (c *Client) streamDataWorker(ctx context.Context, strm *StrmCommand) {
 	}
 	thresholdBytes := int(threshKB * 1024)
 
+	var decoder Decoder
 	switch strm.Format {
-	case 'f': // FLAC stream
-		c.decodeFLACStream(ctx, bufReader, countingStream, thresholdBytes)
-	case 'p': // Raw PCM stream
-		c.decodePCMStream(ctx, countingStream, thresholdBytes)
+	case 'f':
+		decoder = c.flacDecoder
+	case 'p':
+		decoder = c.pcmDecoder
 	default:
 		slog.Warn("SlimProto received stream format, attempting FLAC decoder", "format", string(strm.Format))
-		c.decodeFLACStream(ctx, bufReader, countingStream, thresholdBytes)
+		decoder = c.flacDecoder
+	}
+
+	if err := decoder.Decode(ctx, meta.BodyReader, c.ringBuffer, thresholdBytes, c); err != nil && ctx.Err() == nil {
+		slog.Debug("SlimProto decoder completed with status", "error", err)
 	}
 
 	if ctx.Err() == nil {
 		c.decoderDone.Store(true)
 		_ = c.SendStat([4]byte{'S', 'T', 'M', 'd'}) // Decoder done (STMd)
-	}
-}
-
-func (c *Client) decodeFLACStream(ctx context.Context, bufReader *bufio.Reader, r io.Reader, thresholdBytes int) {
-	peek, _ := bufReader.Peek(4)
-	hasFLACContainer := bytes.Equal(peek, []byte("fLaC"))
-
-	sentSTMl := false
-	chunkCount := 0
-
-	if hasFLACContainer {
-		stream, err := flac.New(r)
-		if err != nil {
-			slog.Error("SlimProto FLAC container stream init failed", "error", err)
-			return
-		}
-		defer stream.Close()
-
-		if stream.Info != nil {
-			sr := stream.Info.SampleRate
-			if sr > 0 {
-				c.sampleRate.Store(sr)
-			}
-			c.channels.Store(uint32(stream.Info.NChannels))
-			slog.Info("SlimProto container FLAC initialized",
-				"sampleRate", sr,
-				"channels", stream.Info.NChannels,
-				"bitsPerSample", stream.Info.BitsPerSample)
-		}
-
-		for c.running.Load() && ctx.Err() == nil {
-			f, err := stream.ParseNext()
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					slog.Info("SlimProto FLAC stream reached EOF", "framesDecoded", chunkCount)
-				} else {
-					slog.Debug("SlimProto FLAC parse stopped", "error", err, "framesDecoded", chunkCount)
-				}
-				break
-			}
-			if !c.processFLACFrame(f, thresholdBytes, &sentSTMl) {
-				break
-			}
-			chunkCount++
-		}
-	} else {
-		slog.Info("SlimProto decoding raw FLAC frame stream (LMS direct)")
-		for c.running.Load() && ctx.Err() == nil {
-			f, err := frame.Parse(r)
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					slog.Info("SlimProto FLAC stream reached EOF", "framesDecoded", chunkCount)
-				} else {
-					slog.Debug("SlimProto raw FLAC parse stopped", "error", err, "framesDecoded", chunkCount)
-				}
-				break
-			}
-			if !c.processFLACFrame(f, thresholdBytes, &sentSTMl) {
-				break
-			}
-			chunkCount++
-		}
-	}
-}
-
-func (c *Client) processFLACFrame(f *frame.Frame, thresholdBytes int, sentSTMl *bool) bool {
-	if len(f.Subframes) == 0 {
-		return true
-	}
-	nSamples := len(f.Subframes[0].Samples)
-	if nSamples == 0 {
-		return true
-	}
-
-	nChannels := len(f.Subframes)
-	bitsPerSample := int(f.BitsPerSample)
-	sr := uint32(f.SampleRate)
-	if sr > 0 {
-		c.sampleRate.Store(sr)
-	}
-
-	// Convert FLAC subframe samples to 16-bit stereo LittleEndian PCM bytes
-	neededBytes := nSamples * 4 // 2 channels * 2 bytes
-	if cap(c.pcmFrameBuf) < neededBytes {
-		c.pcmFrameBuf = make([]byte, neededBytes)
-	}
-	pcmBuf := c.pcmFrameBuf[:neededBytes]
-
-	idx := 0
-	for i := 0; i < nSamples; i++ {
-		for ch := 0; ch < 2; ch++ {
-			var sample int32
-			if ch < nChannels {
-				sample = f.Subframes[ch].Samples[i]
-			}
-			if bitsPerSample > 16 {
-				sample >>= (bitsPerSample - 16)
-			} else if bitsPerSample < 16 && bitsPerSample > 0 {
-				sample <<= (16 - bitsPerSample)
-			}
-			s16 := int16(sample)
-			binary.LittleEndian.PutUint16(pcmBuf[idx:], uint16(s16))
-			idx += 2
-		}
-	}
-
-	// Write to circular PCM ring buffer (blocks if full, providing socket backpressure)
-	if _, err := c.ringBuffer.Write(pcmBuf); err != nil {
-		slog.Debug("SlimProto ring buffer write interrupted", "error", err)
-		return false
-	}
-
-	// Trigger buffer loaded (STMl) once threshold is reached conforming to Squeezelite slimproto.c:L673
-	if !*sentSTMl && c.ringBuffer.Available() >= thresholdBytes {
-		*sentSTMl = true
-		_ = c.SendStat([4]byte{'S', 'T', 'M', 'l'})
-		autoStart := byte(c.autoStart.Load())
-		currentState := c.GetState()
-		if currentState == StateRunning || currentState == StateStartAt {
-			// Continuous / gapless playback: output is already actively consuming
-		} else if autoStart == '1' || autoStart == '3' {
-			c.setState(StateRunning)
-			_ = c.SendStat([4]byte{'S', 'T', 'M', 's'})
-		} else {
-			// autostart == '0' or '2': wait for LMS 'strm u' synchronized unpause
-			c.setState(StateWaitingStart)
-		}
-	}
-	return true
-}
-
-func (c *Client) decodePCMStream(ctx context.Context, r io.Reader, thresholdBytes int) {
-	buf := make([]byte, 4096)
-	sentSTMl := false
-
-	for c.running.Load() && ctx.Err() == nil {
-		n, err := r.Read(buf)
-		if n > 0 {
-			if _, werr := c.ringBuffer.Write(buf[:n]); werr != nil {
-				break
-			}
-			if !sentSTMl && c.ringBuffer.Available() >= thresholdBytes {
-				sentSTMl = true
-				_ = c.SendStat([4]byte{'S', 'T', 'M', 'l'})
-				autoStart := byte(c.autoStart.Load())
-				currentState := c.GetState()
-				if currentState == StateRunning || currentState == StateStartAt {
-					// Continuous / gapless playback
-				} else if autoStart == '1' || autoStart == '3' {
-					c.setState(StateRunning)
-					_ = c.SendStat([4]byte{'S', 'T', 'M', 's'})
-				} else {
-					c.setState(StateWaitingStart)
-				}
-			}
-		}
-		if err != nil {
-			break
-		}
-	}
-}
-
-// audioConsumerLoop consumes PCM samples from ringBuffer in real-time pace, updates
-// framesPlayed, computes Left/Right dB levels, and writes to AtomicLevels for the VU meter.
-func (c *Client) audioConsumerLoop() {
-	defer c.wg.Done()
-
-	const tickInterval = 10 * time.Millisecond
-	ticker := time.NewTicker(tickInterval)
-	defer ticker.Stop()
-
-	lastTime := time.Now()
-	chunkBuf := make([]byte, 65536)
-	var frameAccumulator float64
-
-	for {
-		select {
-		case <-c.ctx.Done():
-			return
-		case now := <-ticker.C:
-			if !c.running.Load() {
-				return
-			}
-
-			dt := now.Sub(lastTime)
-			lastTime = now
-
-			state := c.GetState()
-			sr := c.GetSampleRate()
-			if sr == 0 {
-				sr = 44100
-			}
-
-			switch state {
-			case StateStartAt:
-				nowMs := getMonotonicMs()
-				startAt := c.startAt.Load()
-				if nowMs >= startAt || (startAt > nowMs && (startAt-nowMs) > 10000) {
-					c.setState(StateRunning)
-					_ = c.SendStat([4]byte{'S', 'T', 'M', 's'})
-				}
-				c.levels.Set(-100, -100, false)
-				frameAccumulator = 0
-
-			case StateRunning:
-				pauseFrames := c.pauseFrames.Load()
-				if pauseFrames > 0 {
-					c.levels.Set(-100, -100, false)
-					framesDeducted := int64(float64(sr) * dt.Seconds())
-					if framesDeducted >= pauseFrames {
-						c.pauseFrames.Store(0)
-					} else {
-						c.pauseFrames.Add(-framesDeducted)
-					}
-					break
-				}
-
-				frameAccumulator += float64(sr) * dt.Seconds()
-				framesToConsume := int(frameAccumulator)
-				if framesToConsume <= 0 {
-					break
-				}
-				frameAccumulator -= float64(framesToConsume)
-
-				bytesToConsume := framesToConsume * 4 // 16-bit stereo
-
-				if len(chunkBuf) < bytesToConsume {
-					chunkBuf = make([]byte, bytesToConsume)
-				}
-
-				n, _ := c.ringBuffer.Read(chunkBuf[:bytesToConsume])
-				if n > 0 {
-					c.framesPlayed.Add(uint64(n / 4))
-					leftDB, rightDB := dsp.CalculateLevels(chunkBuf[:n])
-					c.levels.Set(leftDB, rightDB, true)
-				} else {
-					// Buffer underrun
-					if c.decoderDone.Load() {
-						slog.Info("SlimProto stream playback finished (underrun at EOF)")
-						c.setState(StateStopped)
-						_ = c.SendStat([4]byte{'S', 'T', 'M', 'u'}) // Output underrun (STMu)
-					}
-					c.levels.Set(-100, -100, false)
-				}
-
-			case StateStopped, StateBuffering, StateWaitingStart, StatePaused:
-				c.levels.Set(-100, -100, false)
-				frameAccumulator = 0
-			}
-		}
 	}
 }
