@@ -23,6 +23,7 @@ https://github.com/jtl5770/goleds/assets/24967370/34057911-faef-4403-bd07-7b479b
 
 *   **Sensor-Triggered Animations**: Responsive lighting that reacts to IR motion.
 *   **Layered Effects**: Multiple animation "Producers" can run simultaneously, with their outputs combined (max-value blending).
+*   **Audio VU Visualizer**: Pure Go LMS / Squeezebox SlimProto audio visualizer with multi-zone peak hold, linear decay, and network auto-sync.
 *   **Cross-Platform UI**: Modern management app (Web, Android, Linux) built with Flutter.
 *   **Hardware Abstraction**: Runs on Raspberry Pi (SPI/GPIO) or in a terminal simulator (TUI).
 *   **Dynamic Reloading**: Configuration changes apply instantly via the Web UI or by file watcher.
@@ -113,7 +114,7 @@ with a unified experience across all devices.
 *   **CylonProducer**: A classic moving "eye" effect.
 *   **NightlightProducer**: Sunset/sunrise aware ambient glow based on your Lat/Long.
 *   **ClockProducer**: A minimalist clock using LED positions for hours and minutes.
-*   **AudioLEDProducer**: A real-time stereo VU meter (requires PortAudio).
+*   **AudioLEDProducer**: Real-time stereo audio VU meter visualizer with dynamic peak hold and linear decay. Connects natively to LMS (Lyrion / Logitech Media Server) via Squeezebox SlimProto and JSON-RPC with zero CGO dependencies. Features automatic active player discovery, auto-synchronization, and dynamic zone peak colors.
 
 https://github.com/jtl5770/goleds/assets/24967370/865c70b6-cc20-4b60-899c-8e9182680e21
 
