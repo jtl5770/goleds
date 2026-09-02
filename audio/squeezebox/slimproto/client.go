@@ -88,7 +88,7 @@ type Client struct {
 	startAt     atomic.Uint32 // target jiffies timestamp for unpause ('u')
 	autoStart   atomic.Uint32 // autostart mode from strm command ('0'..'3')
 	thresholdKB atomic.Uint32 // buffer threshold in KB
-	pauseFrames atomic.Uint64 // sync micro-pause frames requested by LMS
+	pauseFrames atomic.Int64  // sync micro-pause frames requested by LMS
 
 	ringBuffer *AudioRingBuffer
 
@@ -97,6 +97,7 @@ type Client struct {
 	sampleRate    atomic.Uint32
 	channels      atomic.Uint32
 
+	pcmFrameBuf []byte
 	decoderDone atomic.Bool
 }
 
@@ -474,7 +475,7 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		if intervalMs > 0 {
 			pauseFrames := (uint64(intervalMs) * uint64(c.GetSampleRate())) / 1000
 			slog.Info("SlimProto strm: SYNC PAUSE (delay frames)", "intervalMs", intervalMs, "pauseFrames", pauseFrames)
-			c.pauseFrames.Store(pauseFrames)
+			c.pauseFrames.Store(int64(pauseFrames))
 		} else {
 			slog.Info("SlimProto strm: PAUSE stream")
 			c.setState(StatePaused)
@@ -736,7 +737,11 @@ func (c *Client) processFLACFrame(f *frame.Frame, thresholdBytes int, sentSTMl *
 
 	// Convert FLAC subframe samples to 16-bit stereo LittleEndian PCM bytes
 	neededBytes := nSamples * 4 // 2 channels * 2 bytes
-	pcmBuf := make([]byte, neededBytes)
+	if cap(c.pcmFrameBuf) < neededBytes {
+		c.pcmFrameBuf = make([]byte, neededBytes)
+	}
+	pcmBuf := c.pcmFrameBuf[:neededBytes]
+
 	idx := 0
 	for i := 0; i < nSamples; i++ {
 		for ch := 0; ch < 2; ch++ {
@@ -857,11 +862,11 @@ func (c *Client) audioConsumerLoop() {
 				pauseFrames := c.pauseFrames.Load()
 				if pauseFrames > 0 {
 					c.levels.Set(-100, -100, false)
-					framesDeducted := uint64(float64(sr) * dt.Seconds())
+					framesDeducted := int64(float64(sr) * dt.Seconds())
 					if framesDeducted >= pauseFrames {
 						c.pauseFrames.Store(0)
 					} else {
-						c.pauseFrames.Add(^uint64(framesDeducted - 1))
+						c.pauseFrames.Add(-framesDeducted)
 					}
 					break
 				}

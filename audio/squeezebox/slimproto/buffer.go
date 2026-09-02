@@ -7,8 +7,7 @@ import (
 )
 
 var (
-	ErrBufferClosed  = errors.New("audio buffer closed")
-	ErrBufferFlushed = errors.New("audio buffer flushed")
+	ErrBufferClosed = errors.New("audio buffer closed")
 )
 
 // AudioRingBuffer provides a thread-safe circular byte buffer with backpressure.
@@ -21,10 +20,9 @@ type AudioRingBuffer struct {
 	writePos int
 	count    int
 
-	mu      sync.Mutex
-	cond    *sync.Cond
-	closed  bool
-	flushed bool
+	mu     sync.Mutex
+	cond   *sync.Cond
+	closed bool
 }
 
 // NewAudioRingBuffer creates an initialized AudioRingBuffer with the given capacity in bytes.
@@ -52,17 +50,11 @@ func (rb *AudioRingBuffer) Write(p []byte) (int, error) {
 			if rb.closed {
 				return totalWritten, ErrBufferClosed
 			}
-			if rb.flushed {
-				return totalWritten, ErrBufferFlushed
-			}
 			rb.cond.Wait()
 		}
 
 		if rb.closed {
 			return totalWritten, ErrBufferClosed
-		}
-		if rb.flushed {
-			return totalWritten, ErrBufferFlushed
 		}
 
 		availableSpace := rb.size - rb.count
@@ -144,11 +136,7 @@ func (rb *AudioRingBuffer) Flush() {
 	rb.readPos = 0
 	rb.writePos = 0
 	rb.count = 0
-	rb.flushed = true
 	rb.cond.Broadcast()
-
-	// Reset flushed flag so subsequent writes can proceed cleanly
-	rb.flushed = false
 }
 
 // Close marks the buffer as closed and wakes all waiting goroutines.

@@ -88,22 +88,23 @@ func EncodeHelo(cfg HeloConfig) []byte {
 // EncodeSetdName creates a SETD packet for setting player display/name (id=0).
 // Squeezelite sends id=0 followed by null-terminated player name string.
 func EncodeSetdName(name string) []byte {
-	payload := append([]byte{0x00}, []byte(name)...)
-	payload = append(payload, 0x00) // null-terminated
-	buf := make([]byte, 8+len(payload))
+	payloadLen := 1 + len(name) + 1
+	buf := make([]byte, 8+payloadLen)
 	copy(buf[0:4], OpSetd[:])
-	binary.BigEndian.PutUint32(buf[4:8], uint32(len(payload)))
-	copy(buf[8:], payload)
+	binary.BigEndian.PutUint32(buf[4:8], uint32(payloadLen))
+	buf[8] = 0x00
+	copy(buf[9:9+len(name)], name)
+	buf[8+payloadLen-1] = 0x00
 	return buf
 }
 
 // EncodeResp creates a standard RESP packet relaying HTTP response headers to LMS.
 func EncodeResp(header string) []byte {
-	payload := []byte(header)
-	buf := make([]byte, 8+len(payload))
+	payloadLen := len(header)
+	buf := make([]byte, 8+payloadLen)
 	copy(buf[0:4], OpResp[:])
-	binary.BigEndian.PutUint32(buf[4:8], uint32(len(payload)))
-	copy(buf[8:], payload)
+	binary.BigEndian.PutUint32(buf[4:8], uint32(payloadLen))
+	copy(buf[8:], header)
 	return buf
 }
 
