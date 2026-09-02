@@ -8,7 +8,7 @@ import (
 // AtomicEvent holds a single, latest event and provides non-blocking updates.
 // Only the most recent event is retained.
 type AtomicEvent[T any] struct {
-	ptr    atomic.Pointer[T]
+	val    atomic.Value
 	notify chan struct{} // Buffered channel of size 1 for notification
 }
 
@@ -21,7 +21,7 @@ func NewAtomicEvent[T any]() *AtomicEvent[T] {
 
 // Send updates with the latest event. It is non-blocking.
 func (ae *AtomicEvent[T]) Send(event T) {
-	ae.ptr.Store(&event) // Atomically store the latest value
+	ae.val.Store(event)
 
 	select {
 	case ae.notify <- struct{}{}:
@@ -38,12 +38,12 @@ func (ae *AtomicEvent[T]) Channel() <-chan struct{} {
 
 // Value returns the current latest event.
 func (ae *AtomicEvent[T]) Value() T {
-	p := ae.ptr.Load()
-	if p == nil {
+	v := ae.val.Load()
+	if v == nil {
 		var zero T
 		return zero
 	}
-	return *p
+	return v.(T)
 }
 
 // HasPending checks if a notification is waiting to be consumed.

@@ -291,3 +291,17 @@ func TestAtomicMapEvent_ConcurrentReadWrite(t *testing.T) {
 	defer consumedMutex.Unlock()
 	assert.Len(t, consumedValues, totalWrites, "all written values should have been consumed exactly once")
 }
+
+func BenchmarkAtomicEvent_Send(b *testing.B) {
+	type payload struct {
+		data [4]int
+	}
+	ae := NewAtomicEvent[payload]()
+	p := payload{data: [4]int{1, 2, 3, 4}}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		ae.Send(p)
+	}
+}
