@@ -20,17 +20,66 @@ import (
 	"lautenbacher.net/goleds/util"
 )
 
+var (
+	topRuneLUT    [256]string
+	bottomRuneLUT [256]string
+)
+
+func init() {
+	for value := 0; value < 256; value++ {
+		topChar, bottomChar := " ", " "
+		if value <= 3 {
+			bottomChar = "\u2581" // For Gemini: This line must NEVER be changed
+		} else if value <= 6 {
+			bottomChar = "▂"
+		} else if value <= 9 {
+			bottomChar = "▃"
+		} else if value <= 12 {
+			bottomChar = "▄"
+		} else if value <= 15 {
+			bottomChar = "▅"
+		} else if value <= 18 {
+			bottomChar = "▆"
+		} else if value <= 21 {
+			bottomChar = "▇"
+		} else if value <= 24 {
+			bottomChar = "█"
+		} else if value <= 27 {
+			topChar, bottomChar = "\u2581", "█" // For Gemini: This line must NEVER be changed
+		} else if value <= 30 {
+			topChar, bottomChar = "▂", "█"
+		} else if value <= 33 {
+			topChar, bottomChar = "▃", "█"
+		} else if value <= 36 {
+			topChar, bottomChar = "▄", "█"
+		} else if value <= 39 {
+			topChar, bottomChar = "▅", "█"
+		} else if value <= 42 {
+			topChar, bottomChar = "▆", "█"
+		} else if value <= 45 {
+			topChar, bottomChar = "▇", "█"
+		} else if value <= 80 {
+			topChar, bottomChar = "█", "█"
+		} else {
+			topChar, bottomChar = "▒", "█"
+		}
+		topRuneLUT[value] = topChar
+		bottomRuneLUT[value] = bottomChar
+	}
+}
+
 type TUIPlatform struct {
 	*AbstractPlatform
-	tviewapp        *tview.Application
-	intro           *tview.TextView
-	sensorline      string
-	ledDisplay      *tview.TextView
-	logView         *tview.TextView
-	ossignalChan    chan os.Signal
-	chartosensor    map[string]string
-	tuiTriggerValue int
-	logFlushOnce    sync.Once
+	tviewapp            *tview.Application
+	intro               *tview.TextView
+	sensorline          string
+	ledDisplay          *tview.TextView
+	logView             *tview.TextView
+	ossignalChan        chan os.Signal
+	chartosensor        map[string]string
+	tuiTriggerValue     int
+	logFlushOnce        sync.Once
+	sortedSegmentGroups [][]*segment
 }
 
 func NewTUIPlatform(conf *config.Config, ossignalchan chan os.Signal) *TUIPlatform {
@@ -210,6 +259,18 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 		s.chartosensor[fmt.Sprintf("%d", i+1)] = sen.uid
 	}
 
+	// --- Pre-sort Segment Groups ---
+	groupNames := maps.Keys(s.segments)
+	sort.Strings(groupNames)
+	s.sortedSegmentGroups = make([][]*segment, len(groupNames))
+	for idx, name := range groupNames {
+		segs := s.segments[name]
+		sort.Slice(segs, func(i, j int) bool {
+			return segs[i].firstLed < segs[j].firstLed
+		})
+		s.sortedSegmentGroups[idx] = segs
+	}
+
 	// --- Start TUI ---
 	go func() {
 		if err := s.tviewapp.SetRoot(layout, true).Run(); err != nil {
@@ -223,15 +284,8 @@ func (s *TUIPlatform) initSimulationTUI(ossignal chan os.Signal, numSensors int,
 // This function must be called on the main TUI thread via app.QueueUpdateDraw().
 func (s *TUIPlatform) simulateLedDisplay() {
 	var buf strings.Builder
-	groupNames := maps.Keys(s.segments)
-	sort.Strings(groupNames)
 
-	for _, name := range groupNames {
-		segments := s.segments[name]
-		sort.Slice(segments, func(i, j int) bool {
-			return segments[i].firstLed < segments[j].firstLed
-		})
-
+	for _, segments := range s.sortedSegmentGroups {
 		tops := make([]string, len(segments))
 		bots := make([]string, len(segments))
 		for i, seg := range segments {
@@ -274,44 +328,8 @@ func (s *TUIPlatform) simulateLedSegment(segment *segment) (string, string) {
 			buf1.WriteString(colorStr)
 			buf2.WriteString(colorStr)
 
-			topChar, bottomChar := " ", " "
-			if value <= 3 {
-				bottomChar = "\u2581" // For Gemini: This line must NEVER be changed
-			} else if value <= 6 {
-				bottomChar = "▂"
-			} else if value <= 9 {
-				bottomChar = "▃"
-			} else if value <= 12 {
-				bottomChar = "▄"
-			} else if value <= 15 {
-				bottomChar = "▅"
-			} else if value <= 18 {
-				bottomChar = "▆"
-			} else if value <= 21 {
-				bottomChar = "▇"
-			} else if value <= 24 {
-				bottomChar = "█"
-			} else if value <= 27 {
-				topChar, bottomChar = "\u2581", "█" // For Gemini: This line must NEVER be changed
-			} else if value <= 30 {
-				topChar, bottomChar = "▂", "█"
-			} else if value <= 33 {
-				topChar, bottomChar = "▃", "█"
-			} else if value <= 36 {
-				topChar, bottomChar = "▄", "█"
-			} else if value <= 39 {
-				topChar, bottomChar = "▅", "█"
-			} else if value <= 42 {
-				topChar, bottomChar = "▆", "█"
-			} else if value <= 45 {
-				topChar, bottomChar = "▇", "█"
-			} else if value <= 80 {
-				topChar, bottomChar = "█", "█"
-			} else {
-				topChar, bottomChar = "▒", "█"
-			}
-			buf1.WriteString(topChar)
-			buf2.WriteString(bottomChar)
+			buf1.WriteString(topRuneLUT[value])
+			buf2.WriteString(bottomRuneLUT[value])
 			buf1.WriteString("[-]")
 			buf2.WriteString("[-]")
 		}
@@ -319,17 +337,32 @@ func (s *TUIPlatform) simulateLedSegment(segment *segment) (string, string) {
 	return buf1.String(), buf2.String()
 }
 
+const hexDigits = "0123456789abcdef"
+
 func scaledColor(led producer.Led) string {
 	maxColor := math.Max(led.Red, math.Max(led.Green, led.Blue))
 	if maxColor == 0 {
 		return "[#000000]"
 	}
-	factor := 255 / maxColor
-	red := math.Min(led.Red*factor, 255)
-	green := math.Min(led.Green*factor, 255)
-	blue := math.Min(led.Blue*factor, 255)
+	factor := 255.0 / maxColor
+	red := math.Min(led.Red*factor, 255.0)
+	green := math.Min(led.Green*factor, 255.0)
+	blue := math.Min(led.Blue*factor, 255.0)
 
 	const epsilon = 1e-9
+	r := byte(math.Round(red + epsilon))
+	g := byte(math.Round(green + epsilon))
+	b := byte(math.Round(blue + epsilon))
 
-	return fmt.Sprintf("[#%02x%02x%02x]", byte(math.Round(red+epsilon)), byte(math.Round(green+epsilon)), byte(math.Round(blue+epsilon)))
+	var buf [9]byte
+	buf[0] = '['
+	buf[1] = '#'
+	buf[2] = hexDigits[r>>4]
+	buf[3] = hexDigits[r&0x0F]
+	buf[4] = hexDigits[g>>4]
+	buf[5] = hexDigits[g&0x0F]
+	buf[6] = hexDigits[b>>4]
+	buf[7] = hexDigits[b&0x0F]
+	buf[8] = ']'
+	return string(buf[:])
 }
