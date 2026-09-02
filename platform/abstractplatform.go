@@ -167,7 +167,10 @@ func (s *sensor) smoothedValue(value int) int {
 	}
 	s.sum += value - s.values[s.index]
 	s.values[s.index] = value
-	s.index = (s.index + 1) % n
+	s.index++
+	if s.index == n {
+		s.index = 0
+	}
 	return (s.sum + n/2) / n
 }
 

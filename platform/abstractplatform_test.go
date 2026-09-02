@@ -80,3 +80,15 @@ func TestSensor_thresholdForRed(t *testing.T) {
 		t.Errorf("Expected ~248 for red 11, got %d", th11)
 	}
 }
+
+func BenchmarkSensor_SmoothedValue(b *testing.B) {
+	s := &sensor{
+		values: make([]int, 16),
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_ = s.smoothedValue(i & 0x3FF)
+	}
+}
