@@ -14,17 +14,6 @@ func TestLed_IsEmpty(t *testing.T) {
 	assert.False(t, led.IsEmpty(), "IsEmpty should be false for a non-zero Led")
 }
 
-func TestLed_Max(t *testing.T) {
-	led1 := Led{Red: 10, Green: 20, Blue: 30}
-	led2 := Led{Red: 5, Green: 25, Blue: 15}
-
-	maxLed := led1.Max(led2)
-
-	assert.Equal(t, float64(10), maxLed.Red)
-	assert.Equal(t, float64(25), maxLed.Green)
-	assert.Equal(t, float64(30), maxLed.Blue)
-}
-
 func TestCombineLeds(t *testing.T) {
 	ledsTotal := 5
 	combinedLeds := make([]Led, ledsTotal)
@@ -56,4 +45,25 @@ func TestCombineLeds(t *testing.T) {
 	assert.True(t, combinedLeds[2].IsEmpty())
 	assert.True(t, combinedLeds[3].IsEmpty())
 	assert.True(t, combinedLeds[4].IsEmpty())
+}
+
+func BenchmarkCombineLeds(b *testing.B) {
+	const ledsTotal = 300
+	target := make([]Led, ledsTotal)
+	ledRanges := map[string][]Led{
+		"night": make([]Led, ledsTotal),
+		"audio": make([]Led, ledsTotal),
+		"blob":  make([]Led, ledsTotal),
+	}
+	for i := 0; i < ledsTotal; i++ {
+		ledRanges["night"][i] = Led{Red: 10, Green: 5, Blue: 2}
+		ledRanges["audio"][i] = Led{Red: float64(i % 100), Green: float64((i * 2) % 100), Blue: 10}
+		ledRanges["blob"][i] = Led{Red: 0, Green: float64(i % 50), Blue: float64(i % 200)}
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		CombineLeds(ledRanges, target)
+	}
 }

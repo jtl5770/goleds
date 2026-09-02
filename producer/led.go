@@ -11,27 +11,23 @@ func (s *Led) IsEmpty() bool {
 	return s.Red == 0 && s.Green == 0 && s.Blue == 0
 }
 
-// Return a Led with per component the max value of the caller and the
-// Led input parameter
-func (s *Led) Max(in Led) Led {
-	if s.Red > in.Red {
-		in.Red = s.Red
-	}
-	if s.Green > in.Green {
-		in.Green = s.Green
-	}
-	if s.Blue > in.Blue {
-		in.Blue = s.Blue
-	}
-	return in
-}
-
 func CombineLeds(allLedRanges map[string][]Led, target []Led) {
 	clear(target)
 
 	for _, currleds := range allLedRanges {
-		for j, led := range currleds {
-			target[j] = led.Max(target[j])
+		n := min(len(currleds), len(target))
+		for j := 0; j < n; j++ {
+			led := currleds[j]
+			t := &target[j]
+			if led.Red > t.Red {
+				t.Red = led.Red
+			}
+			if led.Green > t.Green {
+				t.Green = led.Green
+			}
+			if led.Blue > t.Blue {
+				t.Blue = led.Blue
+			}
 		}
 	}
 }
