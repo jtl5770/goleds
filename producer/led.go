@@ -1,5 +1,7 @@
 package producer
 
+import "math"
+
 type Led struct {
 	Red   float64
 	Green float64
@@ -11,10 +13,30 @@ func (s *Led) IsEmpty() bool {
 	return s.Red == 0 && s.Green == 0 && s.Blue == 0
 }
 
-func CombineLeds(allLedRanges map[string][]Led, target []Led) {
+func CombineLeds(allLedRanges map[string][]Led, producers map[string]LedProducer, target []Led) {
 	clear(target)
 
-	for _, currleds := range allLedRanges {
+	maxPrio := math.MinInt32
+	hasActive := false
+	for _, prod := range producers {
+		if prod.IsActive() {
+			hasActive = true
+			if prio := prod.GetPriority(); prio > maxPrio {
+				maxPrio = prio
+			}
+		}
+	}
+
+	if !hasActive {
+		return
+	}
+
+	for key, currleds := range allLedRanges {
+		if prod, ok := producers[key]; ok {
+			if !prod.IsActive() || prod.GetPriority() < maxPrio {
+				continue
+			}
+		}
 		n := min(len(currleds), len(target))
 		for j := 0; j < n; j++ {
 			led := currleds[j]

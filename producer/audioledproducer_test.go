@@ -13,21 +13,21 @@ type mockAudioProvider struct {
 	mu      sync.Mutex
 	leftDB  float64
 	rightDB float64
-	active  bool
+	playing bool
 }
 
-func (m *mockAudioProvider) GetLevels() (leftDB, rightDB float64, active bool) {
+func (m *mockAudioProvider) GetLevels() (leftDB, rightDB float64, playing bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return m.leftDB, m.rightDB, m.active
+	return m.leftDB, m.rightDB, m.playing
 }
 
-func (m *mockAudioProvider) SetLevels(leftDB, rightDB float64, active bool) {
+func (m *mockAudioProvider) SetLevels(leftDB, rightDB float64, playing bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.leftDB = leftDB
 	m.rightDB = rightDB
-	m.active = active
+	m.playing = playing
 }
 
 func (m *mockAudioProvider) Start() error { return nil }
@@ -38,7 +38,7 @@ func TestAudioLEDProducer_LevelsUpdate(t *testing.T) {
 	mock := &mockAudioProvider{
 		leftDB:  -10.0,
 		rightDB: -20.0,
-		active:  true,
+		playing: true,
 	}
 
 	cfg := c.AudioLEDConfig{
@@ -55,9 +55,16 @@ func TestAudioLEDProducer_LevelsUpdate(t *testing.T) {
 	}
 
 	p := NewAudioLEDProducer("test_audio_producer", ledsChanged, 20, cfg, mock)
+	if p.GetPriority() != 10 {
+		t.Errorf("Expected AudioLEDProducer priority to be 10, got %d", p.GetPriority())
+	}
 	p.Start()
 
 	time.Sleep(50 * time.Millisecond)
+
+	if !p.IsActive() {
+		t.Errorf("Expected AudioLEDProducer to be active when playing audio")
+	}
 
 	buf := make([]Led, 20)
 	p.GetLeds(buf)
@@ -86,6 +93,21 @@ func TestAudioLEDProducer_LevelsUpdate(t *testing.T) {
 		t.Errorf("Expected Right segment LEDs to be lit at -20dB")
 	}
 
+	// Now stop audio playback
+	mock.SetLevels(-60, -60, false)
+	time.Sleep(50 * time.Millisecond)
+
+	if p.IsActive() {
+		t.Errorf("Expected AudioLEDProducer to transition to isActive=false when playback stops")
+	}
+
+	p.GetLeds(buf)
+	for i, led := range buf {
+		if !led.IsEmpty() {
+			t.Errorf("Expected LED %d to be clear after playback stops, got %v", i, led)
+		}
+	}
+
 	p.Exit()
 }
 
@@ -94,7 +116,7 @@ func TestAudioLEDProducer_DynamicPeakHoldAndDecay(t *testing.T) {
 	mock := &mockAudioProvider{
 		leftDB:  0.0, // Max volume -> Red zone (index 9)
 		rightDB: -40.0, // Low volume -> Green zone
-		active:  true,
+		playing: true,
 	}
 
 	cfg := c.AudioLEDConfig{

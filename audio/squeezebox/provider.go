@@ -114,7 +114,7 @@ func NewSqueezeboxAudioProvider(cfg Config) (*SqueezeboxAudioProvider, error) {
 }
 
 // GetLevels returns the latest left/right dB levels atomically (0 allocs).
-func (s *SqueezeboxAudioProvider) GetLevels() (leftDB, rightDB float64, active bool) {
+func (s *SqueezeboxAudioProvider) GetLevels() (leftDB, rightDB float64, playing bool) {
 	return s.levels.Get()
 }
 

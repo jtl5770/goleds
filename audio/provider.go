@@ -6,8 +6,8 @@ import (
 
 // AudioProvider provides thread-safe, lock-free audio level measurements.
 type AudioProvider interface {
-	// GetLevels returns the latest left and right dB levels and whether audio is active.
-	GetLevels() (leftDB, rightDB float64, active bool)
+	// GetLevels returns the latest left and right dB levels and whether audio is playing.
+	GetLevels() (leftDB, rightDB float64, playing bool)
 	// Start starts the audio provider background worker.
 	Start() error
 	// Stop stops the audio provider and gracefully cleans up resources.
@@ -18,7 +18,7 @@ type AudioProvider interface {
 type LevelsSnapshot struct {
 	LeftDB  float64
 	RightDB float64
-	Active  bool
+	Playing bool
 }
 
 // AtomicLevels stores instantaneous stereo audio levels using atomic pointer snapshots,
@@ -33,25 +33,25 @@ func NewAtomicLevels() *AtomicLevels {
 	al.snapshot.Store(&LevelsSnapshot{
 		LeftDB:  -100,
 		RightDB: -100,
-		Active:  false,
+		Playing: false,
 	})
 	return al
 }
 
-// Set stores the dB levels and active state in an atomic transaction.
-func (a *AtomicLevels) Set(leftDB, rightDB float64, active bool) {
+// Set stores the dB levels and playing state in an atomic transaction.
+func (a *AtomicLevels) Set(leftDB, rightDB float64, playing bool) {
 	a.snapshot.Store(&LevelsSnapshot{
 		LeftDB:  leftDB,
 		RightDB: rightDB,
-		Active:  active,
+		Playing: playing,
 	})
 }
 
-// Get loads the current dB levels and active state atomically with zero allocations.
-func (a *AtomicLevels) Get() (leftDB, rightDB float64, active bool) {
+// Get loads the current dB levels and playing state atomically with zero allocations.
+func (a *AtomicLevels) Get() (leftDB, rightDB float64, playing bool) {
 	s := a.snapshot.Load()
 	if s == nil {
 		return -100, -100, false
 	}
-	return s.LeftDB, s.RightDB, s.Active
+	return s.LeftDB, s.RightDB, s.Playing
 }

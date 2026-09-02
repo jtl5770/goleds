@@ -423,7 +423,7 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 				prod.GetLeds(allLedRanges[key])
 			}
 			ledsToSend := ledBufferPool.Get().([]p.Led)
-			p.CombineLeds(allLedRanges, ledsToSend)
+			p.CombineLeds(allLedRanges, a.ledproducers, ledsToSend)
 			newLedshash := hashLEDs(ledsToSend)
 			if newLedshash != oldLedsHash {
 				a.platform.SetLeds(ledsToSend)
@@ -438,7 +438,7 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 			// electrical distortions or cross talk so we make sure to
 			// regularly force an update of the Led stripe
 			ledsToSend := ledBufferPool.Get().([]p.Led)
-			p.CombineLeds(allLedRanges, ledsToSend)
+			p.CombineLeds(allLedRanges, a.ledproducers, ledsToSend)
 			a.platform.SetLeds(ledsToSend)
 		case <-a.stopsignal:
 			slog.Info("Ending combineAndupdateDisplay go-routine")

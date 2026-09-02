@@ -28,9 +28,9 @@ func TestSqueezeboxAudioProvider_Init(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	leftDB, rightDB, active := provider.GetLevels()
-	if active {
-		t.Errorf("Expected initial active to be false")
+	leftDB, rightDB, playing := provider.GetLevels()
+	if playing {
+		t.Errorf("Expected initial playing to be false")
 	}
 	if leftDB != -100 || rightDB != -100 {
 		t.Errorf("Expected initial levels to be -100, got %f, %f", leftDB, rightDB)

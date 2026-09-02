@@ -101,6 +101,7 @@ func NewAudioLEDProducer(
 	}
 
 	p.AbstractProducer = NewAbstractProducer(uid, ledsChanged, p.runner, ledsTotal)
+	p.SetPriority(10)
 	return p
 }
 
@@ -132,24 +133,34 @@ func (p *AudioLEDProducer) runner() {
 			}
 			p.lastUpdate = now
 
-			leftDB, rightDB, active := p.provider.GetLevels()
+			leftDB, rightDB, playing := p.provider.GetLevels()
 
 			if tickCount%100 == 1 { // Log periodically
-				slog.Debug("AudioLEDProducer polling levels", "uid", p.GetUID(), "active", active, "leftDB", leftDB, "rightDB", rightDB)
+				slog.Debug("AudioLEDProducer polling levels", "uid", p.GetUID(), "playing", playing, "leftDB", leftDB, "rightDB", rightDB)
 			}
 
-			if !active {
+			if !playing {
 				p.peakLeft = channelPeak{}
 				p.peakRight = channelPeak{}
-				p.ClearLeds()
+				if p.IsActive() {
+					p.SetActive(false)
+					p.ClearLeds()
+				}
 				continue
 			}
 
 			if leftDB <= p.minDB && rightDB <= p.minDB {
 				if !p.peakHoldEnabled || (p.peakLeft.position <= 0 && p.peakRight.position <= 0) {
-					p.ClearLeds()
+					if p.IsActive() {
+						p.SetActive(false)
+						p.ClearLeds()
+					}
 					continue
 				}
+			}
+
+			if !p.IsActive() {
+				p.SetActive(true)
 			}
 
 			p.ledsMutex.Lock()

@@ -163,6 +163,14 @@ func (m *MockLedProducer) GetUID() string {
 	return m.uid
 }
 
+func (m *MockLedProducer) GetPriority() int {
+	return 0
+}
+
+func (m *MockLedProducer) IsActive() bool {
+	return true
+}
+
 func (m *MockLedProducer) getCalls() (int, int, int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

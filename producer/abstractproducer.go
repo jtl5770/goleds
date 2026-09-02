@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	t "time"
 
 	u "lautenbacher.net/goleds/util"
@@ -18,6 +19,8 @@ type AbstractProducer struct {
 	leds         []Led
 	isRunning    bool
 	hasExited    bool
+	priority     atomic.Int32
+	isActive     atomic.Bool
 	ledsMutex    sync.RWMutex
 	updateMutex  sync.RWMutex
 	ledsChanged  *u.AtomicMapEvent[LedProducer]
@@ -38,6 +41,8 @@ func NewAbstractProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer],
 		triggerEvent: u.NewAtomicEvent[*u.Trigger](),
 		endWg:        nil,
 	}
+	inst.priority.Store(0)
+	inst.isActive.Store(true)
 	return &inst
 }
 
@@ -61,14 +66,35 @@ func (s *AbstractProducer) GetUID() string {
 	return s.uid
 }
 
+// GetPriority returns the display priority of the producer.
+func (s *AbstractProducer) GetPriority() int {
+	return int(s.priority.Load())
+}
+
+// SetPriority updates the display priority of the producer.
+func (s *AbstractProducer) SetPriority(priority int) {
+	s.priority.Store(int32(priority))
+}
+
+// IsActive returns whether the producer is actively contributing frame data.
+func (s *AbstractProducer) IsActive() bool {
+	return s.isActive.Load()
+}
+
+// SetActive sets whether the producer is actively contributing frame data.
+func (s *AbstractProducer) SetActive(active bool) {
+	s.isActive.Store(active)
+}
+
 // startLocked is the internal, non-locking version of Start.
 // It MUST be called with updateMutex held.
 func (s *AbstractProducer) startLocked() {
 	s.isRunning = true
+	s.SetActive(true)
 	if s.endWg != nil {
 		s.endWg.Add(1)
 	}
-	go s.runner()
+	go s.runSupervisor()
 }
 
 // Start is the main entry point to begin the producer's execution.
@@ -84,23 +110,24 @@ func (s *AbstractProducer) Start() {
 	}
 }
 
-// runner is the central goroutine for a producer. It calls the concrete
+// runSupervisor is the central goroutine for a producer. It calls the concrete
 // implementation's runfunc and includes logic to handle the race condition
 // where a trigger arrives just as the animation is finishing.
-func (s *AbstractProducer) runner() {
+func (s *AbstractProducer) runSupervisor() {
 	defer func() {
 		s.updateMutex.Lock()
 		defer s.updateMutex.Unlock()
 
 		// After the runfunc completes, we do a final non-destructive check for a trigger.
 		if s.triggerEvent.HasPending() {
-			// A trigger was pending. Relaunch the runner to handle it.
+			// A trigger was pending. Relaunch the supervisor to handle it.
 			// The pending notification remains in the channel for the new runner to consume.
 			slog.Info("Relaunching runner due to late trigger", "uid", s.uid)
-			go s.runner()
+			go s.runSupervisor()
 		} else {
 			// No trigger was pending, it's safe to stop.
 			s.isRunning = false
+			s.SetActive(false)
 			if s.endWg != nil {
 				s.endWg.Done()
 			}
@@ -153,5 +180,6 @@ func (s *AbstractProducer) Exit() {
 	defer s.updateMutex.Unlock()
 	close(s.stopchan)
 	s.isRunning = false
+	s.SetActive(false)
 	s.hasExited = true
 }
