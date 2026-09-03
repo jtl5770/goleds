@@ -229,3 +229,31 @@ func TestGenerateGradientLUT(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkAudioLEDProducer_UpdateLeds(b *testing.B) {
+	green := Led{Red: 0, Green: 255, Blue: 0}
+	yellow := Led{Red: 255, Green: 255, Blue: 0}
+	red := Led{Red: 255, Green: 0, Blue: 0}
+	barLUT, peakLUT := generateGradientLUT(30, green, yellow, red)
+
+	p := &AudioLEDProducer{
+		AbstractProducer: &AbstractProducer{
+			leds: make([]Led, 30),
+		},
+		minDB:           -60,
+		maxDB:           0,
+		peakHoldEnabled: true,
+		peakHoldTime:    250 * time.Millisecond,
+		peakDecayRate:   20.0,
+	}
+
+	now := time.Now()
+	peak := channelPeak{}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		p.updateLeds(-12.5, 0, 29, &peak, barLUT, peakLUT, 0.030, now)
+	}
+}
