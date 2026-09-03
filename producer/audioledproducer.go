@@ -5,7 +5,7 @@ import (
 	"math"
 	"time"
 
-	"lautenbacher.net/goleds/audio"
+	"github.com/jtl5770/go-slimvu"
 	"lautenbacher.net/goleds/config"
 	"lautenbacher.net/goleds/util"
 )
@@ -28,7 +28,7 @@ func brighten(c Led, factor float64) Led {
 // from an AudioProvider and displays the volume on LED segments with peak hold falloff.
 type AudioLEDProducer struct {
 	*AbstractProducer
-	provider      audio.AudioProvider
+	provider      slimvu.AudioProvider
 	startLedLeft  int
 	endLedLeft    int
 	startLedRight int
@@ -58,7 +58,7 @@ func NewAudioLEDProducer(
 	ledsChanged *util.AtomicMapEvent[LedProducer],
 	ledsTotal int,
 	cfg config.AudioLEDConfig,
-	provider audio.AudioProvider,
+	provider slimvu.AudioProvider,
 ) *AudioLEDProducer {
 	p := &AudioLEDProducer{
 		provider:        provider,

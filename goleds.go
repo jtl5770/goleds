@@ -37,7 +37,6 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"lautenbacher.net/goleds/audio"
 	"github.com/jtl5770/go-slimvu"
 	"lautenbacher.net/goleds/config"
 	"lautenbacher.net/goleds/logging"
@@ -67,7 +66,7 @@ type App struct {
 	platform      platform.Platform
 	sensorProdWg  sync.WaitGroup
 	afterProdWg   sync.WaitGroup
-	audioProvider audio.AudioProvider
+	audioProvider slimvu.AudioProvider
 	calibCurves   platform.CalibrationCurves
 }
 
