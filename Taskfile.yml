@@ -39,7 +39,8 @@ tasks:
       - "goleds_web.tar.gz"
     cmds:
       - cd mobile && flutter build web --release --no-wasm-dry-run
-      - rm -rf web/*
+      - rm -rf web
+      - mkdir -p web
       - cp -r mobile/build/web/* web/
       - tar -czf goleds_web.tar.gz web/
       - echo "Web build deployed to ./web and archived to ./goleds_web.tar.gz"
@@ -92,6 +93,6 @@ tasks:
     desc: Clean all artifacts
     cmds:
       - rm -f goleds goleds_commander.apk goleds_web.tar.gz
-      - rm -rf web/* commander_linux/
+      - rm -rf web commander_linux
       - cmd: cd mobile && flutter clean
         ignore_error: true
