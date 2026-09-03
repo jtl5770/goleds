@@ -90,7 +90,7 @@ func NewAudioLEDProducer(
 	p.colors.PeakRed = brighten(p.colors.Red, 1.8)
 
 	if p.peakHoldTime <= 0 {
-		p.peakHoldTime = 60 * time.Millisecond
+		p.peakHoldTime = 250 * time.Millisecond
 	}
 	if p.peakDecayRate <= 0 {
 		p.peakDecayRate = 20.0 // 20 LEDs/sec default decay rate (slower falloff)

@@ -112,7 +112,7 @@ The `config.yml` is the brain of the operation. Key sections:
     *   `MinDB` / `MaxDB`: Decibel range mapping (e.g. `-45.0` dB to `0.0` dB).
     *   `StartLedLeft` / `EndLedLeft` & `StartLedRight` / `EndLedRight`: LED ranges for left and right channels.
     *   `LedGreen`, `LedYellow`, `LedRed`: Multi-zone gradient bar colors.
-    *   `PeakHoldTime`: Duration in milliseconds before peak indicators begin falling (e.g. `60` ms).
+    *   `PeakHoldTime`: Duration in milliseconds before peak indicators begin falling (e.g. `250` ms).
     *   `PeakDecayRate`: Linear falloff speed in LEDs per second (e.g. `20.0` LEDs/sec).
     *   `Dynamic Zone Peak Colors`: Peak indicators automatically calculate brightened colors (1.8×) corresponding to the zone (green, yellow, red) where the peak was set, and retain that color as they decay.
 

@@ -278,7 +278,7 @@ class AudioLEDConfig {
       ledYellow: _parseDoubleList(json['LedYellow']),
       ledRed: _parseDoubleList(json['LedRed']),
       peakHoldEnabled: json['PeakHoldEnabled'] ?? true,
-      peakHoldTimeMs: json['PeakHoldTime'] != null ? _parseDurationToMs(json['PeakHoldTime']) : 60,
+      peakHoldTimeMs: json['PeakHoldTime'] != null ? _parseDurationToMs(json['PeakHoldTime']) : 250,
       peakDecayRate: (json['PeakDecayRate'] ?? 20.0).toDouble(),
       updateFreqMs: _parseDurationToMs(json['UpdateFreq']),
       minDB: (json['MinDB'] ?? -60.0).toDouble(),
