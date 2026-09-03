@@ -206,7 +206,7 @@ AudioLED:
   # Peak hold and falloff indicator settings
   PeakHoldEnabled: true
   PeakHoldTime: 250ms
-  PeakDecayRate: 10.0 # LEDs per second
+  PeakDecayRate: 15.0 # LEDs per second
   # How often to read out levels and update the LED strip
   UpdateFreq: 30ms
   MinDB: -60.0
