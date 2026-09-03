@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -416,5 +417,32 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	receivedLeds := lastLeds[len(lastLeds)-1]
 	if receivedLeds[0].Red != 255 || receivedLeds[0].Green != 0 || receivedLeds[0].Blue != 0 {
 		t.Errorf("Expected LED 0 to be red, got %v", receivedLeds[0])
+	}
+}
+
+func TestWatchConfigFile_Detection(t *testing.T) {
+	tempDir := t.TempDir()
+	cfgFile := filepath.Join(tempDir, "test_watch_config.yml")
+
+	if err := os.WriteFile(cfgFile, []byte("initial content"), 0644); err != nil {
+		t.Fatalf("Failed to write initial file: %v", err)
+	}
+
+	reloadEvent := util.NewAtomicEvent[bool]()
+	go watchConfigFile(cfgFile, reloadEvent)
+
+	// Wait for watcher to register
+	time.Sleep(50 * time.Millisecond)
+
+	// Modify file
+	if err := os.WriteFile(cfgFile, []byte("modified content"), 0644); err != nil {
+		t.Fatalf("Failed to modify file: %v", err)
+	}
+
+	select {
+	case <-reloadEvent.Channel():
+		// Succeeded
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for file reload event")
 	}
 }

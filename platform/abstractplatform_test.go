@@ -2,7 +2,12 @@ package platform
 
 import (
 	"math"
+	"sync"
 	"testing"
+	"time"
+
+	"lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/producer"
 )
 
 func TestSensor_smoothValue(t *testing.T) {
@@ -79,6 +84,72 @@ func TestSensor_thresholdForRed(t *testing.T) {
 	if th11 < 240 || th11 > 260 {
 		t.Errorf("Expected ~248 for red 11, got %d", th11)
 	}
+}
+
+func TestAbstractPlatform_Methods(t *testing.T) {
+	cfg := &config.Config{
+		Hardware: config.HardwareConfig{
+			Display: config.DisplayConfig{
+				LedsTotal:        100,
+				ForceUpdateDelay: 50 * time.Millisecond,
+			},
+		},
+	}
+
+	var mu sync.Mutex
+	var displayedCount int
+	displayFunc := func(leds []producer.Led) {
+		mu.Lock()
+		displayedCount = len(leds)
+		mu.Unlock()
+	}
+
+	ap := newAbstractPlatform(cfg, displayFunc)
+	ap.ledBufferPool = &sync.Pool{
+		New: func() any {
+			return make([]producer.Led, 10)
+		},
+	}
+	ap.sensors["sensor1"] = &sensor{LedIndex: 15}
+
+	if ap.GetLedsTotal() != 100 {
+		t.Errorf("Expected LedsTotal 100, got %d", ap.GetLedsTotal())
+	}
+	if ap.GetForceUpdateDelay() != 50*time.Millisecond {
+		t.Errorf("Expected ForceUpdateDelay 50ms, got %v", ap.GetForceUpdateDelay())
+	}
+
+	indices := ap.GetSensorLedIndices()
+	if indices["sensor1"] != 15 {
+		t.Errorf("Expected sensor1 index 15, got %d", indices["sensor1"])
+	}
+
+	if ap.IsCalibrating() {
+		t.Error("Expected IsCalibrating to be false")
+	}
+
+	// Test displayDriver loop
+	ap.displayWg.Add(1)
+	go ap.displayDriver()
+
+	testLeds := make([]producer.Led, 10)
+	testLeds[0] = producer.Led{Red: 50, Green: 20, Blue: 10}
+	ap.SetLeds(testLeds)
+
+	time.Sleep(20 * time.Millisecond)
+	if ap.getCurrentMaxRed() != 50 {
+		t.Errorf("Expected currentMaxRed to be 50, got %d", ap.getCurrentMaxRed())
+	}
+
+	mu.Lock()
+	count := displayedCount
+	mu.Unlock()
+	if count != 10 {
+		t.Errorf("Expected displayedLeds len 10, got %d", count)
+	}
+
+	ap.displayStopChan <- true
+	ap.displayWg.Wait()
 }
 
 func BenchmarkSensor_SmoothedValue(b *testing.B) {

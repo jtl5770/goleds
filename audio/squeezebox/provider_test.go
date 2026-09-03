@@ -1,7 +1,9 @@
 package squeezebox
 
 import (
+	"net"
 	"testing"
+	"time"
 )
 
 func TestGeneratePlayerMAC(t *testing.T) {
@@ -34,5 +36,49 @@ func TestSqueezeboxAudioProvider_Init(t *testing.T) {
 	}
 	if leftDB != -100 || rightDB != -100 {
 		t.Errorf("Expected initial levels to be -100, got %f, %f", leftDB, rightDB)
+	}
+}
+
+func TestSqueezeboxAudioProvider_StartStopLifecycle(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Failed to listen: %v", err)
+	}
+	defer ln.Close()
+
+	tcpAddr := ln.Addr().(*net.TCPAddr)
+
+	cfg := Config{
+		Server:        "127.0.0.1",
+		SlimProtoPort: tcpAddr.Port,
+		JSONRPCPort:   9000,
+		PlayerMAC:     "00:04:20:ee:11:22",
+		PlayerName:    "Test Lifecycle",
+		AutoSync:      false,
+		PollInterval:  50 * time.Millisecond,
+	}
+
+	provider, err := NewSqueezeboxAudioProvider(cfg)
+	if err != nil {
+		t.Fatalf("Failed to create provider: %v", err)
+	}
+
+	go func() {
+		conn, err := ln.Accept()
+		if err == nil {
+			defer conn.Close()
+			buf := make([]byte, 256)
+			_, _ = conn.Read(buf)
+		}
+	}()
+
+	if err := provider.Start(); err != nil {
+		t.Fatalf("Failed to start provider: %v", err)
+	}
+
+	time.Sleep(20 * time.Millisecond)
+
+	if err := provider.Stop(); err != nil {
+		t.Fatalf("Failed to stop provider: %v", err)
 	}
 }

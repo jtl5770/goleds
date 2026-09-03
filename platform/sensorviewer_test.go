@@ -2,7 +2,12 @@ package platform
 
 import (
 	"math"
+	"os"
+	"strings"
 	"testing"
+	"time"
+
+	"lautenbacher.net/goleds/config"
 )
 
 func TestCalculateStats(t *testing.T) {
@@ -49,4 +54,50 @@ func TestCalculateStats_EvenLength(t *testing.T) {
 	if stats.median != expectedMedian {
 		t.Errorf("Expected median for even length data to be %.2f, got %.2f", expectedMedian, stats.median)
 	}
+}
+
+func TestSensorViewer_NewAndUpdate(t *testing.T) {
+	cfg := config.SensorsConfig{
+		LoopDelay: 10 * time.Millisecond,
+		SensorCfg: map[string]config.SensorCfg{
+			"S2": {LedIndex: 20},
+			"S1": {LedIndex: 10},
+		},
+	}
+
+	sigChan := make(chan os.Signal, 1)
+	sv := NewSensorViewer(cfg, sigChan, false)
+
+	// Verify sensor names are sorted by LedIndex (S1 before S2)
+	if len(sv.sensorNames) != 2 || sv.sensorNames[0] != "S1" || sv.sensorNames[1] != "S2" {
+		t.Errorf("Expected sorted sensor names [S1, S2], got %v", sv.sensorNames)
+	}
+
+	// Update with history
+	sv.mu.Lock()
+	for i := 1; i <= 550; i++ {
+		q := sv.sensorValues["S1"]
+		if q.Len() == maxSensorHistory {
+			q.PopFront()
+		}
+		q.PushBack(i)
+	}
+	if sv.sensorValues["S1"].Len() != maxSensorHistory {
+		t.Errorf("Expected queue capped at %d, got %d", maxSensorHistory, sv.sensorValues["S1"].Len())
+	}
+
+	line1, line2, line3 := sv.prepareDisplayStrings()
+	sv.mu.Unlock()
+
+	if !strings.Contains(line1, "min|mean|max") {
+		t.Errorf("Expected line1 to contain 'min|mean|max', got: %s", line1)
+	}
+	if !strings.Contains(line2, "Standard Deviation") {
+		t.Errorf("Expected line2 to contain 'Standard Deviation', got: %s", line2)
+	}
+	if !strings.Contains(line3, "S1") || !strings.Contains(line3, "S2") {
+		t.Errorf("Expected line3 to contain sensor names, got: %s", line3)
+	}
+
+	sv.Stop()
 }
