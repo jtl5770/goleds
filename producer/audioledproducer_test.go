@@ -179,3 +179,53 @@ func TestAudioLEDProducer_DynamicPeakHoldAndDecay(t *testing.T) {
 
 	p.Exit()
 }
+
+func TestGenerateGradientLUT(t *testing.T) {
+	green := Led{Red: 0, Green: 255, Blue: 0}
+	yellow := Led{Red: 255, Green: 255, Blue: 0}
+	red := Led{Red: 255, Green: 0, Blue: 0}
+
+	// Test 0 length
+	b0, p0 := generateGradientLUT(0, green, yellow, red)
+	if len(b0) != 0 || len(p0) != 0 {
+		t.Errorf("Expected empty LUTs for length 0")
+	}
+
+	// Test 1 length
+	b1, p1 := generateGradientLUT(1, green, yellow, red)
+	if len(b1) != 1 || len(p1) != 1 {
+		t.Fatalf("Expected LUT length 1, got %d", len(b1))
+	}
+	if b1[0] != green {
+		t.Errorf("Expected single LED to be green %v, got %v", green, b1[0])
+	}
+
+	// Test 20 LEDs
+	b20, p20 := generateGradientLUT(20, green, yellow, red)
+	if len(b20) != 20 || len(p20) != 20 {
+		t.Fatalf("Expected LUT length 20, got %d", len(b20))
+	}
+
+	// Index 0 should be pure green
+	if b20[0] != green {
+		t.Errorf("Expected index 0 to be green, got %v", b20[0])
+	}
+
+	// Index 19 should be pure red
+	if b20[19] != red {
+		t.Errorf("Expected index 19 to be red, got %v", b20[19])
+	}
+
+	// Mid index (around 60% = index 12) should have both red and green
+	if b20[12].Red == 0 || b20[12].Green == 0 {
+		t.Errorf("Expected index 12 to be transitional gradient, got %v", b20[12])
+	}
+
+	// Peak LUT should be brightened version of bar LUT
+	for i := range b20 {
+		expectedPeak := brighten(b20[i], 1.8)
+		if p20[i] != expectedPeak {
+			t.Errorf("Peak LUT mismatch at index %d: expected %v, got %v", i, expectedPeak, p20[i])
+		}
+	}
+}

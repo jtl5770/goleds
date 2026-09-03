@@ -24,23 +24,73 @@ func brighten(c Led, factor float64) Led {
 	}
 }
 
+// generateGradientLUT precomputes the bar and peak LED color lookup tables
+// for a segment of given length using anchor points centered at 0.60 and 0.85.
+func generateGradientLUT(length int, green, yellow, red Led) (barLUT, peakLUT []Led) {
+	if length <= 0 {
+		return nil, nil
+	}
+	barLUT = make([]Led, length)
+	peakLUT = make([]Led, length)
+
+	for i := 0; i < length; i++ {
+		var t float64
+		if length > 1 {
+			t = float64(i) / float64(length-1)
+		} else {
+			t = 0
+		}
+
+		var r, g, b float64
+		// Anchor transitions centered at 0.60 and 0.85:
+		// 0.00 - 0.45: Solid green
+		// 0.45 - 0.75: Green -> Yellow gradient
+		// 0.75 - 0.95: Yellow -> Red gradient
+		// 0.95 - 1.00: Solid red
+		if t < 0.45 {
+			r = green.Red
+			g = green.Green
+			b = green.Blue
+		} else if t < 0.75 {
+			f := (t - 0.45) / (0.75 - 0.45)
+			r = green.Red + f*(yellow.Red-green.Red)
+			g = green.Green + f*(yellow.Green-green.Green)
+			b = green.Blue + f*(yellow.Blue-green.Blue)
+		} else if t < 0.95 {
+			f := (t - 0.75) / (0.95 - 0.75)
+			r = yellow.Red + f*(red.Red-yellow.Red)
+			g = yellow.Green + f*(red.Green-yellow.Green)
+			b = yellow.Blue + f*(red.Blue-yellow.Blue)
+		} else {
+			r = red.Red
+			g = red.Green
+			b = red.Blue
+		}
+
+		led := Led{
+			Red:   min(math.Round(r), 255),
+			Green: min(math.Round(g), 255),
+			Blue:  min(math.Round(b), 255),
+		}
+		barLUT[i] = led
+		peakLUT[i] = brighten(led, 1.8)
+	}
+	return barLUT, peakLUT
+}
+
 // AudioLEDProducer implements a VU meter that reads atomic audio levels
 // from an AudioProvider and displays the volume on LED segments with peak hold falloff.
 type AudioLEDProducer struct {
 	*AbstractProducer
-	provider      slimvu.AudioProvider
-	startLedLeft  int
-	endLedLeft    int
-	startLedRight int
-	endLedRight   int
-	colors        struct {
-		Green      Led
-		Yellow     Led
-		Red        Led
-		PeakGreen  Led
-		PeakYellow Led
-		PeakRed    Led
-	}
+	provider        slimvu.AudioProvider
+	startLedLeft    int
+	endLedLeft      int
+	startLedRight   int
+	endLedRight     int
+	leftBarLUT      []Led
+	leftPeakLUT     []Led
+	rightBarLUT     []Led
+	rightPeakLUT    []Led
 	peakHoldEnabled bool
 	peakHoldTime    time.Duration
 	peakDecayRate   float64 // LEDs per second
@@ -74,26 +124,28 @@ func NewAudioLEDProducer(
 		peakDecayRate:   cfg.PeakDecayRate,
 	}
 
+	var colorGreen, colorYellow, colorRed Led
 	if len(cfg.LedGreen) >= 3 {
-		p.colors.Green = Led{Red: cfg.LedGreen[0], Green: cfg.LedGreen[1], Blue: cfg.LedGreen[2]}
+		colorGreen = Led{Red: cfg.LedGreen[0], Green: cfg.LedGreen[1], Blue: cfg.LedGreen[2]}
 	}
 	if len(cfg.LedYellow) >= 3 {
-		p.colors.Yellow = Led{Red: cfg.LedYellow[0], Green: cfg.LedYellow[1], Blue: cfg.LedYellow[2]}
+		colorYellow = Led{Red: cfg.LedYellow[0], Green: cfg.LedYellow[1], Blue: cfg.LedYellow[2]}
 	}
 	if len(cfg.LedRed) >= 3 {
-		p.colors.Red = Led{Red: cfg.LedRed[0], Green: cfg.LedRed[1], Blue: cfg.LedRed[2]}
+		colorRed = Led{Red: cfg.LedRed[0], Green: cfg.LedRed[1], Blue: cfg.LedRed[2]}
 	}
 
-	// Precompute brightened peak colors for each zone
-	p.colors.PeakGreen = brighten(p.colors.Green, 1.8)
-	p.colors.PeakYellow = brighten(p.colors.Yellow, 1.8)
-	p.colors.PeakRed = brighten(p.colors.Red, 1.8)
+	leftLen := max(p.startLedLeft, p.endLedLeft) - min(p.startLedLeft, p.endLedLeft) + 1
+	rightLen := max(p.startLedRight, p.endLedRight) - min(p.startLedRight, p.endLedRight) + 1
+
+	p.leftBarLUT, p.leftPeakLUT = generateGradientLUT(leftLen, colorGreen, colorYellow, colorRed)
+	p.rightBarLUT, p.rightPeakLUT = generateGradientLUT(rightLen, colorGreen, colorYellow, colorRed)
 
 	if p.peakHoldTime <= 0 {
 		p.peakHoldTime = 250 * time.Millisecond
 	}
 	if p.peakDecayRate <= 0 {
-		p.peakDecayRate = 20.0 // 20 LEDs/sec default decay rate (slower falloff)
+		p.peakDecayRate = 20.0 // 20 LEDs/sec default decay rate
 	}
 
 	if p.updateFreq <= 0 {
@@ -164,8 +216,8 @@ func (p *AudioLEDProducer) runner() {
 			}
 
 			p.ledsMutex.Lock()
-			p.updateLeds(leftDB, p.startLedLeft, p.endLedLeft, &p.peakLeft, dt, now)
-			p.updateLeds(rightDB, p.startLedRight, p.endLedRight, &p.peakRight, dt, now)
+			p.updateLeds(leftDB, p.startLedLeft, p.endLedLeft, &p.peakLeft, p.leftBarLUT, p.leftPeakLUT, dt, now)
+			p.updateLeds(rightDB, p.startLedRight, p.endLedRight, &p.peakRight, p.rightBarLUT, p.rightPeakLUT, dt, now)
 			p.ledsMutex.Unlock()
 
 			p.ledsChanged.Send(p.GetUID(), p)
@@ -173,15 +225,24 @@ func (p *AudioLEDProducer) runner() {
 	}
 }
 
-// updateLeds calculates and sets the LED colors based on the dB level and peak indicator.
-func (p *AudioLEDProducer) updateLeds(db float64, startLed int, endLed int, peak *channelPeak, dt float64, now time.Time) {
+// updateLeds sets the LED colors directly using the precomputed gradient LUTs and handles peak indicators.
+func (p *AudioLEDProducer) updateLeds(
+	db float64,
+	startLed int,
+	endLed int,
+	peak *channelPeak,
+	barLUT []Led,
+	peakLUT []Led,
+	dt float64,
+	now time.Time,
+) {
 	reverse := false
 	if startLed > endLed {
 		reverse = true
 		startLed, endLed = endLed, startLed
 	}
 	segmentLen := endLed - startLed + 1
-	if segmentLen <= 0 {
+	if segmentLen <= 0 || len(barLUT) < segmentLen {
 		return
 	}
 
@@ -193,10 +254,6 @@ func (p *AudioLEDProducer) updateLeds(db float64, startLed int, endLed int, peak
 	level := (db - p.minDB) / (p.maxDB - p.minDB)
 	ledsToLight := int(math.Ceil(level * float64(segmentLen)))
 
-	// Define color sections (e.g., 60% green, 25% yellow, 15% red)
-	greenEnd := int(float64(segmentLen) * 0.6)
-	yellowEnd := int(float64(segmentLen) * 0.85)
-
 	// Update peak tracking
 	if p.peakHoldEnabled {
 		targetPeak := float64(ledsToLight)
@@ -204,14 +261,8 @@ func (p *AudioLEDProducer) updateLeds(db float64, startLed int, endLed int, peak
 			peak.position = targetPeak
 			peak.holdUntil = now.Add(p.peakHoldTime)
 			if targetPeak >= 1.0 {
-				peakIdx := int(math.Round(targetPeak)) - 1
-				if peakIdx < greenEnd {
-					peak.color = p.colors.PeakGreen
-				} else if peakIdx < yellowEnd {
-					peak.color = p.colors.PeakYellow
-				} else {
-					peak.color = p.colors.PeakRed
-				}
+				peakIdx := min(int(math.Round(targetPeak))-1, segmentLen-1)
+				peak.color = peakLUT[peakIdx]
 			}
 		} else {
 			if now.After(peak.holdUntil) && dt > 0 {
@@ -229,22 +280,17 @@ func (p *AudioLEDProducer) updateLeds(db float64, startLed int, endLed int, peak
 		}
 	}
 
+	// Fill the LED strip from precomputed gradient LUT
 	for i := range segmentLen {
 		stripIndex := startLed + i
 		if i < ledsToLight {
-			if i < greenEnd {
-				p.leds[stripIndex] = p.colors.Green
-			} else if i < yellowEnd {
-				p.leds[stripIndex] = p.colors.Yellow
-			} else {
-				p.leds[stripIndex] = p.colors.Red
-			}
+			p.leds[stripIndex] = barLUT[i]
 		} else {
 			p.leds[stripIndex] = Led{} // Off
 		}
 	}
 
-	// Draw 1-LED peak marker with its captured brightened zone color
+	// Draw 1-LED peak marker with its captured brightened gradient color
 	if p.peakHoldEnabled && peak.position >= 1.0 {
 		peakIdx := int(math.Round(peak.position)) - 1
 		if peakIdx >= segmentLen {
