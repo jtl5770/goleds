@@ -39,32 +39,32 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"lautenbacher.net/goleds/audio"
 	"lautenbacher.net/goleds/audio/squeezebox"
-	c "lautenbacher.net/goleds/config"
-	l "lautenbacher.net/goleds/logging"
-	pl "lautenbacher.net/goleds/platform"
-	p "lautenbacher.net/goleds/producer"
-	u "lautenbacher.net/goleds/util"
+	"lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/logging"
+	"lautenbacher.net/goleds/platform"
+	"lautenbacher.net/goleds/producer"
+	"lautenbacher.net/goleds/util"
 )
 
 // UIDs for the different types of producers
 const (
-	NIGHT_LED_UID  = "__night_producer"
-	CLOCK_UID      = "__clock_producer"
-	AUDIO_LED_UID  = "__audio_producer"
-	MULTI_BLOB_UID = "__multiblob_producer"
-	CYLON_LED_UID  = "__cylon_producer"
+	NightLedUID  = "__night_producer"
+	ClockLedUID  = "__clock_producer"
+	AudioLedUID  = "__audio_producer"
+	MultiBlobUID = "__multiblob_producer"
+	CylonLedUID  = "__cylon_producer"
 )
 
 // App holds the global state of the application
 type App struct {
-	ledproducers  map[string]p.LedProducer
-	sensorProd    []p.LedProducer
-	afterProd     []p.LedProducer
-	permProd      []p.LedProducer
+	ledproducers  map[string]producer.LedProducer
+	sensorProd    []producer.LedProducer
+	afterProd     []producer.LedProducer
+	permProd      []producer.LedProducer
 	stopsignal    chan struct{}
 	shutdownWg    sync.WaitGroup
 	ossignal      chan os.Signal
-	platform      pl.Platform
+	platform      platform.Platform
 	sensorProdWg  sync.WaitGroup
 	afterProdWg   sync.WaitGroup
 	audioProvider audio.AudioProvider
@@ -90,7 +90,7 @@ func main() {
 	}
 	ossignal := make(chan os.Signal, 1)
 	exPath := filepath.Dir(ex)
-	cfile := flag.String("config", exPath+"/"+c.CONFILE, "Config file to use")
+	cfile := flag.String("config", exPath+"/"+config.DefaultConfigFile, "Config file to use")
 	realp := flag.Bool("real", false, "Set to true if program runs on real hardware")
 	sensp := flag.Bool("show-sensors", false,
 		"Set to true if program should only display sensor values.\n"+
@@ -98,7 +98,7 @@ func main() {
 			"* will be using random values if -real is not given - useful only for development of the viewer component itself")
 	flag.Parse()
 
-	if err := l.InitialSetup(); err != nil {
+	if err := logging.InitialSetup(); err != nil {
 		// Use fmt.Println here because the logging system may not be initialized.
 		fmt.Println("Fatal error during logging setup:", err)
 		os.Exit(1)
@@ -106,13 +106,13 @@ func main() {
 
 	app := NewApp(ossignal)
 	if err := app.initialise(*cfile, *realp, *sensp); err != nil {
-		l.Close()
+		logging.Close()
 		fmt.Fprintf(os.Stderr, "Error: Failed to initialize application: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Start a watcher to automatically reload on config file changes.
-	reloadEvent := u.NewAtomicEvent[bool]()
+	reloadEvent := util.NewAtomicEvent[bool]()
 	go watchConfigFile(*cfile, reloadEvent)
 
 	signal.Notify(ossignal, os.Interrupt)
@@ -120,17 +120,17 @@ func main() {
 	for {
 		select {
 		case <-ossignal:
-			l.BufferOutput() // Start capturing all shutdown logs
+			logging.BufferOutput() // Start capturing all shutdown logs
 			slog.Info("Exiting...")
 			app.shutdown()
-			l.Close() // Final flush to console/file
+			logging.Close() // Final flush to console/file
 			os.Exit(0)
 		case <-reloadEvent.Channel():
-			l.BufferOutput()
+			logging.BufferOutput()
 			slog.Info("Config file changed, resetting...")
 			app.shutdown()
 			if err := app.initialise(*cfile, *realp, *sensp); err != nil {
-				l.Close()
+				logging.Close()
 				fmt.Fprintf(os.Stderr, "Error: Failed to re-initialize application: %v\n", err)
 				os.Exit(1)
 			}
@@ -140,7 +140,7 @@ func main() {
 
 // watchConfigFile sets up a fsnotify watcher to monitor the config file for changes.
 // It sends a signal on the reloadChan when a write or create event is detected.
-func watchConfigFile(cfile string, reloadEvent *u.AtomicEvent[bool]) {
+func watchConfigFile(cfile string, reloadEvent *util.AtomicEvent[bool]) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		slog.Error("Failed to create config file watcher", "error", err)
@@ -196,18 +196,18 @@ func watchConfigFile(cfile string, reloadEvent *u.AtomicEvent[bool]) {
 func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	slog.Info("Initializing...")
 
-	a.afterProd = make([]p.LedProducer, 0)
-	a.permProd = make([]p.LedProducer, 0)
+	a.afterProd = make([]producer.LedProducer, 0)
+	a.permProd = make([]producer.LedProducer, 0)
 	a.stopsignal = make(chan struct{})
-	a.ledproducers = make(map[string]p.LedProducer)
+	a.ledproducers = make(map[string]producer.LedProducer)
 
-	conf, err := c.ReadConfig(cfile)
+	conf, err := config.ReadConfig(cfile)
 	if err != nil {
 		return fmt.Errorf("failed to read or validate config: %w", err)
 	}
 
 	// Configure logging with values from the config file.
-	var logConf c.SingleLoggingConfig
+	var logConf config.SingleLoggingConfig
 	bufferLogs := false
 	if realp {
 		logConf = conf.Logging.HW
@@ -218,7 +218,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 
 	logToFile := logConf.File != ""
 
-	if err := l.Configure(bufferLogs, logConf.Level, logConf.Format, logToFile, logConf.File); err != nil {
+	if err := logging.Configure(bufferLogs, logConf.Level, logConf.Format, logToFile, logConf.File); err != nil {
 		slog.Error("Failed to configure logging with config values", "error", err)
 		// We don't exit here, as logging might still be partially functional.
 	}
@@ -226,7 +226,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	// Handle the special "-sensor-show development mode"
 	if !realp && sensp {
 		slog.Info("Starting in Sensor Viewer development mode...")
-		viewer := pl.NewSensorViewer(conf.Hardware.Sensors, a.ossignal, true)
+		viewer := platform.NewSensorViewer(conf.Hardware.Sensors, a.ossignal, true)
 		go viewer.Start()
 		// In this mode, we don't need any platforms or producers, so we exit early.
 		return nil
@@ -234,24 +234,24 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 
 	// Standard platform setup
 	if realp {
-		rpiPlatform := pl.NewRaspberryPiPlatform(conf)
+		rpiPlatform := platform.NewRaspberryPiPlatform(conf)
 		if sensp {
-			viewer := pl.NewSensorViewer(conf.Hardware.Sensors, a.ossignal, false)
+			viewer := platform.NewSensorViewer(conf.Hardware.Sensors, a.ossignal, false)
 			rpiPlatform.SetSensorViewer(viewer)
 		}
 		a.platform = rpiPlatform
 	} else {
-		a.platform = pl.NewTUIPlatform(conf, a.ossignal)
+		a.platform = platform.NewTUIPlatform(conf, a.ossignal)
 	}
 
 	ledsTotal := a.platform.GetLedsTotal()
 	ledBufferPool := &sync.Pool{
 		New: func() any {
-			return make([]p.Led, ledsTotal)
+			return make([]producer.Led, ledsTotal)
 		},
 	}
 
-	ledReader := u.NewAtomicMapEvent[p.LedProducer]()
+	ledReader := util.NewAtomicMapEvent[producer.LedProducer]()
 
 	if err := a.platform.Start(ledBufferPool); err != nil {
 		return fmt.Errorf("failed to start platform: %w", err)
@@ -286,25 +286,25 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	// These producers runs all the time and will be started right away here
 	if conf.NightLED.Enabled {
 		cfg := conf.NightLED
-		prodnight := p.NewNightlightProducer(NIGHT_LED_UID, ledReader,
+		prodnight := producer.NewNightlightProducer(NightLedUID, ledReader,
 			ledsTotal, cfg.Latitude, cfg.Longitude, cfg.LedRGB)
-		a.ledproducers[NIGHT_LED_UID] = prodnight
+		a.ledproducers[NightLedUID] = prodnight
 		a.permProd = append(a.permProd, prodnight)
 		prodnight.Start()
 	}
 
 	if conf.ClockLED.Enabled {
 		cfg := conf.ClockLED
-		prodclock := p.NewClockProducer(CLOCK_UID, ledReader, ledsTotal, cfg)
-		a.ledproducers[CLOCK_UID] = prodclock
+		prodclock := producer.NewClockProducer(ClockLedUID, ledReader, ledsTotal, cfg)
+		a.ledproducers[ClockLedUID] = prodclock
 		a.permProd = append(a.permProd, prodclock)
 		prodclock.Start()
 	}
 
 	if conf.AudioLED.Enabled {
 		cfg := conf.AudioLED
-		prodaudio := p.NewAudioLEDProducer(AUDIO_LED_UID, ledReader, ledsTotal, cfg, a.audioProvider)
-		a.ledproducers[AUDIO_LED_UID] = prodaudio
+		prodaudio := producer.NewAudioLEDProducer(AudioLedUID, ledReader, ledsTotal, cfg, a.audioProvider)
+		a.ledproducers[AudioLedUID] = prodaudio
 		a.permProd = append(a.permProd, prodaudio)
 		prodaudio.Start()
 	}
@@ -313,29 +313,29 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	// on the running state of the SensorLedProducers.
 	if conf.MultiBlobLED.Enabled {
 		cfg := conf.MultiBlobLED
-		prodmulti := p.NewMultiBlobProducer(MULTI_BLOB_UID, ledReader,
+		prodmulti := producer.NewMultiBlobProducer(MultiBlobUID, ledReader,
 			ledsTotal, cfg.Duration, cfg.Delay, cfg.BlobCfg, &a.afterProdWg)
-		a.ledproducers[MULTI_BLOB_UID] = prodmulti
+		a.ledproducers[MultiBlobUID] = prodmulti
 		a.afterProd = append(a.afterProd, prodmulti)
 	}
 
 	if conf.CylonLED.Enabled {
 		cfg := conf.CylonLED
-		prodcylon := p.NewCylonProducer(CYLON_LED_UID, ledReader, ledsTotal,
+		prodcylon := producer.NewCylonProducer(CylonLedUID, ledReader, ledsTotal,
 			cfg.Duration, cfg.Delay, cfg.Step, cfg.Width, cfg.LedRGB, &a.afterProdWg)
-		a.ledproducers[CYLON_LED_UID] = prodcylon
+		a.ledproducers[CylonLedUID] = prodcylon
 		a.afterProd = append(a.afterProd, prodcylon)
 	}
 
 	// This producer reacts on sensor triggers to light the strips.
 	if conf.SensorLED.Enabled {
 		cfg := conf.SensorLED
-		a.sensorProd = make([]p.LedProducer, 0, len(a.platform.GetSensorLedIndices()))
+		a.sensorProd = make([]producer.LedProducer, 0, len(a.platform.GetSensorLedIndices()))
 		for uid, ledIndex := range a.platform.GetSensorLedIndices() {
-			producer := p.NewSensorLedProducer(uid, ledIndex, ledReader,
+			prod := producer.NewSensorLedProducer(uid, ledIndex, ledReader,
 				ledsTotal, cfg, &a.sensorProdWg)
-			a.ledproducers[uid] = producer
-			a.sensorProd = append(a.sensorProd, producer)
+			a.ledproducers[uid] = prod
+			a.sensorProd = append(a.sensorProd, prod)
 		}
 	}
 
@@ -349,8 +349,8 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 	// Start the web server in a separate goroutine - only once.
 	startWeb.Do(func() {
 		http.Handle("/", http.FileServer(http.Dir("./web")))
-		http.HandleFunc("/api/config", c.ConfigHandler(cfile))
-		http.HandleFunc("/api/sensors/calibrate", c.CalibrateHandler(func() error {
+		http.HandleFunc("/api/config", config.ConfigHandler(cfile))
+		http.HandleFunc("/api/sensors/calibrate", config.CalibrateHandler(func() error {
 			if a.platform != nil {
 				return a.platform.Calibrate()
 			}
@@ -396,14 +396,14 @@ func (a *App) shutdown() {
 // This go-routine combines the LED values from all producers.
 // It hands them to the platform via SetLeds() It also forces an
 // update of the LED stripe at regular intervals to avoid artifacts.
-func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer], ledBufferPool *sync.Pool) {
+func (a *App) combineAndUpdateDisplay(ledreader *util.AtomicMapEvent[producer.LedProducer], ledBufferPool *sync.Pool) {
 	defer a.shutdownWg.Done()
 
 	var oldLedsHash uint64
 	forceupdatedelay := a.platform.GetForceUpdateDelay()
 	ledsTotal := a.platform.GetLedsTotal()
-	allLedRanges := make(map[string][]p.Led)
-	pmap := make(map[string]p.LedProducer)
+	allLedRanges := make(map[string][]producer.Led)
+	pmap := make(map[string]producer.LedProducer)
 	var ticker *time.Ticker
 	if forceupdatedelay > 0 {
 		ticker = time.NewTicker(forceupdatedelay)
@@ -417,13 +417,13 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 			for key, prod := range pmap {
 				// Ensure a buffer exists for this producer.
 				if _, ok := allLedRanges[key]; !ok {
-					allLedRanges[key] = make([]p.Led, ledsTotal)
+					allLedRanges[key] = make([]producer.Led, ledsTotal)
 				}
 				// Fill the buffer with the producer's data.
 				prod.GetLeds(allLedRanges[key])
 			}
-			ledsToSend := ledBufferPool.Get().([]p.Led)
-			p.CombineLeds(allLedRanges, a.ledproducers, ledsToSend)
+			ledsToSend := ledBufferPool.Get().([]producer.Led)
+			producer.CombineLeds(allLedRanges, a.ledproducers, ledsToSend)
 			newLedshash := hashLEDs(ledsToSend)
 			if newLedshash != oldLedsHash {
 				a.platform.SetLeds(ledsToSend)
@@ -437,8 +437,8 @@ func (a *App) combineAndUpdateDisplay(ledreader *u.AtomicMapEvent[p.LedProducer]
 			// artifacts on the led stripe from - maybe/somehow -
 			// electrical distortions or cross talk so we make sure to
 			// regularly force an update of the Led stripe
-			ledsToSend := ledBufferPool.Get().([]p.Led)
-			p.CombineLeds(allLedRanges, a.ledproducers, ledsToSend)
+			ledsToSend := ledBufferPool.Get().([]producer.Led)
+			producer.CombineLeds(allLedRanges, a.ledproducers, ledsToSend)
 			a.platform.SetLeds(ledsToSend)
 		case <-a.stopsignal:
 			slog.Info("Ending combineAndupdateDisplay go-routine")
@@ -488,7 +488,7 @@ func (a *App) stateManager() {
 		case event := <-a.platform.GetSensorEvents():
 			// This is the new, simplified, and race-free logic for handling sensor events.
 			// It delegates the responsibility of starting the producer to the producer itself.
-			producer, ok := a.ledproducers[event.ID]
+			prod, ok := a.ledproducers[event.ID]
 			if !ok {
 				slog.Warn("Received sensor event for unknown producer", "uid", event.ID)
 				continue
@@ -498,14 +498,14 @@ func (a *App) stateManager() {
 			case stateIdle:
 				slog.Info("Sensor event received in idle state", "uid", event.ID)
 				// Stop permanent producers.
-				for _, prod := range a.permProd {
-					slog.Info("<=== Stopping perm Producer", "uid", prod.GetUID())
-					prod.TryStop() // It's okay if it's already stopped.
+				for _, p := range a.permProd {
+					slog.Info("<=== Stopping perm Producer", "uid", p.GetUID())
+					p.TryStop() // It's okay if it's already stopped.
 				}
 
 				currentState = stateSensor
 				slog.Info("   ===> Starting/Triggering SensorLedProducer", "uid", event.ID)
-				producer.SendTrigger(event)
+				prod.SendTrigger(event)
 
 				// Start a waiter that will signal when this generation is complete.
 				sensorRun++ // Start a new generation.
@@ -518,7 +518,7 @@ func (a *App) stateManager() {
 				// generation of producers might signal completion just as we process this
 				// new event, which would cause a premature and incorrect state transition.
 				slog.Info("   ===> Starting/Triggering SensorLedProducer", "uid", event.ID)
-				producer.SendTrigger(event)
+				prod.SendTrigger(event)
 
 				// The existing waiter goroutine will send a
 				// completion signal that will carry the old,
@@ -531,14 +531,14 @@ func (a *App) stateManager() {
 			case stateAfterProd:
 				slog.Info("      Sensor event received in afterProd state", "uid", event.ID)
 				// Stop any running after-producers.
-				for _, prod := range a.afterProd {
-					slog.Info("      <=== Stopping afterProd Producer", "uid", prod.GetUID())
-					prod.TryStop() // It's okay if it's already stopped.
+				for _, p := range a.afterProd {
+					slog.Info("      <=== Stopping afterProd Producer", "uid", p.GetUID())
+					p.TryStop() // It's okay if it's already stopped.
 				}
 
 				currentState = stateSensor
 				slog.Info("   ===> Starting/Triggering SensorLedProducer", "uid", event.ID)
-				producer.SendTrigger(event)
+				prod.SendTrigger(event)
 
 				// Start a waiter for the new generation.
 				sensorRun++
@@ -553,9 +553,9 @@ func (a *App) stateManager() {
 
 			slog.Info("      Received valid [SensorLedProducer(s) finished] event, switching to afterProd state", "run", recvdRun)
 			currentState = stateAfterProd
-			for _, prod := range a.afterProd {
-				slog.Info("      ===> Starting afterProd Producer", "uid", prod.GetUID())
-				prod.Start()
+			for _, p := range a.afterProd {
+				slog.Info("      ===> Starting afterProd Producer", "uid", p.GetUID())
+				p.Start()
 			}
 			go func() {
 				a.afterProdWg.Wait()
@@ -570,9 +570,9 @@ func (a *App) stateManager() {
 			if currentState == stateAfterProd {
 				slog.Info("      Received [AfterProdProducer(s) finished] event, switching to idle state")
 				currentState = stateIdle
-				for _, prod := range a.permProd {
-					slog.Info("===> Starting permProd Producer", "uid", prod.GetUID())
-					prod.Start()
+				for _, p := range a.permProd {
+					slog.Info("===> Starting permProd Producer", "uid", p.GetUID())
+					p.Start()
 				}
 			} else {
 				slog.Info("      Received [AfterProdProducer(s) finished] event, but not in afterProd state, ignoring")
@@ -587,7 +587,7 @@ func (a *App) stateManager() {
 
 // hashLEDs computes an inlined 64-bit FNV-1a hash for the given LED state array.
 // This is used to detect changes in the LED state without any heap allocations.
-func hashLEDs(leds []p.Led) uint64 {
+func hashLEDs(leds []producer.Led) uint64 {
 	const (
 		offset64 = 14695981039346656037
 		prime64  = 1099511628211

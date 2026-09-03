@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"sync"
 	"sync/atomic"
-	t "time"
+	"time"
 
-	u "lautenbacher.net/goleds/util"
+	"lautenbacher.net/goleds/util"
 )
 
 var errTimeout = errors.New("timeout reached while sending stop signal")
@@ -23,22 +23,22 @@ type AbstractProducer struct {
 	isActive     atomic.Bool
 	ledsMutex    sync.RWMutex
 	updateMutex  sync.RWMutex
-	ledsChanged  *u.AtomicMapEvent[LedProducer]
+	ledsChanged  *util.AtomicMapEvent[LedProducer]
 	stopchan     chan bool
-	triggerEvent *u.AtomicEvent[*u.Trigger]
+	triggerEvent *util.AtomicEvent[*util.Trigger]
 	endWg        *sync.WaitGroup
 	runfunc      func()
 }
 
 // Creates a new instance of AbstractProducer. The uid must be unique
-func NewAbstractProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], runfunc func(), ledsTotal int) *AbstractProducer {
+func NewAbstractProducer(uid string, ledsChanged *util.AtomicMapEvent[LedProducer], runfunc func(), ledsTotal int) *AbstractProducer {
 	inst := AbstractProducer{
 		uid:          uid,
 		leds:         make([]Led, ledsTotal),
 		ledsChanged:  ledsChanged,
 		stopchan:     make(chan bool),
 		runfunc:      runfunc,
-		triggerEvent: u.NewAtomicEvent[*u.Trigger](),
+		triggerEvent: util.NewAtomicEvent[*util.Trigger](),
 		endWg:        nil,
 	}
 	inst.priority.Store(0)
@@ -139,7 +139,7 @@ func (s *AbstractProducer) runSupervisor() {
 
 // SendTrigger ensures the producer is running and then sends it a trigger event.
 // This operation is atomic, preventing a race between starting and triggering.
-func (s *AbstractProducer) SendTrigger(trigger *u.Trigger) {
+func (s *AbstractProducer) SendTrigger(trigger *util.Trigger) {
 	s.updateMutex.Lock()
 	defer s.updateMutex.Unlock()
 
@@ -168,7 +168,7 @@ func (s *AbstractProducer) TryStop() (bool, error) {
 	select {
 	case s.stopchan <- true:
 		return true, nil
-	case <-t.After(5 * t.Second):
+	case <-time.After(5 * time.Second):
 		slog.Warn("Timeout reached while sending stop signal", "uid", s.GetUID())
 		return false, errTimeout
 	}

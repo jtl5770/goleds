@@ -6,16 +6,16 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	c "lautenbacher.net/goleds/config"
-	u "lautenbacher.net/goleds/util"
+	"lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/util"
 )
 
 func TestNewMultiBlobProducer(t *testing.T) {
-	ledsChanged := u.NewAtomicMapEvent[LedProducer]()
+	ledsChanged := util.NewAtomicMapEvent[LedProducer]()
 	ledsTotal := 10
 	duration := 5 * time.Second
 	delay := 50 * time.Millisecond
-	blobCfg := []c.BlobCfg{
+	blobCfg := []config.BlobCfg{
 		{DeltaX: 0.1, X: 2.0, Width: 1.0, LedRGB: []float64{255, 0, 0}},
 		{DeltaX: -0.2, X: 8.0, Width: 1.5, LedRGB: []float64{0, 255, 0}},
 	}
@@ -103,7 +103,7 @@ func TestDetectAndHandleCollisions_Boundary(t *testing.T) {
 	blobs := map[string]*Blob{"blobRight": blobRight}
 	detectAndHandleCollisions(blobs, nil, ledsTotal)
 	assert.Equal(t, float64(-1), blobRight.dir, "Blob hitting right boundary should reverse direction")
-	assert.Equal(t, float64(ledsTotal)+1, blobRight.x, "Blob x should be reverted to last_x")
+	assert.Equal(t, float64(ledsTotal)+1, blobRight.x, "Blob x should be reverted to lastX")
 
 	// Test blob hitting left boundary
 	blobLeft := NewBlob("blobLeft", []float64{0, 255, 0}, -1.0, 1.0, -0.1)
@@ -111,7 +111,7 @@ func TestDetectAndHandleCollisions_Boundary(t *testing.T) {
 	blobs = map[string]*Blob{"blobLeft": blobLeft}
 	detectAndHandleCollisions(blobs, nil, ledsTotal)
 	assert.Equal(t, float64(1), blobLeft.dir, "Blob hitting left boundary should reverse direction")
-	assert.Equal(t, -1.0, blobLeft.x, "Blob x should be reverted to last_x")
+	assert.Equal(t, -1.0, blobLeft.x, "Blob x should be reverted to lastX")
 
 	// Test blob not hitting boundary
 	blobNoHit := NewBlob("blobNoHit", []float64{0, 0, 255}, 5.0, 1.0, 0.1)

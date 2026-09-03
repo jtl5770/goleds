@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"sort"
 	"strings"
@@ -15,7 +15,7 @@ import (
 	"github.com/gammazero/deque"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	c "lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/config"
 )
 
 const (
@@ -29,7 +29,7 @@ type SensorViewer struct {
 	tuiApp        *tview.Application
 	view          *tview.TextView
 	sensorValues  map[string]*deque.Deque[int]
-	sensorCfgs    map[string]c.SensorCfg
+	sensorCfgs    map[string]config.SensorCfg
 	sensorNames   []string
 	mu            sync.Mutex
 	ossignal      chan os.Signal
@@ -47,19 +47,19 @@ type sensorStats struct {
 }
 
 // NewSensorViewer creates and initializes a new SensorViewer.
-func NewSensorViewer(config c.SensorsConfig, ossignal chan os.Signal, devMode bool) *SensorViewer {
+func NewSensorViewer(cfg config.SensorsConfig, ossignal chan os.Signal, devMode bool) *SensorViewer {
 	sv := &SensorViewer{
 		tuiApp:        tview.NewApplication(),
 		sensorValues:  make(map[string]*deque.Deque[int]),
-		sensorCfgs:    config.SensorCfg,
-		sensorNames:   make([]string, 0, len(config.SensorCfg)),
+		sensorCfgs:    cfg.SensorCfg,
+		sensorNames:   make([]string, 0, len(cfg.SensorCfg)),
 		ossignal:      ossignal,
 		devMode:       devMode,
-		loopDelay:     config.LoopDelay,
+		loopDelay:     cfg.LoopDelay,
 		generatorStop: make(chan struct{}),
 	}
 
-	for name := range config.SensorCfg {
+	for name := range cfg.SensorCfg {
 		sv.sensorNames = append(sv.sensorNames, name)
 		sv.sensorValues[name] = new(deque.Deque[int])
 		sv.sensorValues[name].Grow(maxSensorHistory)
@@ -152,7 +152,7 @@ func (sv *SensorViewer) RunSensorDataGenForDev(stopSignal chan struct{}) {
 			return
 		case <-ticker.C:
 			for _, name := range sv.sensorNames {
-				latestValues[name] = rand.Intn(1024)
+				latestValues[name] = rand.IntN(1024)
 			}
 			sv.Update(latestValues)
 		}

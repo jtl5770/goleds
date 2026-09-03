@@ -8,14 +8,14 @@ import (
 	"sync"
 	"time"
 
-	c "lautenbacher.net/goleds/config"
-	u "lautenbacher.net/goleds/util"
+	"lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/util"
 )
 
 type Blob struct {
 	uid      string
 	led      Led
-	last_x   float64
+	lastX    float64
 	x        float64
 	width    float64
 	delta    float64
@@ -31,10 +31,10 @@ func NewBlob(uid string, ledRGB []float64, x, width, deltaX float64) *Blob {
 			Green: ledRGB[1],
 			Blue:  ledRGB[2],
 		},
-		last_x: x,
-		x:      x,
-		width:  width,
-		delta:  deltaX,
+		lastX: x,
+		x:     x,
+		width: width,
+		delta: deltaX,
 	}
 	if inst.delta < 0 {
 		inst.dir = -1
@@ -99,7 +99,7 @@ type MultiBlobProducer struct {
 	delay      time.Duration
 }
 
-func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, duration, delay time.Duration, blobCfg []c.BlobCfg, endwg *sync.WaitGroup) *MultiBlobProducer {
+func NewMultiBlobProducer(uid string, ledsChanged *util.AtomicMapEvent[LedProducer], ledsTotal int, duration, delay time.Duration, blobCfg []config.BlobCfg, endwg *sync.WaitGroup) *MultiBlobProducer {
 	inst := &MultiBlobProducer{
 		duration:   duration,
 		delay:      delay,
@@ -119,7 +119,7 @@ func NewMultiBlobProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer]
 	return inst
 }
 
-func (s *MultiBlobProducer) fade_in_or_out(fadein bool) (stopped bool) {
+func (s *MultiBlobProducer) fadeInOrOut(fadein bool) (stopped bool) {
 	intervals := 20
 	delay := 20 * time.Millisecond
 	// The pattern to be faded is in s.leds, but we want a stable base
@@ -166,7 +166,7 @@ func (s *MultiBlobProducer) fade_in_or_out(fadein bool) (stopped bool) {
 func (s *MultiBlobProducer) runner() {
 	triggerduration := time.NewTicker(s.duration)
 	tick := time.NewTicker(s.delay)
-	countup_run := false
+	countUpRun := false
 	defer func() {
 		tick.Stop()
 		triggerduration.Stop()
@@ -176,11 +176,11 @@ func (s *MultiBlobProducer) runner() {
 		select {
 		case <-triggerduration.C:
 			// Doing the fadeout after the time is up
-			s.fade_in_or_out(false)
+			s.fadeInOrOut(false)
 			return
 		case <-s.stopchan:
 			// Doing the fadeout when Stop() is triggered
-			s.fade_in_or_out(false)
+			s.fadeInOrOut(false)
 			return
 		case <-tick.C:
 			// compute new x value
@@ -200,19 +200,19 @@ func (s *MultiBlobProducer) runner() {
 			}
 			s.ledsMutex.Unlock()
 
-			if countup_run {
+			if countUpRun {
 				s.ledsChanged.Send(s.GetUID(), s)
 			} else {
 				// The "countup" similar to the "countdown" fade out but fade in
 				// at the start of the blob period
-				if s.fade_in_or_out(true) {
+				if s.fadeInOrOut(true) {
 					return
 				}
-				countup_run = true
+				countUpRun = true
 			}
-			// update last_x value to current x
+			// update lastX value to current x
 			for _, blob := range s.allblobs {
-				blob.last_x = blob.x
+				blob.lastX = blob.x
 			}
 		}
 	}
@@ -241,12 +241,12 @@ func detectAndHandleCollisions(blobs map[string]*Blob, checkinter []*Blob, ledsT
 	size := len(checkinter)
 	if size >= 2 {
 		for i := range size {
-			blob_a := checkinter[i]
+			blobA := checkinter[i]
 			for j := i + 1; j < size; j++ {
-				blob_b := checkinter[j]
-				if detectBlobColl(blob_a, blob_b) {
-					blob_a.collided = true
-					blob_b.collided = true
+				blobB := checkinter[j]
+				if detectBlobColl(blobA, blobB) {
+					blobA.collided = true
+					blobB.collided = true
 				}
 			}
 		}
@@ -255,40 +255,40 @@ func detectAndHandleCollisions(blobs map[string]*Blob, checkinter []*Blob, ledsT
 	// value back to the last know value
 	for _, blob := range blobs {
 		if blob.collided {
-			blob.x = blob.last_x
+			blob.x = blob.lastX
 			blob.collided = false
 		}
 	}
 	return checkinter
 }
 
-func detectBlobColl(blob_a *Blob, blob_b *Blob) bool {
-	a1, a2 := blob_a.x, blob_a.last_x
-	a_start := math.Min(a1, a2)
-	a_end := math.Max(a1, a2)
-	b1, b2 := blob_b.x, blob_b.last_x
-	b_start := math.Min(b1, b2)
-	b_end := math.Max(b1, b2)
+func detectBlobColl(blobA *Blob, blobB *Blob) bool {
+	a1, a2 := blobA.x, blobA.lastX
+	aStart := math.Min(a1, a2)
+	aEnd := math.Max(a1, a2)
+	b1, b2 := blobB.x, blobB.lastX
+	bStart := math.Min(b1, b2)
+	bEnd := math.Max(b1, b2)
 
-	collide := (a_start <= b_end) && (b_start <= a_end)
+	collide := (aStart <= bEnd) && (bStart <= aEnd)
 	if collide {
 		// Generate a random value between 0 and 1 and if smaller
 		// than a threshold, just return as if no collision is detected.
 		if rand.Float64() <= 0.33 {
 			return false
 		}
-		// log.Println("Collision detected between " + blob_a.uid + " and " + blob_b.uid)
+		// log.Println("Collision detected between " + blobA.uid + " and " + blobB.uid)
 		var left *Blob
 		var right *Blob
 
 		// find out which one is the "left one" and which is the
 		// "right one", to simplify handling
-		if blob_a.last_x < blob_b.last_x {
-			left = blob_a
-			right = blob_b
+		if blobA.lastX < blobB.lastX {
+			left = blobA
+			right = blobB
 		} else {
-			left = blob_b
-			right = blob_a
+			left = blobB
+			right = blobA
 		}
 
 		if left.dir > 0 && right.dir < 0 {

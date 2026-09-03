@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	c "lautenbacher.net/goleds/config"
-	p "lautenbacher.net/goleds/producer"
-	u "lautenbacher.net/goleds/util"
+	"lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/producer"
+	"lautenbacher.net/goleds/util"
 )
 
 var (
@@ -18,12 +18,12 @@ var (
 )
 
 type AbstractPlatform struct {
-	config          *c.Config
-	ledsEvent       *u.AtomicEvent[[]p.Led]
-	sensorEvents    chan *u.Trigger
+	config          *config.Config
+	ledsEvent       *util.AtomicEvent[[]producer.Led]
+	sensorEvents    chan *util.Trigger
 	sensors         map[string]*sensor
 	segments        map[string][]*segment
-	displayFunc     func([]p.Led)
+	displayFunc     func([]producer.Led)
 	displayWg       sync.WaitGroup
 	displayStopChan chan bool
 	readyChan       chan bool
@@ -33,11 +33,11 @@ type AbstractPlatform struct {
 	ledBufferPool   *sync.Pool
 }
 
-func newAbstractPlatform(conf *c.Config, displayFunc func([]p.Led)) *AbstractPlatform {
+func newAbstractPlatform(conf *config.Config, displayFunc func([]producer.Led)) *AbstractPlatform {
 	return &AbstractPlatform{
 		config:          conf,
-		ledsEvent:       u.NewAtomicEvent[[]p.Led](),
-		sensorEvents:    make(chan *u.Trigger),
+		ledsEvent:       util.NewAtomicEvent[[]producer.Led](),
+		sensorEvents:    make(chan *util.Trigger),
 		sensors:         make(map[string]*sensor),
 		displayFunc:     displayFunc,
 		displayStopChan: make(chan bool),
@@ -49,11 +49,11 @@ func (s *AbstractPlatform) Ready() <-chan bool {
 	return s.readyChan
 }
 
-func (s *AbstractPlatform) SetLeds(leds []p.Led) {
+func (s *AbstractPlatform) SetLeds(leds []producer.Led) {
 	s.ledsEvent.Send(leds)
 }
 
-func (s *AbstractPlatform) GetSensorEvents() <-chan *u.Trigger {
+func (s *AbstractPlatform) GetSensorEvents() <-chan *util.Trigger {
 	return s.sensorEvents
 }
 
@@ -174,7 +174,7 @@ func (s *sensor) smoothedValue(value int) int {
 	return (s.sum + n/2) / n
 }
 
-func (s *AbstractPlatform) initSensors(sensorConfig c.SensorsConfig) {
+func (s *AbstractPlatform) initSensors(sensorConfig config.SensorsConfig) {
 	s.sensors = make(map[string]*sensor, len(sensorConfig.SensorCfg))
 	globalCalibMutex.RLock()
 	defer globalCalibMutex.RUnlock()

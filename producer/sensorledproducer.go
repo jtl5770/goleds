@@ -46,27 +46,27 @@ package producer
 import (
 	"log/slog"
 	"sync"
-	t "time"
+	"time"
 
-	c "lautenbacher.net/goleds/config"
-	u "lautenbacher.net/goleds/util"
+	"lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/util"
 )
 
 type SensorLedProducer struct {
 	*AbstractProducer
 	ledIndex          int
-	holdT             t.Duration
-	runUpT            t.Duration
-	runDownT          t.Duration
+	holdT             time.Duration
+	runUpT            time.Duration
+	runDownT          time.Duration
 	ledOn             Led
 	latchEnabled      bool
 	latchTriggerValue int
-	latchTriggerDelay t.Duration
-	latchTime         t.Duration
+	latchTriggerDelay time.Duration
+	latchTime         time.Duration
 	latchLed          Led
 }
 
-func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, cfg c.SensorLEDConfig, endwg *sync.WaitGroup) *SensorLedProducer {
+func NewSensorLedProducer(uid string, index int, ledsChanged *util.AtomicMapEvent[LedProducer], ledsTotal int, cfg config.SensorLEDConfig, endwg *sync.WaitGroup) *SensorLedProducer {
 	inst := &SensorLedProducer{
 		ledIndex:          index,
 		holdT:             cfg.HoldTime,
@@ -97,7 +97,7 @@ func NewSensorLedProducer(uid string, index int, ledsChanged *u.AtomicMapEvent[L
 // runUpPhase handles the "run-up" part of the animation, where LEDs
 // are turned on from the center outwards.
 func (s *SensorLedProducer) runUpPhase(left, right int) (nleft, nright int, stopped bool) {
-	ticker := t.NewTicker(s.runUpT)
+	ticker := time.NewTicker(s.runUpT)
 	defer ticker.Stop()
 
 	for {
@@ -130,11 +130,11 @@ func (s *SensorLedProducer) runUpPhase(left, right int) (nleft, nright int, stop
 // is extended if new triggers arrive. It also checks for the "latch"
 // trigger pattern.
 func (s *SensorLedProducer) holdPhase() (stopped bool) {
-	var latchStart t.Time
+	var latchStart time.Time
 	inLatchZone := false
 
 	for {
-		holdTimer := t.NewTimer(s.holdT)
+		holdTimer := time.NewTimer(s.holdT)
 
 		select {
 		case <-s.stopchan:
@@ -153,7 +153,7 @@ func (s *SensorLedProducer) holdPhase() (stopped bool) {
 					latchStart = trigger.Timestamp
 				} else {
 					// Check if the latch-on delay has been met
-					if t.Since(latchStart) >= s.latchTriggerDelay {
+					if time.Since(latchStart) >= s.latchTriggerDelay {
 						if s.runLatchMode() {
 							return true // Latch mode was stopped via stopchan
 						}
@@ -191,10 +191,10 @@ func (s *SensorLedProducer) runLatchMode() (stopped bool) {
 		s.ledsChanged.Send(s.GetUID(), s)
 	}()
 
-	latchTimer := t.NewTimer(s.latchTime)
+	latchTimer := time.NewTimer(s.latchTime)
 	defer latchTimer.Stop()
 
-	var latchOffStart t.Time
+	var latchOffStart time.Time
 	inLatchOffZone := false
 
 	for {
@@ -214,7 +214,7 @@ func (s *SensorLedProducer) runLatchMode() (stopped bool) {
 					latchOffStart = trigger.Timestamp
 				} else {
 					// Check if the latch-off delay has been met
-					if t.Since(latchOffStart) >= s.latchTriggerDelay {
+					if time.Since(latchOffStart) >= s.latchTriggerDelay {
 						slog.Info("Latch Mode Deactivated by toggle", "uid", s.GetUID())
 						return false
 					}
@@ -231,7 +231,7 @@ func (s *SensorLedProducer) runLatchMode() (stopped bool) {
 // edges inwards. It can be interrupted by a new trigger, which
 // signals that the animation should restart.
 func (s *SensorLedProducer) runDownPhase(left, right int) (nleft, nright int, shouldRestart, stopped bool) {
-	ticker := t.NewTicker(s.runDownT)
+	ticker := time.NewTicker(s.runDownT)
 	defer ticker.Stop()
 	for {
 		s.ledsMutex.Lock()

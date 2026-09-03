@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const CONFILE = "config.yml"
+const DefaultConfigFile = "config.yml"
 
 // validateRGB checks if the RGB slice has exactly 3 components between 0 and 255.
 func validateRGB(rgb []float64) error {

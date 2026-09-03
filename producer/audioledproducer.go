@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"lautenbacher.net/goleds/audio"
-	c "lautenbacher.net/goleds/config"
-	u "lautenbacher.net/goleds/util"
+	"lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/util"
 )
 
 type channelPeak struct {
@@ -55,9 +55,9 @@ type AudioLEDProducer struct {
 // NewAudioLEDProducer creates a new AudioLEDProducer.
 func NewAudioLEDProducer(
 	uid string,
-	ledsChanged *u.AtomicMapEvent[LedProducer],
+	ledsChanged *util.AtomicMapEvent[LedProducer],
 	ledsTotal int,
-	cfg c.AudioLEDConfig,
+	cfg config.AudioLEDConfig,
 	provider audio.AudioProvider,
 ) *AudioLEDProducer {
 	p := &AudioLEDProducer{

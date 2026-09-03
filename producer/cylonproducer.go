@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	u "lautenbacher.net/goleds/util"
+	"lautenbacher.net/goleds/util"
 )
 
 type CylonProducer struct {
@@ -19,7 +19,7 @@ type CylonProducer struct {
 	delay     time.Duration
 }
 
-func NewCylonProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, duration time.Duration, delay time.Duration, step float64, width int, ledRGB []float64, endwg *sync.WaitGroup) *CylonProducer {
+func NewCylonProducer(uid string, ledsChanged *util.AtomicMapEvent[LedProducer], ledsTotal int, duration time.Duration, delay time.Duration, step float64, width int, ledRGB []float64, endwg *sync.WaitGroup) *CylonProducer {
 	inst := &CylonProducer{
 		color: Led{
 			Red:   ledRGB[0],

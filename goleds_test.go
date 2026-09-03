@@ -6,31 +6,31 @@ import (
 	"testing"
 	"time"
 
-	c "lautenbacher.net/goleds/config"
-	pl "lautenbacher.net/goleds/platform"
-	p "lautenbacher.net/goleds/producer"
-	u "lautenbacher.net/goleds/util"
+	"lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/platform"
+	"lautenbacher.net/goleds/producer"
+	"lautenbacher.net/goleds/util"
 )
 
 type MockPlatform struct {
-	pl.Platform
-	sensorEvents chan *u.Trigger
-	sensors      map[string]c.SensorCfg
-	lastLeds     [][]p.Led
+	platform.Platform
+	sensorEvents chan *util.Trigger
+	sensors      map[string]config.SensorCfg
+	lastLeds     [][]producer.Led
 	mu           sync.Mutex
 	stopChan     chan struct{}
 }
 
-func (m *MockPlatform) SetLeds(leds []p.Led) {
+func (m *MockPlatform) SetLeds(leds []producer.Led) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	// Make a copy of the slice to avoid data races
-	ledsCopy := make([]p.Led, len(leds))
+	ledsCopy := make([]producer.Led, len(leds))
 	copy(ledsCopy, leds)
 	m.lastLeds = append(m.lastLeds, ledsCopy)
 }
 
-func (m *MockPlatform) GetSensorEvents() <-chan *u.Trigger {
+func (m *MockPlatform) GetSensorEvents() <-chan *util.Trigger {
 	return m.sensorEvents
 }
 
@@ -73,13 +73,13 @@ func (m *MockPlatform) IsCalibrating() bool {
 	return false
 }
 
-func (m *MockPlatform) GetLastLeds() [][]p.Led {
+func (m *MockPlatform) GetLastLeds() [][]producer.Led {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	// Return a copy to avoid race conditions
-	ret := make([][]p.Led, len(m.lastLeds))
+	ret := make([][]producer.Led, len(m.lastLeds))
 	for i, leds := range m.lastLeds {
-		ret[i] = make([]p.Led, len(leds))
+		ret[i] = make([]producer.Led, len(leds))
 		copy(ret[i], leds)
 	}
 	return ret
@@ -93,22 +93,22 @@ func (m *MockPlatform) ClearLastLeds() {
 
 func NewMockPlatform() *MockPlatform {
 	return &MockPlatform{
-		sensorEvents: make(chan *u.Trigger),
-		sensors:      make(map[string]c.SensorCfg),
-		lastLeds:     make([][]p.Led, 0),
+		sensorEvents: make(chan *util.Trigger),
+		sensors:      make(map[string]config.SensorCfg),
+		lastLeds:     make([][]producer.Led, 0),
 		stopChan:     make(chan struct{}),
 	}
 }
 
 type MockLedProducer struct {
-	*p.AbstractProducer
+	*producer.AbstractProducer
 	uid          string
 	wg           *sync.WaitGroup
 	mu           sync.Mutex
 	startCalls   int
 	stopCalls    int
 	triggerCalls int
-	leds         []p.Led
+	leds         []producer.Led
 }
 
 func NewMockLedProducer(uid string, wg *sync.WaitGroup) *MockLedProducer {
@@ -134,7 +134,7 @@ func (m *MockLedProducer) Start() {
 	}()
 }
 
-func (m *MockLedProducer) SendTrigger(trigger *u.Trigger) {
+func (m *MockLedProducer) SendTrigger(trigger *util.Trigger) {
 	m.mu.Lock()
 	m.triggerCalls++
 	m.wg.Add(1) // Expect one sensor producer to run
@@ -153,7 +153,7 @@ func (m *MockLedProducer) TryStop() (bool, error) {
 	return true, nil
 }
 
-func (m *MockLedProducer) GetLeds(buffer []p.Led) {
+func (m *MockLedProducer) GetLeds(buffer []producer.Led) {
 	copy(buffer, m.leds)
 }
 
@@ -181,20 +181,20 @@ func TestStateManager(t *testing.T) {
 	// Setup
 	ossignal := make(chan os.Signal, 1)
 	app := NewApp(ossignal)
-	app.ledproducers = make(map[string]p.LedProducer)
+	app.ledproducers = make(map[string]producer.LedProducer)
 	app.stopsignal = make(chan struct{})
 
 	mockPlatform := NewMockPlatform()
 	app.platform = mockPlatform
-	mockPlatform.sensors["sensor1"] = c.SensorCfg{LedIndex: 0}
+	mockPlatform.sensors["sensor1"] = config.SensorCfg{LedIndex: 0}
 
 	permProd := NewMockLedProducer("perm", nil)
 	sensorProd := NewMockLedProducer("sensor1", &app.sensorProdWg)
 	afterProd := NewMockLedProducer("after", &app.afterProdWg)
 
-	app.permProd = []p.LedProducer{permProd}
-	app.sensorProd = []p.LedProducer{sensorProd}
-	app.afterProd = []p.LedProducer{afterProd}
+	app.permProd = []producer.LedProducer{permProd}
+	app.sensorProd = []producer.LedProducer{sensorProd}
+	app.afterProd = []producer.LedProducer{afterProd}
 	app.ledproducers["perm"] = permProd
 	app.ledproducers["sensor1"] = sensorProd
 	app.ledproducers["after"] = afterProd
@@ -220,7 +220,7 @@ func TestStateManager(t *testing.T) {
 	}
 
 	// 2. Trigger a sensor event
-	mockPlatform.sensorEvents <- u.NewTrigger("sensor1", 100, time.Now())
+	mockPlatform.sensorEvents <- util.NewTrigger("sensor1", 100, time.Now())
 
 	// 3. Verify state transition: perm should be stopped, sensor should be triggered
 	time.Sleep(25 * time.Millisecond) // Allow time for state transition
@@ -253,7 +253,7 @@ func TestStateManager(t *testing.T) {
 func TestCombineAndUpdateDisplay(t *testing.T) {
 	ossignal := make(chan os.Signal, 1)
 	app := NewApp(ossignal)
-	app.ledproducers = make(map[string]p.LedProducer)
+	app.ledproducers = make(map[string]producer.LedProducer)
 
 	mockPlatform := NewMockPlatform()
 	app.platform = mockPlatform
@@ -261,19 +261,19 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 	mockPlatform.Start(nil)
 	t.Cleanup(mockPlatform.Stop)
 
-	mockPlatform.sensors["sensor"] = c.SensorCfg{LedIndex: 0, SpiMultiplex: "", AdcChannel: 0}
+	mockPlatform.sensors["sensor"] = config.SensorCfg{LedIndex: 0, SpiMultiplex: "", AdcChannel: 0}
 
 	mockSensorProducer := NewMockLedProducer("sensor", nil)
-	mockMultiBlobProducer := NewMockLedProducer(MULTI_BLOB_UID, nil)
+	mockMultiBlobProducer := NewMockLedProducer(MultiBlobUID, nil)
 	app.ledproducers["sensor"] = mockSensorProducer
-	app.ledproducers[MULTI_BLOB_UID] = mockMultiBlobProducer
-	app.sensorProd = []p.LedProducer{mockSensorProducer}
+	app.ledproducers[MultiBlobUID] = mockMultiBlobProducer
+	app.sensorProd = []producer.LedProducer{mockSensorProducer}
 
-	ledReader := u.NewAtomicMapEvent[p.LedProducer]()
+	ledReader := util.NewAtomicMapEvent[producer.LedProducer]()
 	app.stopsignal = make(chan struct{})
 	ledBufferPool := &sync.Pool{
 		New: func() any {
-			return make([]p.Led, 10)
+			return make([]producer.Led, 10)
 		},
 	}
 
@@ -300,15 +300,15 @@ func TestCombineAndUpdateDisplay(t *testing.T) {
 }
 
 func TestHashLEDs(t *testing.T) {
-	leds1 := []p.Led{
+	leds1 := []producer.Led{
 		{Red: 100, Green: 150, Blue: 200},
 		{Red: 0, Green: 50, Blue: 255},
 	}
-	leds2 := []p.Led{
+	leds2 := []producer.Led{
 		{Red: 100, Green: 150, Blue: 200},
 		{Red: 0, Green: 50, Blue: 255},
 	}
-	leds3 := []p.Led{
+	leds3 := []producer.Led{
 		{Red: 100, Green: 150, Blue: 200},
 		{Red: 0, Green: 51, Blue: 255},
 	}
@@ -326,9 +326,9 @@ func TestHashLEDs(t *testing.T) {
 }
 
 func BenchmarkHashLEDs(b *testing.B) {
-	leds := make([]p.Led, 100)
+	leds := make([]producer.Led, 100)
 	for i := range leds {
-		leds[i] = p.Led{Red: float64(i % 256), Green: float64((i * 2) % 256), Blue: float64((i * 3) % 256)}
+		leds[i] = producer.Led{Red: float64(i % 256), Green: float64((i * 2) % 256), Blue: float64((i * 3) % 256)}
 	}
 	b.ResetTimer()
 	b.ReportAllocs()

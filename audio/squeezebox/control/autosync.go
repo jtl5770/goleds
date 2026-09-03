@@ -3,7 +3,7 @@ package control
 import (
 	"context"
 	"log/slog"
-	"math/rand"
+	"math/rand/v2"
 	"strings"
 	"sync"
 	"time"
@@ -200,7 +200,7 @@ func (m *AutoSyncManager) evaluatePlayers() {
 	}
 
 	// 4. Pick an active candidate
-	selected := activeCandidates[rand.Intn(len(activeCandidates))]
+	selected := activeCandidates[rand.IntN(len(activeCandidates))]
 	targetMAC := selected.masterMAC
 	targetName := selected.player.Name
 

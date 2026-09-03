@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	p "lautenbacher.net/goleds/producer"
-	u "lautenbacher.net/goleds/util"
+	"lautenbacher.net/goleds/producer"
+	"lautenbacher.net/goleds/util"
 )
 
 // Platform defines the interface for abstracting away the real
@@ -20,11 +20,11 @@ type Platform interface {
 
 	// SetLeds provides a non-blocking way for the application to send the
 	// latest LED data to the platform.
-	SetLeds(leds []p.Led)
+	SetLeds(leds []producer.Led)
 
 	// GetSensorEvents returns a channel that the application can read from
 	// to receive sensor trigger events.
-	GetSensorEvents() <-chan *u.Trigger
+	GetSensorEvents() <-chan *util.Trigger
 
 	// GetSensorLedIndices returns a map of sensor UIDs to their LED indices.
 	GetSensorLedIndices() map[string]int

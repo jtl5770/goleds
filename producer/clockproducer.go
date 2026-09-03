@@ -5,28 +5,28 @@ import (
 	"math"
 	"time"
 
-	c "lautenbacher.net/goleds/config"
-	u "lautenbacher.net/goleds/util"
+	"lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/util"
 )
 
 type ClockProducer struct {
 	*AbstractProducer
-	hour         Led
-	minute       Led
-	hour_dist    float64
-	minute_dist  float64
-	hour_start   int
-	minute_start int
+	hour        Led
+	minute      Led
+	hourDist    float64
+	minuteDist  float64
+	hourStart   int
+	minuteStart int
 }
 
-func NewClockProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, cfg c.ClockLEDConfig) *ClockProducer {
-	hour_start := cfg.StartLedHour
-	hour_end := cfg.EndLedHour
-	hour_length := hour_end - hour_start
+func NewClockProducer(uid string, ledsChanged *util.AtomicMapEvent[LedProducer], ledsTotal int, cfg config.ClockLEDConfig) *ClockProducer {
+	hourStart := cfg.StartLedHour
+	hourEnd := cfg.EndLedHour
+	hourLength := hourEnd - hourStart
 
-	minute_start := cfg.StartLedMinute
-	minute_end := cfg.EndLedMinute
-	minute_length := minute_end - minute_start
+	minuteStart := cfg.StartLedMinute
+	minuteEnd := cfg.EndLedMinute
+	minuteLength := minuteEnd - minuteStart
 
 	inst := &ClockProducer{
 		hour: Led{
@@ -39,12 +39,12 @@ func NewClockProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], le
 			Green: cfg.LedMinute[1],
 			Blue:  cfg.LedMinute[2],
 		},
-		hour_dist:    float64(hour_length) / (12*60.0 - 1),
-		minute_dist:  float64(minute_length) / (60.0 - 1),
-		hour_start:   hour_start,
-		minute_start: minute_start,
+		hourDist:    float64(hourLength) / (12*60.0 - 1),
+		minuteDist:  float64(minuteLength) / (60.0 - 1),
+		hourStart:   hourStart,
+		minuteStart: minuteStart,
 	}
-	slog.Debug("Clock distances", "hour_dist", inst.hour_dist, "minute_dist", inst.minute_dist)
+	slog.Debug("Clock distances", "hourDist", inst.hourDist, "minuteDist", inst.minuteDist)
 	inst.AbstractProducer = NewAbstractProducer(uid, ledsChanged, inst.runner, ledsTotal)
 	return inst
 }
@@ -55,8 +55,8 @@ func (s *ClockProducer) setTime() {
 	now := time.Now()
 	hour := now.Hour() % 12
 	minute := now.Minute()
-	hIdx := s.hour_start + int(math.Round(float64(hour*60+minute)*s.hour_dist))
-	mIdx := s.minute_start + int(math.Round(float64(minute)*s.minute_dist))
+	hIdx := s.hourStart + int(math.Round(float64(hour*60+minute)*s.hourDist))
+	mIdx := s.minuteStart + int(math.Round(float64(minute)*s.minuteDist))
 	if hIdx >= 0 && hIdx < len(s.leds) {
 		s.leds[hIdx] = s.hour
 	}

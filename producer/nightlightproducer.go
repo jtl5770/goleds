@@ -7,9 +7,8 @@ package producer
 import (
 	"time"
 
-	u "lautenbacher.net/goleds/util"
-
 	"github.com/nathan-osman/go-sunrise"
+	"lautenbacher.net/goleds/util"
 )
 
 type NightlightProducer struct {
@@ -19,7 +18,7 @@ type NightlightProducer struct {
 	ledNight  []Led
 }
 
-func NewNightlightProducer(uid string, ledsChanged *u.AtomicMapEvent[LedProducer], ledsTotal int, latitude float64, longitude float64, ledRGB [][]float64) *NightlightProducer {
+func NewNightlightProducer(uid string, ledsChanged *util.AtomicMapEvent[LedProducer], ledsTotal int, latitude float64, longitude float64, ledRGB [][]float64) *NightlightProducer {
 	inst := &NightlightProducer{
 		latitude:  latitude,
 		longitude: longitude,
@@ -58,8 +57,8 @@ func (s *NightlightProducer) runner() {
 		next := now.Add(24 * time.Hour)  // tomorrow
 		prev := now.Add(-24 * time.Hour) // yesterday
 		rise, set := sunrise.SunriseSunset(s.latitude, s.longitude, now.Year(), now.Month(), now.Day())
-		rise_next_day, _ := sunrise.SunriseSunset(s.latitude, s.longitude, next.Year(), next.Month(), next.Day())
-		_, set_prev_day := sunrise.SunriseSunset(s.latitude, s.longitude, prev.Year(), prev.Month(), prev.Day())
+		riseNextDay, _ := sunrise.SunriseSunset(s.latitude, s.longitude, next.Year(), next.Month(), next.Day())
+		_, setPrevDay := sunrise.SunriseSunset(s.latitude, s.longitude, prev.Year(), prev.Month(), prev.Day())
 		var wakeupAfter time.Duration
 		if now.After(rise) && now.Before(set) {
 			// During the day - between sunrise and sunset
@@ -76,16 +75,16 @@ func (s *NightlightProducer) runner() {
 				// configured LED value should be used is computed by
 				// dividing the night duration by the number of
 				// configured night LED configurations
-				waitIntervalDuration = time.Duration(rise.Sub(set_prev_day).Nanoseconds() / int64(len(s.ledNight)))
+				waitIntervalDuration = time.Duration(rise.Sub(setPrevDay).Nanoseconds() / int64(len(s.ledNight)))
 				if waitIntervalDuration <= 0 {
 					waitIntervalDuration = time.Minute
 				}
-				currInterval = int(now.Sub(set_prev_day) / waitIntervalDuration)
-				tillNextInterval = set_prev_day.Add(time.Duration((currInterval + 1)) * waitIntervalDuration).Sub(now)
+				currInterval = int(now.Sub(setPrevDay) / waitIntervalDuration)
+				tillNextInterval = setPrevDay.Add(time.Duration((currInterval + 1)) * waitIntervalDuration).Sub(now)
 			} else {
 				// in the night before midnight - similar as above but
 				// using current days sunset and next days sunrise
-				waitIntervalDuration = time.Duration(rise_next_day.Sub(set).Nanoseconds() / int64(len(s.ledNight)))
+				waitIntervalDuration = time.Duration(riseNextDay.Sub(set).Nanoseconds() / int64(len(s.ledNight)))
 				if waitIntervalDuration <= 0 {
 					waitIntervalDuration = time.Minute
 				}

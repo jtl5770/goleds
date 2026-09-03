@@ -1,6 +1,6 @@
 package producer
 
-import u "lautenbacher.net/goleds/util"
+import "lautenbacher.net/goleds/util"
 
 // The outside interface all concrete producers need to fulfill
 type LedProducer interface {
@@ -9,7 +9,7 @@ type LedProducer interface {
 	GetPriority() int
 	IsActive() bool
 	Start()
-	SendTrigger(trigger *u.Trigger)
+	SendTrigger(trigger *util.Trigger)
 	TryStop() (bool, error)
 	Exit()
 }

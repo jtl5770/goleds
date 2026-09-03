@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"sort"
 
-	c "lautenbacher.net/goleds/config"
-	p "lautenbacher.net/goleds/producer"
+	"lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/producer"
 )
 
 // segment represents a single LED segment.
@@ -15,10 +15,10 @@ type segment struct {
 	visible      bool
 	reverse      bool
 	spiMultiplex string
-	leds         []p.Led
+	leds         []producer.Led
 }
 
-func parseDisplaySegments(displayConfig c.DisplayConfig) map[string][]*segment {
+func parseDisplaySegments(displayConfig config.DisplayConfig) map[string][]*segment {
 	segments := make(map[string][]*segment)
 
 	for name, segarray := range displayConfig.LedSegments {
@@ -78,14 +78,14 @@ func newSegment(firstled, lastled int, spimultiplex string, reverse bool, visibl
 }
 
 // setLeds sets the LEDs for the segment.
-func (s *segment) setLeds(sumleds []p.Led) {
+func (s *segment) setLeds(sumleds []producer.Led) {
 	if s.visible {
 		s.leds = sumleds[s.firstLed : s.lastLed+1]
 	}
 }
 
 // getLeds returns the LEDs for the segment if visible, otherwise nil.
-func (s *segment) getLeds() []p.Led {
+func (s *segment) getLeds() []producer.Led {
 	if s.visible {
 		return s.leds
 	}

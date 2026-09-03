@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	c "lautenbacher.net/goleds/config"
-	u "lautenbacher.net/goleds/util"
+	"lautenbacher.net/goleds/config"
+	"lautenbacher.net/goleds/util"
 )
 
 type mockAudioProvider struct {
@@ -34,14 +34,14 @@ func (m *mockAudioProvider) Start() error { return nil }
 func (m *mockAudioProvider) Stop() error  { return nil }
 
 func TestAudioLEDProducer_LevelsUpdate(t *testing.T) {
-	ledsChanged := u.NewAtomicMapEvent[LedProducer]()
+	ledsChanged := util.NewAtomicMapEvent[LedProducer]()
 	mock := &mockAudioProvider{
 		leftDB:  -10.0,
 		rightDB: -20.0,
 		playing: true,
 	}
 
-	cfg := c.AudioLEDConfig{
+	cfg := config.AudioLEDConfig{
 		StartLedLeft:  0,
 		EndLedLeft:    9,
 		StartLedRight: 10,
@@ -112,14 +112,14 @@ func TestAudioLEDProducer_LevelsUpdate(t *testing.T) {
 }
 
 func TestAudioLEDProducer_DynamicPeakHoldAndDecay(t *testing.T) {
-	ledsChanged := u.NewAtomicMapEvent[LedProducer]()
+	ledsChanged := util.NewAtomicMapEvent[LedProducer]()
 	mock := &mockAudioProvider{
-		leftDB:  0.0, // Max volume -> Red zone (index 9)
+		leftDB:  0.0,  // Max volume -> Red zone (index 9)
 		rightDB: -40.0, // Low volume -> Green zone
 		playing: true,
 	}
 
-	cfg := c.AudioLEDConfig{
+	cfg := config.AudioLEDConfig{
 		StartLedLeft:    0,
 		EndLedLeft:      9,
 		StartLedRight:   10,
