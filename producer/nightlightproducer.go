@@ -45,6 +45,18 @@ func (s *NightlightProducer) setNightLed(index int) {
 	s.ledsChanged.Send(s.GetUID(), s)
 }
 
+func (s *NightlightProducer) waitForWakeup(duration time.Duration) (stopped bool) {
+	timer := time.NewTimer(duration)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		return false
+	case <-s.stopchan:
+		return true
+	}
+}
+
 func (s *NightlightProducer) runner() {
 	defer s.ClearLeds()
 
@@ -92,17 +104,12 @@ func (s *NightlightProducer) runner() {
 				tillNextInterval = set.Add(time.Duration((currInterval + 1)) * waitIntervalDuration).Sub(now)
 			}
 			currInterval = max(0, min(currInterval, len(s.ledNight)-1))
-			// log.Printf("Current NightLED index %d : waitInterval %d : tillNextInterval %d", currInterval, waitIntervalDuration, tillNextInterval)
 			s.setNightLed(currInterval)
 			// + 1s maybe not needed, but so we are sure to really be
 			// in the next interval
 			wakeupAfter = tillNextInterval + time.Second
 		}
-		select {
-		case <-time.After(wakeupAfter):
-			// nothing, just continue
-		case <-s.stopchan:
-			// log.Println("Stopped NightlightProducer...")
+		if s.waitForWakeup(wakeupAfter) {
 			return
 		}
 	}

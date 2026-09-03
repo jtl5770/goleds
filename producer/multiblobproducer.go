@@ -168,6 +168,7 @@ func (s *MultiBlobProducer) runner() {
 	tick := time.NewTicker(s.delay)
 	countUpRun := false
 	defer func() {
+		s.ClearLeds()
 		tick.Stop()
 		triggerduration.Stop()
 	}()

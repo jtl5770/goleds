@@ -165,10 +165,13 @@ func (s *AbstractProducer) TryStop() (bool, error) {
 		return false, nil
 	}
 
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
+
 	select {
 	case s.stopchan <- true:
 		return true, nil
-	case <-time.After(5 * time.Second):
+	case <-timer.C:
 		slog.Warn("Timeout reached while sending stop signal", "uid", s.GetUID())
 		return false, errTimeout
 	}
