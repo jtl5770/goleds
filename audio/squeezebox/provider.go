@@ -1,8 +1,10 @@
 package squeezebox
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"strings"
@@ -10,6 +12,7 @@ import (
 
 	"lautenbacher.net/goleds/audio"
 	"lautenbacher.net/goleds/audio/squeezebox/control"
+	"lautenbacher.net/goleds/audio/squeezebox/discovery"
 	"lautenbacher.net/goleds/audio/squeezebox/slimproto"
 )
 
@@ -56,13 +59,47 @@ func GeneratePlayerMAC() net.HardwareAddr {
 }
 
 // NewSqueezeboxAudioProvider creates an initialized SqueezeboxAudioProvider.
+// If cfg.Server is empty, it uses modern UDP auto-discovery to locate LMS, ignoring any configured ports.
+// If cfg.Server is specified, it connects to that host and uses the given ports or defaults.
 func NewSqueezeboxAudioProvider(cfg Config) (*SqueezeboxAudioProvider, error) {
-	if cfg.SlimProtoPort <= 0 {
-		cfg.SlimProtoPort = 3483
+	var serverHost string
+	var slimProtoPort int
+	var jsonrpcPort int
+
+	cleanServer := strings.TrimSpace(cfg.Server)
+	if cleanServer == "" {
+		slog.Info("Squeezebox Server not configured, initiating UDP auto-discovery...")
+		discCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		discovered, err := discovery.DiscoverServer(discCtx, 3*time.Second)
+		if err != nil {
+			return nil, fmt.Errorf("squeezebox auto-discovery: %w", err)
+		}
+		serverHost = discovered.Host
+		slimProtoPort = discovered.SlimProtoPort
+		jsonrpcPort = discovered.JSONRPCPort
+		slog.Info("Using auto-discovered LMS server",
+			"name", discovered.Name,
+			"host", serverHost,
+			"slimproto_port", slimProtoPort,
+			"jsonrpc_port", jsonrpcPort,
+			"version", discovered.Version)
+	} else {
+		serverHost = cleanServer
+		slimProtoPort = cfg.SlimProtoPort
+		if slimProtoPort <= 0 {
+			slimProtoPort = discovery.DefaultPort
+		}
+		jsonrpcPort = cfg.JSONRPCPort
+		if jsonrpcPort <= 0 {
+			jsonrpcPort = discovery.DefaultJSONRPCPort
+		}
+		slog.Info("Using statically configured LMS server",
+			"host", serverHost,
+			"slimproto_port", slimProtoPort,
+			"jsonrpc_port", jsonrpcPort)
 	}
-	if cfg.JSONRPCPort <= 0 {
-		cfg.JSONRPCPort = 9000
-	}
+
 	if cfg.PlayerName == "" {
 		cfg.PlayerName = "GoLEDs VU"
 	}
@@ -84,7 +121,7 @@ func NewSqueezeboxAudioProvider(cfg Config) (*SqueezeboxAudioProvider, error) {
 	}
 
 	levels := audio.NewAtomicLevels()
-	serverSlim := fmt.Sprintf("%s:%d", cfg.Server, cfg.SlimProtoPort)
+	serverSlim := fmt.Sprintf("%s:%d", serverHost, slimProtoPort)
 	helo := slimproto.HeloConfig{
 		MAC:        mac,
 		DeviceID:   12, // SqueezePlay / SqueezeSlave
@@ -96,7 +133,7 @@ func NewSqueezeboxAudioProvider(cfg Config) (*SqueezeboxAudioProvider, error) {
 
 	var autoSyncMgr *control.AutoSyncManager
 	if cfg.AutoSync {
-		lmsClient := control.NewLMSClient(cfg.Server, cfg.JSONRPCPort)
+		lmsClient := control.NewLMSClient(serverHost, jsonrpcPort)
 		syncConfig := control.AutoSyncConfig{
 			OurMAC:         mac.String(),
 			OurName:        cfg.PlayerName,

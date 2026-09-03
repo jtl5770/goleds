@@ -45,8 +45,10 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
         final s = a.squeezebox;
 
         serverCtrl = TextEditingController(text: s.server);
-        slimProtoPortCtrl = TextEditingController(text: s.slimProtoPort.toString());
-        jsonrpcPortCtrl = TextEditingController(text: s.jsonrpcPort.toString());
+        slimProtoPortCtrl = TextEditingController(
+            text: s.slimProtoPort > 0 ? s.slimProtoPort.toString() : '');
+        jsonrpcPortCtrl = TextEditingController(
+            text: s.jsonrpcPort > 0 ? s.jsonrpcPort.toString() : '');
         playerNameCtrl = TextEditingController(text: s.playerName);
         playerMACCtrl = TextEditingController(text: s.playerMAC);
         ignoredPlayersCtrl = TextEditingController(text: s.ignoredPlayers.join(', '));
@@ -86,8 +88,8 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
 
     final s = config.audioLED.squeezebox;
     s.server = serverCtrl.text.trim();
-    s.slimProtoPort = int.tryParse(slimProtoPortCtrl.text.trim()) ?? 3483;
-    s.jsonrpcPort = int.tryParse(jsonrpcPortCtrl.text.trim()) ?? 9000;
+    s.slimProtoPort = int.tryParse(slimProtoPortCtrl.text.trim()) ?? 0;
+    s.jsonrpcPort = int.tryParse(jsonrpcPortCtrl.text.trim()) ?? 0;
     s.playerName = playerNameCtrl.text.trim();
     s.playerMAC = playerMACCtrl.text.trim();
     s.autoSync = autoSync;
@@ -137,8 +139,8 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
             controller: serverCtrl,
             decoration: const InputDecoration(
               labelText: 'LMS Server Host/IP',
+              hintText: 'Auto-discover if empty',
               border: OutlineInputBorder(),
-              helperText: 'e.g. 192.168.1.100 or 127.0.0.1',
             ),
           ),
           const SizedBox(height: 12),
@@ -150,8 +152,8 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     labelText: 'SlimProto Port',
+                    hintText: '3483',
                     border: OutlineInputBorder(),
-                    helperText: 'Default: 3483',
                   ),
                 ),
               ),
@@ -162,8 +164,8 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     labelText: 'JSON-RPC Port',
+                    hintText: '9000',
                     border: OutlineInputBorder(),
-                    helperText: 'Default: 9000',
                   ),
                 ),
               ),
@@ -174,8 +176,8 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
             controller: playerNameCtrl,
             decoration: const InputDecoration(
               labelText: 'Player Name',
+              hintText: 'GoLEDs VU',
               border: OutlineInputBorder(),
-              helperText: 'Name displayed in LMS (e.g. "GoLEDs VU")',
             ),
           ),
           const SizedBox(height: 12),
@@ -183,8 +185,8 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
             controller: playerMACCtrl,
             decoration: const InputDecoration(
               labelText: 'Player MAC Address',
+              hintText: 'Auto-generated if empty',
               border: OutlineInputBorder(),
-              helperText: 'Optional: leave empty or "auto" to generate',
             ),
           ),
           const SizedBox(height: 16),
@@ -212,7 +214,6 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
               decoration: const InputDecoration(
                 labelText: 'Ignored Players',
                 border: OutlineInputBorder(),
-                helperText: 'Comma-separated player names or MACs to ignore',
               ),
             ),
           ],

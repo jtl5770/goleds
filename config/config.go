@@ -140,6 +140,8 @@ func (c *ClockLEDConfig) Validate(ledsTotal int) error {
 }
 
 // SqueezeboxConfig holds settings for connecting to Logitech Media Server.
+// If Server is empty, modern TLV auto-discovery is used on UDP port 3483,
+// and any configured port numbers are ignored.
 type SqueezeboxConfig struct {
 	Server         string        `yaml:"Server"`
 	SlimProtoPort  int           `yaml:"SlimProtoPort"`
@@ -152,14 +154,13 @@ type SqueezeboxConfig struct {
 }
 
 func (c *SqueezeboxConfig) Validate() error {
-	if c.Server == "" {
-		return fmt.Errorf("Server address cannot be empty")
-	}
-	if c.SlimProtoPort < 0 || c.SlimProtoPort > 65535 {
-		return fmt.Errorf("SlimProtoPort must be between 0 and 65535, got %d", c.SlimProtoPort)
-	}
-	if c.JSONRPCPort < 0 || c.JSONRPCPort > 65535 {
-		return fmt.Errorf("JSONRPCPort must be between 0 and 65535, got %d", c.JSONRPCPort)
+	if c.Server != "" {
+		if c.SlimProtoPort < 0 || c.SlimProtoPort > 65535 {
+			return fmt.Errorf("SlimProtoPort must be between 0 and 65535, got %d", c.SlimProtoPort)
+		}
+		if c.JSONRPCPort < 0 || c.JSONRPCPort > 65535 {
+			return fmt.Errorf("JSONRPCPort must be between 0 and 65535, got %d", c.JSONRPCPort)
+		}
 	}
 	if c.PlayerMAC != "" && !strings.EqualFold(strings.TrimSpace(c.PlayerMAC), "auto") {
 		if _, err := net.ParseMAC(strings.TrimSpace(c.PlayerMAC)); err != nil {

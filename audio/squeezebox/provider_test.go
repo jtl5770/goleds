@@ -16,7 +16,7 @@ func TestGeneratePlayerMAC(t *testing.T) {
 	}
 }
 
-func TestSqueezeboxAudioProvider_Init(t *testing.T) {
+func TestSqueezeboxAudioProvider_ExplicitHost(t *testing.T) {
 	cfg := Config{
 		Server:        "127.0.0.1",
 		SlimProtoPort: 3483,
@@ -36,6 +36,23 @@ func TestSqueezeboxAudioProvider_Init(t *testing.T) {
 	}
 	if leftDB != -100 || rightDB != -100 {
 		t.Errorf("Expected initial levels to be -100, got %f, %f", leftDB, rightDB)
+	}
+}
+
+func TestSqueezeboxAudioProvider_ExplicitHost_DefaultPorts(t *testing.T) {
+	cfg := Config{
+		Server:     "127.0.0.1",
+		PlayerMAC:  "00:04:20:11:22:33",
+		PlayerName: "Test VU",
+	}
+
+	provider, err := NewSqueezeboxAudioProvider(cfg)
+	if err != nil {
+		t.Fatalf("Failed to create provider: %v", err)
+	}
+
+	if provider.proto == nil {
+		t.Fatalf("Expected proto client to be initialized")
 	}
 }
 

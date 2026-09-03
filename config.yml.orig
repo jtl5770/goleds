@@ -212,7 +212,10 @@ AudioLED:
   MinDB: -60.0
   MaxDB: -3.0
   Squeezebox:
-    Server: "127.0.0.1"
+    # LMS Server IP/hostname. Leave empty ("") to automatically discover LMS via UDP on port 3483.
+    Server: ""
+    # SlimProto and JSON-RPC ports are ignored when Server is empty (auto-discovery).
+    # When Server is specified, standard defaults are used if set to 0.
     SlimProtoPort: 3483
     JSONRPCPort: 9000
     PlayerMAC: "" # Leave empty or "auto" to derive 00:04:20:ee:Y:Z from host MAC

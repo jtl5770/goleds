@@ -196,7 +196,7 @@ func TestReadConfig_InvalidBlobX(t *testing.T) {
 }
 
 func TestSqueezeboxConfig_Validation(t *testing.T) {
-	// Valid configuration
+	// Valid configuration with explicit server
 	validCfg := SqueezeboxConfig{
 		Server:        "192.168.1.100",
 		SlimProtoPort: 3483,
@@ -208,13 +208,12 @@ func TestSqueezeboxConfig_Validation(t *testing.T) {
 	}
 	assert.NoError(t, validCfg.Validate())
 
-	// Empty server
+	// Empty server is valid (triggers modern auto-discovery)
 	emptyServerCfg := validCfg
 	emptyServerCfg.Server = ""
-	assert.Error(t, emptyServerCfg.Validate())
-	assert.Contains(t, emptyServerCfg.Validate().Error(), "Server address cannot be empty")
+	assert.NoError(t, emptyServerCfg.Validate())
 
-	// Invalid SlimProto port
+	// Invalid SlimProto port when Server is set
 	badPortCfg := validCfg
 	badPortCfg.SlimProtoPort = 70000
 	assert.Error(t, badPortCfg.Validate())
