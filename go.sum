@@ -19,8 +19,8 @@ github.com/jfreymuth/oggvorbis v1.0.5 h1:u+Ck+R0eLSRhgq8WTmffYnrVtSztJcYrl588DM4
 github.com/jfreymuth/oggvorbis v1.0.5/go.mod h1:1U4pqWmghcoVsCJJ4fRBKv9peUJMBHixthRlBeD6uII=
 github.com/jfreymuth/vorbis v1.0.2 h1:m1xH6+ZI4thH927pgKD8JOH4eaGRm18rEE9/0WKjvNE=
 github.com/jfreymuth/vorbis v1.0.2/go.mod h1:DoftRo4AznKnShRl1GxiTFCseHr4zR9BN3TWXyuzrqQ=
-github.com/jtl5770/go-slimvu v0.0.0-20260903204946-53592b1edf16 h1:H31ylWYXqhNQSdHIZUm+T8iriS9u9W5t1uQSWp5iOow=
-github.com/jtl5770/go-slimvu v0.0.0-20260903204946-53592b1edf16/go.mod h1:HLIT8oj0L1c5NoYbkwsUt3D8/s6shSH2UWBADhqGl/s=
+github.com/jtl5770/go-slimvu v0.0.0-20260903213827-3208540f790f h1:B+y8qzPgahzC3KlkSSxa1U/Eb3//aTlSToBrQRvMjFc=
+github.com/jtl5770/go-slimvu v0.0.0-20260903213827-3208540f790f/go.mod h1:zfmJB2JcMXnyLzn0EsSeHo7CV1+jLaGA5EQWNQyDtnc=
 github.com/lucasb-eyer/go-colorful v1.3.0 h1:2/yBRLdWBZKrf7gB40FoiKfAWYQ0lqNcbuQwVHXptag=
 github.com/lucasb-eyer/go-colorful v1.3.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/mewkiz/flac v1.0.14 h1:hyRGAM8NCKznoPmIi9zz2jyO+nfmxY2ErqBnHZ+gxh4=
