@@ -68,6 +68,7 @@ type App struct {
 	sensorProdWg  sync.WaitGroup
 	afterProdWg   sync.WaitGroup
 	audioProvider audio.AudioProvider
+	calibCurves   platform.CalibrationCurves
 }
 
 var startWeb sync.Once
@@ -75,7 +76,8 @@ var startWeb sync.Once
 // NewApp creates a new App instance
 func NewApp(ossignal chan os.Signal) *App {
 	return &App{
-		ossignal: ossignal,
+		ossignal:    ossignal,
+		calibCurves: make(platform.CalibrationCurves),
 	}
 }
 
@@ -253,7 +255,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 
 	ledReader := util.NewAtomicMapEvent[producer.LedProducer]()
 
-	if err := a.platform.Start(ledBufferPool); err != nil {
+	if err := a.platform.Start(ledBufferPool, a.calibCurves); err != nil {
 		return fmt.Errorf("failed to start platform: %w", err)
 	}
 
@@ -352,7 +354,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 		http.HandleFunc("/api/config", config.ConfigHandler(cfile))
 		http.HandleFunc("/api/sensors/calibrate", config.CalibrateHandler(func() error {
 			if a.platform != nil {
-				return a.platform.Calibrate()
+				return a.platform.Calibrate(a.calibCurves)
 			}
 			return nil
 		}))

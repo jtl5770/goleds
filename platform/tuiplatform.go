@@ -91,12 +91,12 @@ func NewTUIPlatform(conf *config.Config, ossignalchan chan os.Signal) *TUIPlatfo
 	return inst
 }
 
-func (s *TUIPlatform) Calibrate() error {
+func (s *TUIPlatform) Calibrate(calibCurves CalibrationCurves) error {
 	slog.Info("TUI Platform: Simulated sensor calibration completed.")
 	return nil
 }
 
-func (s *TUIPlatform) Start(pool *sync.Pool) error {
+func (s *TUIPlatform) Start(pool *sync.Pool, calibCurves CalibrationCurves) error {
 	s.ledBufferPool = pool
 
 	s.segments = parseDisplaySegments(s.config.Hardware.Display)

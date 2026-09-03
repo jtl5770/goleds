@@ -45,7 +45,7 @@ func (s *RaspberryPiPlatform) SetSensorViewer(v *SensorViewer) {
 	s.sensorViewer = v
 }
 
-func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
+func (s *RaspberryPiPlatform) Start(pool *sync.Pool, calibCurves CalibrationCurves) error {
 	s.ledBufferPool = pool
 
 	s.segments = parseDisplaySegments(s.config.Hardware.Display)
@@ -104,19 +104,21 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool) error {
 
 	s.initSensors(s.config.Hardware.Sensors)
 
+	if calibCurves.IsCalibrated() {
+		for name, curve := range calibCurves {
+			if sn, ok := s.sensors[name]; ok {
+				sn.setCalibrationCurve(curve)
+			}
+		}
+	} else if len(s.sensors) > 0 {
+		go s.Calibrate(calibCurves)
+	}
+
 	s.displayWg.Add(1)
 	go s.displayDriver()
 
 	s.sensorWg.Add(1)
 	go s.sensorDriver()
-
-	globalCalibMutex.RLock()
-	hasCurves := len(globalCalibCurves) > 0
-	globalCalibMutex.RUnlock()
-
-	if len(s.sensors) > 0 && !hasCurves {
-		go s.Calibrate()
-	}
 
 	close(s.readyChan) // For RPi, we are ready immediately.
 	return nil
@@ -161,7 +163,7 @@ func (s *RaspberryPiPlatform) rpiDisplayFunc(leds []producer.Led) {
 	}
 }
 
-func (s *RaspberryPiPlatform) Calibrate() error {
+func (s *RaspberryPiPlatform) Calibrate(calibCurves CalibrationCurves) error {
 	if !s.isCalibrating.CompareAndSwap(false, true) {
 		return fmt.Errorf("calibration already in progress")
 	}
@@ -290,13 +292,13 @@ func (s *RaspberryPiPlatform) Calibrate() error {
 			continue
 		}
 
-		globalCalibMutex.Lock()
 		for name, curve := range stepCurves {
 			s.sensors[name].setCalibrationCurve(curve)
-			globalCalibCurves[name] = curve
+			if calibCurves != nil {
+				calibCurves[name] = curve
+			}
 			slog.Info("Calibrated sensor curve", "sensor", name, "curve", curve)
 		}
-		globalCalibMutex.Unlock()
 		setAllLeds(0, 0, 0)
 		flashBlue(2)
 		slog.Info("Sensor calibration completed successfully.")
