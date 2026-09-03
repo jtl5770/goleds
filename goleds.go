@@ -38,7 +38,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"lautenbacher.net/goleds/audio"
-	"lautenbacher.net/goleds/audio/squeezebox"
+	"github.com/jtl5770/go-slimvu"
 	"lautenbacher.net/goleds/config"
 	"lautenbacher.net/goleds/logging"
 	"lautenbacher.net/goleds/platform"
@@ -265,7 +265,7 @@ func (a *App) initialise(cfile string, realp bool, sensp bool) error {
 
 	// Initialize AudioProvider if AudioLED is enabled
 	if conf.AudioLED.Enabled {
-		provider, err := squeezebox.NewSqueezeboxAudioProvider(squeezebox.Config{
+		provider, err := slimvu.NewProvider(slimvu.Config{
 			Server:         conf.AudioLED.Squeezebox.Server,
 			SlimProtoPort:  conf.AudioLED.Squeezebox.SlimProtoPort,
 			JSONRPCPort:    conf.AudioLED.Squeezebox.JSONRPCPort,
