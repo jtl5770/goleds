@@ -120,7 +120,9 @@ func (d *FLACDecoder) processFrame(f *frame.Frame, out *AudioRingBuffer, thresho
 	for i := 0; i < nSamples; i++ {
 		for ch := 0; ch < 2; ch++ {
 			var sample int32
-			if ch < nChannels {
+			if nChannels == 1 {
+				sample = f.Subframes[0].Samples[i]
+			} else if ch < nChannels {
 				sample = f.Subframes[ch].Samples[i]
 			}
 			if bitsPerSample > 16 {

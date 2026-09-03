@@ -3,6 +3,7 @@ package slimproto
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"net"
 )
 
@@ -39,7 +40,11 @@ type HeloConfig struct {
 func EncodeHelo(cfg HeloConfig) []byte {
 	caps := cfg.Capabilities
 	if caps == "" {
-		caps = "Model=squeezelite,AccuratePlayPoints=1,HasDigitalOut=1,HasPolarityInversion=1,Balance=1,Firmware=v1.9.9-1414,flc,pcm"
+		modelName := cfg.PlayerName
+		if modelName == "" {
+			modelName = "GoLEDs VU"
+		}
+		caps = fmt.Sprintf("Model=squeezelite,ModelName=%s,MaxSampleRate=384000,AccuratePlayPoints=1,HasDigitalOut=1,HasPolarityInversion=1,Firmware=v1.9.9-1414,flc,pcm,mp3,aac,ogg,ops", modelName)
 	}
 	payloadLen := 36 + len(caps)
 	buf := make([]byte, 8+payloadLen)
@@ -143,7 +148,7 @@ func EncodeStat(event [4]byte, streamBufSize uint32, streamBufFullness uint32, o
 	buf[offset+2] = 0 // [6] mas_mode
 	offset += 3
 
-	binary.BigEndian.PutUint32(buf[offset:offset+4], streamBufSize)     // [7..11] stream_buffer_size
+	binary.BigEndian.PutUint32(buf[offset:offset+4], streamBufSize)       // [7..11] stream_buffer_size
 	binary.BigEndian.PutUint32(buf[offset+4:offset+8], streamBufFullness) // [11..15] stream_buffer_fullness
 	offset += 8
 
@@ -174,14 +179,14 @@ func EncodeStat(event [4]byte, streamBufSize uint32, streamBufFullness uint32, o
 
 // StrmCommand represents a parsed 'strm' command sent by LMS to control playback.
 type StrmCommand struct {
-	SubCommand       byte   // 's'=start, 'p'=pause, 'u'=unpause, 'q'=stop, 'f'=flush, 't'=tick, 'a'=skip ahead
-	AutoStart        byte   // '0'=manual/sync, '1'=autostart, '2'=direct, '3'=wait for direct
-	Format           byte   // 'p'=pcm, 'm'=mp3, 'f'=flac, 'a'=aac, 'o'=ogg
-	PCMSampleSize    byte   // '0'=8-bit, '1'=16-bit, '2'=24-bit, '3'=32-bit
-	PCMSampleRate    byte   // '0'=11kHz, '1'=22kHz, '2'=32kHz, '3'=44.1kHz, '4'=48kHz, '5'=88.2kHz, '6'=96kHz
-	PCMChannels      byte   // '1'=mono, '2'=stereo
-	PCMEndianness    byte   // '0'=big, '1'=little
-	Threshold        uint8  // buffer threshold KB
+	SubCommand       byte  // 's'=start, 'p'=pause, 'u'=unpause, 'q'=stop, 'f'=flush, 't'=tick, 'a'=skip ahead
+	AutoStart        byte  // '0'=manual/sync, '1'=autostart, '2'=direct, '3'=wait for direct
+	Format           byte  // 'p'=pcm, 'm'=mp3, 'f'=flac, 'a'=aac, 'o'=ogg/vorbis, 'u'=opus
+	PCMSampleSize    byte  // '0'=8-bit, '1'=16-bit, '2'=24-bit, '3'=32-bit
+	PCMSampleRate    byte  // '0'=11kHz, '1'=22kHz, '2'=32kHz, '3'=44.1kHz, '4'=48kHz, '5'=88.2kHz, '6'=96kHz
+	PCMChannels      byte  // '1'=mono, '2'=stereo
+	PCMEndianness    byte  // '0'=big, '1'=little
+	Threshold        uint8 // buffer threshold KB
 	SpdifEnable      uint8
 	TransitionPeriod uint8
 	TransitionType   uint8

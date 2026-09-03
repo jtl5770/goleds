@@ -54,7 +54,6 @@ type Client struct {
 	transport   *TCPTransport
 	fetcher     StreamFetcher
 	flacDecoder *FLACDecoder
-	pcmDecoder  *PCMDecoder
 	ringBuffer  *AudioRingBuffer
 	clock       Clock
 	consumer    *PacedConsumer
@@ -68,11 +67,12 @@ type Client struct {
 	ctxCancel context.CancelFunc
 	running   atomic.Bool
 
-	state       atomic.Int32  // PlaybackState
-	startAt     atomic.Uint32 // target jiffies timestamp for unpause ('u')
-	autoStart   atomic.Uint32 // autostart mode from strm command ('0'..'3')
-	thresholdKB atomic.Uint32 // buffer threshold in KB
-	pauseFrames atomic.Int64  // sync micro-pause frames requested by LMS
+	state         atomic.Int32  // PlaybackState
+	startAt       atomic.Uint32 // target jiffies timestamp for unpause ('u')
+	autoStart     atomic.Uint32 // autostart mode from strm command ('0'..'3')
+	thresholdKB   atomic.Uint32 // buffer threshold in KB
+	pauseFrames   atomic.Int64  // sync micro-pause frames requested by LMS
+	currentFormat atomic.Uint32 // active stream format byte ('f', 'm', 'p', 'a', 'o', 'u')
 
 	bytesReceived atomic.Uint64
 	framesPlayed  atomic.Uint64
@@ -102,7 +102,6 @@ func NewClient(serverAddr string, heloConfig HeloConfig, levels *audio.AtomicLev
 		levels:      levels,
 		fetcher:     NewHTTPStreamer(5 * time.Second),
 		flacDecoder: NewFLACDecoder(),
-		pcmDecoder:  NewPCMDecoder(),
 		ringBuffer:  rb,
 		clock:       clock,
 		ctx:         ctx,
@@ -338,17 +337,17 @@ func (c *Client) HandleCommand(cmd string, payload []byte) {
 }
 
 func (c *Client) handleStrm(strm *StrmCommand) {
-	slog.Info("SlimProto received strm command",
-		"subCommand", string(strm.SubCommand),
-		"format", string(strm.Format),
-		"autostart", string(strm.AutoStart),
-		"replayGain_or_jiffies", strm.ReplayGain,
-		"thresholdKB", strm.Threshold,
-		"serverIP", strm.ServerIP.String(),
-		"serverPort", strm.ServerPort)
-
 	switch strm.SubCommand {
 	case 's': // Start stream
+		c.currentFormat.Store(uint32(strm.Format))
+		slog.Info("SlimProto received strm command: START",
+			"subCommand", "s",
+			"format", string(strm.Format),
+			"autostart", string(strm.AutoStart),
+			"thresholdKB", strm.Threshold,
+			"serverIP", strm.ServerIP.String(),
+			"serverPort", strm.ServerPort)
+
 		c.mu.Lock()
 		if c.streamCancel != nil {
 			c.streamCancel()
@@ -408,7 +407,13 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 
 	case 'u': // Unpause stream (synchronized group play command)
 		startAt := strm.ReplayGain
-		slog.Info("SlimProto strm: UNPAUSE stream (Sync Play)", "startAt_jiffies", startAt)
+		activeFmt := byte(c.currentFormat.Load())
+		if activeFmt == 0 {
+			activeFmt = strm.Format
+		}
+		slog.Info("SlimProto strm: UNPAUSE stream (Sync Play)",
+			"startAt_jiffies", startAt,
+			"format", string(activeFmt))
 		c.startAt.Store(startAt)
 
 		// Send resume ack (STMr)
@@ -423,6 +428,7 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		}
 
 	case 'q': // Quit / stop stream
+		c.currentFormat.Store(0)
 		slog.Info("SlimProto strm: QUIT stream")
 		c.mu.Lock()
 		if c.streamCancel != nil {
@@ -465,6 +471,7 @@ func (c *Client) handleStrm(strm *StrmCommand) {
 		c.framesPlayed.Add(skipFrames)
 
 	case 't': // Timestamp tick with latency tracking
+		slog.Debug("SlimProto strm: TICK latency ping", "timestamp", strm.ReplayGain)
 		_ = c.SendStatWithTimestamp([4]byte{'S', 'T', 'M', 't'}, strm.ReplayGain)
 	}
 }
@@ -496,7 +503,15 @@ func (c *Client) streamDataWorker(ctx context.Context, strm *StrmCommand) {
 	case 'f':
 		decoder = c.flacDecoder
 	case 'p':
-		decoder = c.pcmDecoder
+		decoder = NewPCMDecoder(ParsePCMConfig(strm.PCMSampleRate, strm.PCMSampleSize, strm.PCMChannels, strm.PCMEndianness))
+	case 'm':
+		decoder = NewMP3Decoder()
+	case 'a':
+		decoder = NewAACDecoder()
+	case 'o':
+		decoder = NewVorbisDecoder()
+	case 'u':
+		decoder = NewOpusDecoder()
 	default:
 		slog.Warn("SlimProto received stream format, attempting FLAC decoder", "format", string(strm.Format))
 		decoder = c.flacDecoder
