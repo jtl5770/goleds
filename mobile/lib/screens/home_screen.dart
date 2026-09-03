@@ -87,7 +87,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               } else {
                 messenger.showSnackBar(
-                  SnackBar(content: Text(configProvider.error ?? 'Calibration failed')),
+                  SnackBar(
+                    content: Text(configProvider.error ?? 'Calibration failed'),
+                  ),
                 );
               }
             },
@@ -146,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ProducerCard(
                       title: 'Sensor',
                       icon: Icons.sensors,
-                      imagePath: 'images/sensors.png',
+                      imagePath: 'images/sensors.webp',
                       isEnabled: config.sensorLED.enabled,
                       accentColor: Colors.purpleAccent,
                       onToggle: () => configProvider.toggleProducer(
@@ -163,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ProducerCard(
                       title: 'Night Light',
                       icon: Icons.nightlight_round,
-                      imagePath: 'images/nightlight.png',
+                      imagePath: 'images/nightlight.webp',
                       imageOpacity: 0.4,
                       isEnabled: config.nightLED.enabled,
                       accentColor: Colors.orangeAccent,
@@ -181,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ProducerCard(
                       title: 'Clock',
                       icon: Icons.access_time,
-                      imagePath: 'images/clock.png',
+                      imagePath: 'images/clock.webp',
                       isEnabled: config.clockLED.enabled,
                       accentColor: Colors.blueAccent,
                       onToggle: () => configProvider.toggleProducer(
@@ -198,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ProducerCard(
                       title: 'Audio VU',
                       icon: Icons.equalizer,
-                      imagePath: 'images/audio.png',
+                      imagePath: 'images/audio.webp',
                       imageOpacity: 0.12,
                       isEnabled: config.audioLED.enabled,
                       accentColor: Colors.greenAccent,
@@ -216,7 +218,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ProducerCard(
                       title: 'Cylon Eye',
                       icon: Icons.remove_red_eye,
-                      imagePath: 'images/cylon.png',
+                      imagePath: 'images/cylon.webp',
                       isEnabled: config.cylonLED.enabled,
                       isDisabled: !config.sensorLED.enabled,
                       accentColor: Colors.redAccent,
@@ -234,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ProducerCard(
                       title: 'Multi Blob',
                       icon: Icons.bubble_chart,
-                      imagePath: 'images/blobs.png',
+                      imagePath: 'images/blobs.webp',
                       isEnabled: config.multiBlobLED.enabled,
                       isDisabled: !config.sensorLED.enabled,
                       accentColor: Colors.pinkAccent,

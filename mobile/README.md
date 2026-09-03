@@ -4,7 +4,7 @@
 reactive lighting system. Built with [Flutter](https://flutter.dev), it provides a unified,
 beautiful UI to control your LED strips from Android or the Web.
 
-![GoLEDS Commander](images/sensors.png)
+![GoLEDS Commander](images/sensors.webp)
 
 ## Features
 

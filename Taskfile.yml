@@ -46,7 +46,7 @@ tasks:
       - echo "Web build deployed to ./web and archived to ./goleds_web.tar.gz"
 
   build-android:
-    desc: Build Flutter Android APK
+    desc: Build Flutter Android Split APKs
     deps: [generate-icons]
     sources:
       - "mobile/lib/**/*.dart"
@@ -57,23 +57,29 @@ tasks:
       - "mobile/android/app/build.gradle.kts"
       - "mobile/android/app/src/**/*"
     generates:
+      - "goleds_commander_arm64-v8a.apk"
+      - "goleds_commander_armeabi-v7a.apk"
+      - "goleds_commander_x86_64.apk"
       - "goleds_commander.apk"
     cmds:
-      - cd mobile && flutter build apk --release
-      - cp mobile/build/app/outputs/flutter-apk/app-release.apk goleds_commander.apk
-      - echo "APK copied to ./goleds_commander.apk"
+      - cd mobile && flutter build apk --release --split-per-abi
+      - cp mobile/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk goleds_commander_arm64-v8a.apk
+      - cp mobile/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk goleds_commander_armeabi-v7a.apk
+      - cp mobile/build/app/outputs/flutter-apk/app-x86_64-release.apk goleds_commander_x86_64.apk
+      - cp goleds_commander_arm64-v8a.apk goleds_commander.apk
+      - echo "Split APKs copied to root"
 
   install-android:
-    desc: Build Android APK and install on connected device via adb
+    desc: Build Android APK and install modern 64-bit ARM APK on connected device via adb
     deps: [build-android]
     cmds:
-      - adb install -r goleds_commander.apk
-      - echo "Installed goleds_commander.apk on connected device via adb"
+      - adb install -r goleds_commander_arm64-v8a.apk
+      - echo "Installed goleds_commander_arm64-v8a.apk on connected device via adb"
 
   clean:
     desc: Clean all artifacts
     cmds:
-      - rm -f goleds goleds_commander.apk goleds_web.tar.gz
+      - rm -f goleds goleds_commander*.apk goleds_web.tar.gz
       - rm -rf web
       - cmd: cd mobile && flutter clean
         ignore_error: true
