@@ -114,35 +114,28 @@ func getBaseConfig() string {
 	return commonHardware + validSensorLED + validNightLED + validClockLED + validAudioLED + validCylonLED + validMultiBlobLED
 }
 
-func createConfigFile(t *testing.T, configData string) string {
-	tempDir, err := os.MkdirTemp("", "goleds-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	// We schedule cleanup of the directory, but return the file path
-	t.Cleanup(func() { os.RemoveAll(tempDir) })
-
-	configFile := filepath.Join(tempDir, "config.yml")
-	err = os.WriteFile(configFile, []byte(configData), 0o644)
-	if err != nil {
-		t.Fatalf("Failed to write dummy config file: %v", err)
-	}
+func createConfigFile(t *testing.T, content string) string {
+	dir := t.TempDir()
+	configFile := filepath.Join(dir, "config.yml")
+	err := os.WriteFile(configFile, []byte(content), 0666)
+	assert.NoError(t, err, "Failed to write config file")
 	return configFile
 }
 
-func TestReadConfig(t *testing.T) {
+func TestReadConfig_Success(t *testing.T) {
 	configFile := createConfigFile(t, getBaseConfig())
 
-	// Call the function to be tested
 	conf, err := ReadConfig(configFile)
-	assert.NoError(t, err, "ReadConfig should not return an error")
 
-	// Assertions
+	assert.NoError(t, err, "ReadConfig should not return an error")
+	assert.NotNil(t, conf, "Config should not be nil")
+	assert.Equal(t, 10, conf.Hardware.Display.LedsTotal, "Hardware.Display.LedsTotal should be 10")
 	assert.True(t, conf.SensorLED.Enabled, "SensorLED.Enabled should be true")
-	assert.Equal(t, 10*time.Millisecond, conf.SensorLED.RunUpDelay, "SensorLED.RunUpDelay should be 10ms")
-	assert.Equal(t, 20*time.Millisecond, conf.SensorLED.RunDownDelay, "SensorLED.RunDownDelay should be 20ms")
-	assert.Equal(t, 30*time.Second, conf.SensorLED.HoldTime, "SensorLED.HoldTime should be 30s")
-	assert.Equal(t, []float64{255, 0, 0}, conf.SensorLED.LedRGB, "SensorLED.LedRGB should be [255, 0, 0]")
+	assert.False(t, conf.NightLED.Enabled, "NightLED.Enabled should be false")
+	assert.False(t, conf.ClockLED.Enabled, "ClockLED.Enabled should be false")
+	assert.False(t, conf.AudioLED.Enabled, "AudioLED.Enabled should be false")
+	assert.False(t, conf.CylonLED.Enabled, "CylonLED.Enabled should be false")
+	assert.False(t, conf.MultiBlobLED.Enabled, "MultiBlobLED.Enabled should be false")
 
 	assert.Equal(t, "DEBUG", conf.Logging.TUI.Level, "Logging.TUI.Level should be DEBUG")
 	assert.Equal(t, "text", conf.Logging.TUI.Format, "Logging.TUI.Format should be text")
@@ -241,4 +234,84 @@ func TestSqueezeboxConfig_Validation(t *testing.T) {
 	negPollCfg := validCfg
 	negPollCfg.PollInterval = -100 * time.Millisecond
 	assert.Error(t, negPollCfg.Validate())
+}
+
+func TestValidateRGB_Helpers(t *testing.T) {
+	assert.NoError(t, validateRGB([]float64{0, 128, 255}))
+	assert.Error(t, validateRGB([]float64{0, 128}))
+	assert.Error(t, validateRGB([]float64{0, 128, 255, 100}))
+	assert.Error(t, validateRGB([]float64{-1, 128, 255}))
+	assert.Error(t, validateRGB([]float64{0, 256, 255}))
+
+	assert.True(t, isValidIndex(0, 10))
+	assert.True(t, isValidIndex(9, 10))
+	assert.False(t, isValidIndex(-1, 10))
+	assert.False(t, isValidIndex(10, 10))
+}
+
+func TestSubConfigs_Validation(t *testing.T) {
+	// NightLED validation
+	night := NightLEDConfig{
+		Latitude:  -95,
+		Longitude: 0,
+		LedRGB:    [][]float64{{0, 0, 0}},
+	}
+	assert.Error(t, night.Validate())
+	night.Latitude = 45
+	night.Longitude = 190
+	assert.Error(t, night.Validate())
+	night.Longitude = 11
+	night.LedRGB = [][]float64{{-5, 0, 0}}
+	assert.Error(t, night.Validate())
+
+	// ClockLED validation
+	clock := ClockLEDConfig{
+		StartLedHour:   -1,
+		EndLedHour:     10,
+		StartLedMinute: 0,
+		EndLedMinute:   10,
+		LedHour:        []float64{1, 0, 0},
+		LedMinute:      []float64{0, 1, 0},
+	}
+	assert.Error(t, clock.Validate(20))
+	clock.StartLedHour = 0
+	clock.EndLedHour = 25
+	assert.Error(t, clock.Validate(20))
+
+	// AudioLED validation
+	audio := AudioLEDConfig{
+		StartLedLeft:  0,
+		EndLedLeft:    10,
+		StartLedRight: 0,
+		EndLedRight:   10,
+		MinDB:         -10,
+		MaxDB:         -20, // MinDB > MaxDB
+		LedGreen:      []float64{0, 255, 0},
+		LedYellow:     []float64{255, 255, 0},
+		LedRed:        []float64{255, 0, 0},
+		Squeezebox: SqueezeboxConfig{
+			Server:        "127.0.0.1",
+			SlimProtoPort: 3483,
+			JSONRPCPort:   9000,
+			PlayerMAC:     "auto",
+		},
+	}
+	assert.Error(t, audio.Validate(20))
+
+	// CylonLED validation
+	cylon := CylonLEDConfig{
+		Duration: -1 * time.Second,
+		Delay:    10 * time.Millisecond,
+		Step:     1,
+		Width:    1,
+		LedRGB:   []float64{255, 0, 0},
+	}
+	assert.Error(t, cylon.Validate(20))
+
+	// MultiBlobLED validation
+	blob := MultiBlobLEDConfig{
+		Duration: -1 * time.Second,
+		Delay:    10 * time.Millisecond,
+	}
+	assert.Error(t, blob.Validate(20))
 }

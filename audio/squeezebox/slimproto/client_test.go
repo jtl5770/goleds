@@ -61,8 +61,7 @@ func TestSlimProto_ParseStrm(t *testing.T) {
 	payload[5] = 2                                       // pcm channels
 	payload[6] = 0                                       // endian
 	payload[7] = 64                                      // threshold KB
-	payload[19] = 100                                    // server port (binary 9000 -> 0x2328)
-	payload[18] = 0x23
+	payload[18] = 0x23                                   // server port (binary 9000 -> 0x2328)
 	payload[19] = 0x28
 	copy(payload[20:24], net.ParseIP("192.168.1.50").To4())
 
@@ -168,5 +167,45 @@ func TestSlimProto_TrackTransitionPreservesBuffer(t *testing.T) {
 	// Ring buffer should still retain the 1024 bytes
 	if client.ringBuffer.Available() != 1024 {
 		t.Errorf("Expected ring buffer to retain 1024 bytes across track transition, got %d", client.ringBuffer.Available())
+	}
+}
+
+func TestSlimProto_HandleStrmCommands(t *testing.T) {
+	mac, _ := net.ParseMAC("00:04:20:aa:bb:cc")
+	cfg := HeloConfig{
+		MAC:      mac,
+		DeviceID: 12,
+	}
+	levels := audio.NewAtomicLevels()
+	client := NewClient("127.0.0.1:3483", cfg, levels)
+
+	// Test Pause 'p'
+	client.SetState(StateRunning)
+	client.handleStrm(&StrmCommand{SubCommand: 'p'})
+	if client.GetState() != StatePaused {
+		t.Errorf("Expected state StatePaused after 'p', got %v", client.GetState())
+	}
+
+	// Test Unpause 'u'
+	client.handleStrm(&StrmCommand{SubCommand: 'u'})
+	if client.GetState() != StateRunning {
+		t.Errorf("Expected state StateRunning after 'u', got %v", client.GetState())
+	}
+
+	// Test Flush 'f'
+	_, _ = client.ringBuffer.Write([]byte{1, 2, 3, 4})
+	client.handleStrm(&StrmCommand{SubCommand: 'f'})
+	if client.ringBuffer.Available() != 0 {
+		t.Errorf("Expected ring buffer cleared after 'f', got %d", client.ringBuffer.Available())
+	}
+
+	// Test Quit 'q'
+	client.SetState(StateRunning)
+	client.handleStrm(&StrmCommand{SubCommand: 'q'})
+	if client.GetState() != StateStopped {
+		t.Errorf("Expected state StateStopped after 'q', got %v", client.GetState())
+	}
+	if client.currentFormat.Load() != 0 {
+		t.Errorf("Expected currentFormat cleared after 'q', got %d", client.currentFormat.Load())
 	}
 }

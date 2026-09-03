@@ -1,12 +1,61 @@
 package platform
 
 import (
+	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"lautenbacher.net/goleds/config"
 	"lautenbacher.net/goleds/producer"
 )
+
+func TestNewColorLUT(t *testing.T) {
+	lut := newColorLUT([]float64{1.0, 0.5, 2.0})
+
+	if lut.r[100] != 100 {
+		t.Errorf("Expected r[100]=100, got %d", lut.r[100])
+	}
+	if lut.g[100] != 50 {
+		t.Errorf("Expected g[100]=50, got %d", lut.g[100])
+	}
+	// 100 * 2.0 = 200; 200 * 2.0 = 400 clamped to 255
+	if lut.b[100] != 200 {
+		t.Errorf("Expected b[100]=200, got %d", lut.b[100])
+	}
+	if lut.b[200] != 255 {
+		t.Errorf("Expected b[200] clamped to 255, got %d", lut.b[200])
+	}
+
+	// Empty correction defaults to 1.0, 1.0, 1.0
+	lutDefault := newColorLUT(nil)
+	if lutDefault.r[123] != 123 || lutDefault.g[123] != 123 || lutDefault.b[123] != 123 {
+		t.Errorf("Default LUT mismatch")
+	}
+}
+
+func TestRaspberryPiPlatform_Init(t *testing.T) {
+	cfg := &config.Config{
+		Hardware: config.HardwareConfig{
+			Display: config.DisplayConfig{
+				LedsTotal:        50,
+				ForceUpdateDelay: 100 * time.Millisecond,
+			},
+		},
+	}
+
+	rpi := NewRaspberryPiPlatform(cfg)
+	if rpi == nil {
+		t.Fatal("Expected NewRaspberryPiPlatform to return non-nil")
+	}
+
+	sigChan := make(chan os.Signal, 1)
+	sv := NewSensorViewer(cfg.Hardware.Sensors, sigChan, false)
+	rpi.SetSensorViewer(sv)
+	if rpi.sensorViewer != sv {
+		t.Error("SetSensorViewer did not set sensor viewer")
+	}
+}
 
 func TestWS2801Driver_Write(t *testing.T) {
 	displayConfig := config.DisplayConfig{
