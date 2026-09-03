@@ -24,7 +24,7 @@ https://github.com/jtl5770/goleds/assets/24967370/34057911-faef-4403-bd07-7b479b
 *   **Sensor-Triggered Animations**: Responsive lighting that reacts to IR motion.
 *   **Layered Effects**: Multiple animation "Producers" can run simultaneously, with their outputs combined (max-value blending).
 *   **Audio VU Visualizer**: Pure Go LMS / Squeezebox SlimProto audio visualizer with multi-zone peak hold, linear decay, and network auto-sync.
-*   **Cross-Platform UI**: Modern management app (Web, Android, Linux) built with Flutter.
+*   **Cross-Platform UI**: Modern management app (Web, Android) built with Flutter.
 *   **Hardware Abstraction**: Runs on Raspberry Pi (SPI/GPIO) or in a terminal simulator (TUI).
 *   **Dynamic Reloading**: Configuration changes apply instantly via the Web UI or by file watcher.
 
@@ -58,7 +58,7 @@ All settings are in `config.yml`. This defines your LED segments, sensor mapping
 
 This project uses [Task](https://taskfile.dev/) to manage builds.
 
-**To build everything (Local Server, Web UI, Linux App, and Android APK):**
+**To build everything (Local Server, Web UI, and Android APK):**
 ```bash
 task
 ```
@@ -67,7 +67,6 @@ task
 ```bash
 task build-server   # Build the Go server for local development
 task build-web      # Build the Flutter Web UI and deploy to ./web
-task build-linux    # Build the Flutter Linux Desktop app (bundle)
 task build-android  # Build the Flutter Android APK
 ```
 
@@ -84,40 +83,4 @@ GoLEDS automatically calibrates IR sensor trigger baselines at startup and adapt
 * **Multi-Step Baseline Sweep**: Upon start, the system measures ambient optical noise across multiple LED brightness steps (0%, 33%, 66%, and 100% of configured `SensorLED` brightness).
 * **Dynamic Threshold Interpolation**: During runtime, trigger thresholds are computed on-the-fly depending on instantaneous peak display brightness, compensating for LED optical reflection into IR sensors.
 * **Outlier Rejection**: If unexpected motion or noise spikes are detected during calibration, the system flashes red, pauses, and restarts the calibration routine until a clean baseline is established. Successful calibration finishes with a short blue confirmation pulse.
-* **On-Demand Recalibration**: Calibration can be triggered at any time via the tune button in the GoLEDS Commander UI or via `POST /api/sensors/calibrate`.
-
-For visual diagnostics, you can still inspect live sensor readings in real-time by running with the `-show-sensors` flag:
-
-```bash
-sudo ./goleds -real -show-sensors
-```
-
-![TUI sensor calibration](images/goleds-tui-sensors.png)
-
-## GoLEDS Commander (Management App)
-
-The project includes **GoLEDS Commander**, a modern management interface built with Flutter. 
-
-*   **Web**: Served directly by the Go server at `http://<device-ip>:8080`.
-*   **Desktop**: Native Linux application (build via `task build-linux`).
-*   **Mobile**: Android APK (build via `task build-android`).
-
-It allows you to toggle producers, adjust colors, and tune timing parameters on the fly
-with a unified experience across all devices.
-
-![ Home Screen](images/goleds-commander-home.png)  ![AudioLEDProducer](images/goleds-commander-audio.png)  ![MultiBLobProducer](images/goleds-commander-blob.png) 
-
-## Available Producers
-
-*   **SensorLedProducer**: The core reactive "pulse" animation. Includes a "latch mode" for sustained bright light.
-*   **MultiBlobProducer**: Physics-based colored blobs that bounce and collide.
-*   **CylonProducer**: A classic moving "eye" effect.
-*   **NightlightProducer**: Sunset/sunrise aware ambient glow based on your Lat/Long.
-*   **ClockProducer**: A minimalist clock using LED positions for hours and minutes.
-*   **AudioLEDProducer**: Real-time stereo audio VU meter visualizer with dynamic peak hold and linear decay. Connects natively to LMS (Lyrion / Logitech Media Server) via Squeezebox SlimProto and JSON-RPC with zero CGO dependencies. Features automatic active player discovery, auto-synchronization, and dynamic zone peak colors.
-
-https://github.com/jtl5770/goleds/assets/24967370/865c70b6-cc20-4b60-899c-8e9182680e21
-
-<!-- Local Variables: -->
-<!-- eval: (auto-fill-mode t) -->
-<!-- End: -->
+* **On-Demand Recalibration**: Calibration can be triggered at any time via the tune button in the GoLEDS Commander UI or via `POST /api/sensors/calibrate`.\n\nFor visual diagnostics, you can still inspect live sensor readings in real-time by running with the `-show-sensors` flag:\n\n```bash\nsudo ./goleds -real -show-sensors\n```\n\n![TUI sensor calibration](images/goleds-tui-sensors.png)\n\n## GoLEDS Commander (Management App)\n\nThe project includes **GoLEDS Commander**, a modern management interface built with Flutter. \n\n*   **Web**: Served directly by the Go server at `http://<device-ip>:8080`.\n*   **Mobile**: Android APK (build via `task build-android`).\n\nIt allows you to toggle producers, adjust colors, and tune timing parameters on the fly\nwith a unified experience across all devices.\n\n![ Home Screen](images/goleds-commander-home.png)  ![AudioLEDProducer](images/goleds-commander-audio.png)  ![MultiBLobProducer](images/goleds-commander-blob.png) \n\n## Available Producers\n\n*   **SensorLedProducer**: The core reactive \"pulse\" animation. Includes a \"latch mode\" for sustained bright light.\n*   **MultiBlobProducer**: Physics-based colored blobs that bounce and collide.\n*   **CylonProducer**: A classic moving \"eye\" effect.\n*   **NightlightProducer**: Sunset/sunrise aware ambient glow based on your Lat/Long.\n*   **ClockProducer**: A minimalist clock using LED positions for hours and minutes.\n*   **AudioLEDProducer**: Real-time stereo audio VU meter visualizer with dynamic peak hold and linear decay. Connects natively to LMS (Lyrion / Logitech Media Server) via Squeezebox SlimProto and JSON-RPC with zero CGO dependencies. Features automatic active player discovery, auto-synchronization, and dynamic zone peak colors.\n\nhttps://github.com/jtl5770/goleds/assets/24967370/865c70b6-cc20-4b60-899c-8e9182680e21\n\n<!-- Local Variables: -->\n<!-- eval: (auto-fill-mode t) -->\n<!-- End: -->\n

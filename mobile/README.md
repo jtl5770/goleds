@@ -2,8 +2,7 @@
 
 **GoLEDS Commander** is the remote management interface for the [GoLEDS](https://github.com/jtl5770/goleds)
 reactive lighting system. Built with [Flutter](https://flutter.dev), it provides a unified,
-beautiful UI to control your LED strips from Android, Linux, or the
-Web.
+beautiful UI to control your LED strips from Android or the Web.
 
 ![GoLEDS Commander](images/sensors.png)
 
@@ -12,9 +11,8 @@ Web.
 *   **Real-time Control:** Toggle lighting modes (Producers) instantly.
 *   **Live Configuration:** Adjust colors, animation timing, and effect
     parameters without restarting the server.
-*   **Unified UI:** Same codebase runs as a native Android app, a Linux
-    desktop app, and a Web dashboard served directly by the GoLEDS
-    server.
+*   **Unified UI:** Same codebase runs as a native Android app and a Web dashboard
+    served directly by the GoLEDS server.
 *   **Smart Safety:** Prevents data loss with atomic saves and validates
     configuration changes before applying them.
 
@@ -23,7 +21,6 @@ Web.
 *   **Android:** Full native APK with launcher integration.
 *   **Web:** Progressive Web App (PWA) experience, typically hosted by the
     GoLEDS device itself.
-*   **Linux:** Native desktop application.
 
 ## Development
 
@@ -50,8 +47,6 @@ This project follows standard Flutter conventions.
     ```bash
     cd mobile
     flutter run -d chrome  # For Web
-    # OR
-    flutter run -d linux   # For Desktop
     ```
 
     *Tip: The app automatically attempts to connect to
@@ -63,7 +58,7 @@ This project follows standard Flutter conventions.
 We use [Task](https://taskfile.dev/) (defined in the project root) to automate builds and asset
 generation.
 
-Build for Web:**
+**Build for Web:**
 Builds the PWA and deploys it to the `web/` directory for the Go server to serve.
 ```bash
 task build-web
@@ -73,12 +68,6 @@ task build-web
 Generates `goleds_commander.apk`.
 ```bash
 task build-android
-```
-
-**Build for Linux:**
-Generates the desktop bundle in `commander_linux/`.
-```bash
-task build-linux
 ```
 
 ## Architecture

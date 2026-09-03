@@ -38,8 +38,6 @@ dependencies:
   http: ^1.6.0
   flutter_colorpicker: ^1.1.0
   shared_preferences: ^2.5.4
-  shared_preferences_linux: ^2.4.1
-  path_provider_linux: ^2.2.1
 
 dev_dependencies:
   flutter_test:
