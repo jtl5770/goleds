@@ -4,23 +4,40 @@ import '../../providers/config_provider.dart';
 import '../../widgets/color_picker_tile.dart';
 import '../../widgets/config_slider.dart';
 import '../../widgets/led_selectors.dart';
+import '../../widgets/section_header.dart';
+import '../../models.dart';
 import '../../utils.dart';
 
 class AudioLEDEditor extends StatefulWidget {
-  const AudioLEDEditor({super.key});
+  final AudioLEDConfig initialConfig;
+  final int totalLeds;
+
+  const AudioLEDEditor({
+    super.key,
+    required this.initialConfig,
+    required this.totalLeds,
+  });
 
   @override
   State<AudioLEDEditor> createState() => _AudioLEDEditorState();
 }
 
 class _AudioLEDEditorState extends State<AudioLEDEditor> {
-  // Squeezebox Controllers
+  // Squeezebox Controllers & FocusNodes
   late TextEditingController serverCtrl;
   late TextEditingController slimProtoPortCtrl;
   late TextEditingController jsonrpcPortCtrl;
   late TextEditingController playerNameCtrl;
   late TextEditingController playerMACCtrl;
   late TextEditingController ignoredPlayersCtrl;
+
+  late FocusNode serverFocusNode;
+  late FocusNode slimProtoPortFocusNode;
+  late FocusNode jsonrpcPortFocusNode;
+  late FocusNode playerNameFocusNode;
+  late FocusNode playerMACFocusNode;
+  late FocusNode ignoredPlayersFocusNode;
+
   late bool autoSync;
   late int pollIntervalMs;
 
@@ -30,44 +47,46 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
   late Color ledGreen, ledYellow, ledRed;
   late int updateFreqMs;
   late double minDB, maxDB;
-  late int ledsTotal;
-
-  bool _initialized = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_initialized) {
-      final config = context.read<ConfigProvider>().config;
-      if (config != null) {
-        ledsTotal = config.ledsTotal;
-        final a = config.audioLED;
-        final s = a.squeezebox;
+  void initState() {
+    super.initState();
+    final a = widget.initialConfig;
+    final s = a.squeezebox;
 
-        serverCtrl = TextEditingController(text: s.server);
-        slimProtoPortCtrl = TextEditingController(
-            text: s.slimProtoPort > 0 ? s.slimProtoPort.toString() : '');
-        jsonrpcPortCtrl = TextEditingController(
-            text: s.jsonrpcPort > 0 ? s.jsonrpcPort.toString() : '');
-        playerNameCtrl = TextEditingController(text: s.playerName);
-        playerMACCtrl = TextEditingController(text: s.playerMAC);
-        ignoredPlayersCtrl = TextEditingController(text: s.ignoredPlayers.join(', '));
-        autoSync = s.autoSync;
-        pollIntervalMs = s.pollIntervalMs > 0 ? s.pollIntervalMs : 1500;
+    serverCtrl = TextEditingController(text: s.server);
+    slimProtoPortCtrl = TextEditingController(
+      text: s.slimProtoPort > 0 ? s.slimProtoPort.toString() : '',
+    );
+    jsonrpcPortCtrl = TextEditingController(
+      text: s.jsonrpcPort > 0 ? s.jsonrpcPort.toString() : '',
+    );
+    playerNameCtrl = TextEditingController(text: s.playerName);
+    playerMACCtrl = TextEditingController(text: s.playerMAC);
+    ignoredPlayersCtrl = TextEditingController(
+      text: s.ignoredPlayers.join(', '),
+    );
 
-        startLedLeft = a.startLedLeft;
-        endLedLeft = a.endLedLeft;
-        startLedRight = a.startLedRight;
-        endLedRight = a.endLedRight;
-        ledGreen = fromRgbList(a.ledGreen);
-        ledYellow = fromRgbList(a.ledYellow);
-        ledRed = fromRgbList(a.ledRed);
-        updateFreqMs = a.updateFreqMs > 0 ? a.updateFreqMs : 30;
-        minDB = a.minDB;
-        maxDB = a.maxDB;
-        _initialized = true;
-      }
-    }
+    serverFocusNode = FocusNode()..addListener(() => setState(() {}));
+    slimProtoPortFocusNode = FocusNode()..addListener(() => setState(() {}));
+    jsonrpcPortFocusNode = FocusNode()..addListener(() => setState(() {}));
+    playerNameFocusNode = FocusNode()..addListener(() => setState(() {}));
+    playerMACFocusNode = FocusNode()..addListener(() => setState(() {}));
+    ignoredPlayersFocusNode = FocusNode()..addListener(() => setState(() {}));
+
+    autoSync = s.autoSync;
+    pollIntervalMs = s.pollIntervalMs > 0 ? s.pollIntervalMs : 1500;
+
+    startLedLeft = a.startLedLeft;
+    endLedLeft = a.endLedLeft;
+    startLedRight = a.startLedRight;
+    endLedRight = a.endLedRight;
+    ledGreen = fromRgbList(a.ledGreen);
+    ledYellow = fromRgbList(a.ledYellow);
+    ledRed = fromRgbList(a.ledRed);
+    updateFreqMs = a.updateFreqMs > 0 ? a.updateFreqMs : 30;
+    minDB = a.minDB;
+    maxDB = a.maxDB;
   }
 
   @override
@@ -78,54 +97,65 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
     playerNameCtrl.dispose();
     playerMACCtrl.dispose();
     ignoredPlayersCtrl.dispose();
+
+    serverFocusNode.dispose();
+    slimProtoPortFocusNode.dispose();
+    jsonrpcPortFocusNode.dispose();
+    playerNameFocusNode.dispose();
+    playerMACFocusNode.dispose();
+    ignoredPlayersFocusNode.dispose();
+
     super.dispose();
   }
 
   void _save() {
     final provider = context.read<ConfigProvider>();
-    final config = provider.config;
-    if (config == null) return;
-
-    final s = config.audioLED.squeezebox;
-    s.server = serverCtrl.text.trim();
-    s.slimProtoPort = int.tryParse(slimProtoPortCtrl.text.trim()) ?? 0;
-    s.jsonrpcPort = int.tryParse(jsonrpcPortCtrl.text.trim()) ?? 0;
-    s.playerName = playerNameCtrl.text.trim();
-    s.playerMAC = playerMACCtrl.text.trim();
-    s.autoSync = autoSync;
-    s.pollIntervalMs = pollIntervalMs;
+    final currentFullConfig = provider.config;
+    if (currentFullConfig == null) return;
 
     final ignoredText = ignoredPlayersCtrl.text.trim();
-    if (ignoredText.isEmpty) {
-      s.ignoredPlayers = [];
-    } else {
-      s.ignoredPlayers = ignoredText
-          .split(',')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toList();
-    }
+    final ignoredPlayers = ignoredText.isEmpty
+        ? <String>[]
+        : ignoredText
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList();
 
-    config.audioLED.startLedLeft = startLedLeft;
-    config.audioLED.endLedLeft = endLedLeft;
-    config.audioLED.startLedRight = startLedRight;
-    config.audioLED.endLedRight = endLedRight;
-    config.audioLED.ledGreen = toRgbList(ledGreen);
-    config.audioLED.ledYellow = toRgbList(ledYellow);
-    config.audioLED.ledRed = toRgbList(ledRed);
-    config.audioLED.updateFreqMs = updateFreqMs;
-    config.audioLED.minDB = minDB;
-    config.audioLED.maxDB = maxDB;
+    final updatedSqueezebox = currentFullConfig.audioLED.squeezebox.copyWith(
+      server: serverCtrl.text.trim(),
+      slimProtoPort: int.tryParse(slimProtoPortCtrl.text.trim()) ?? 0,
+      jsonrpcPort: int.tryParse(jsonrpcPortCtrl.text.trim()) ?? 0,
+      playerName: playerNameCtrl.text.trim(),
+      playerMAC: playerMACCtrl.text.trim(),
+      autoSync: autoSync,
+      pollIntervalMs: pollIntervalMs,
+      ignoredPlayers: ignoredPlayers,
+    );
 
-    provider.updateConfig(config).then((_) {
-      if (mounted) Navigator.pop(context);
-    });
+    final updatedAudioConfig = currentFullConfig.audioLED.copyWith(
+      startLedLeft: startLedLeft,
+      endLedLeft: endLedLeft,
+      startLedRight: startLedRight,
+      endLedRight: endLedRight,
+      ledGreen: toRgbList(ledGreen),
+      ledYellow: toRgbList(ledYellow),
+      ledRed: toRgbList(ledRed),
+      updateFreqMs: updateFreqMs,
+      minDB: minDB,
+      maxDB: maxDB,
+      squeezebox: updatedSqueezebox,
+    );
+
+    provider
+        .updateConfig(currentFullConfig.copyWith(audioLED: updatedAudioConfig))
+        .then((_) {
+          if (mounted) Navigator.pop(context);
+        });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_initialized) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Audio VU Config'),
@@ -134,13 +164,20 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildSectionHeader('Logitech Media Server (LMS)'),
+          const SectionHeader(
+            'Logitech Media Server (LMS)',
+            color: Colors.greenAccent,
+          ),
           TextField(
             controller: serverCtrl,
-            decoration: const InputDecoration(
+            focusNode: serverFocusNode,
+            decoration: InputDecoration(
               labelText: 'LMS Server Host/IP',
-              hintText: 'Auto-discover if empty',
-              border: OutlineInputBorder(),
+              floatingLabelBehavior: FloatingLabelBehavior.always,
+              hintText: serverFocusNode.hasFocus
+                  ? 'Auto-discovery when empty'
+                  : null,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
@@ -149,11 +186,13 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
               Expanded(
                 child: TextField(
                   controller: slimProtoPortCtrl,
+                  focusNode: slimProtoPortFocusNode,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'SlimProto Port',
-                    hintText: '3483',
-                    border: OutlineInputBorder(),
+                    floatingLabelBehavior: FloatingLabelBehavior.always,
+                    hintText: slimProtoPortFocusNode.hasFocus ? '3483' : null,
+                    border: const OutlineInputBorder(),
                   ),
                 ),
               ),
@@ -161,11 +200,13 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
               Expanded(
                 child: TextField(
                   controller: jsonrpcPortCtrl,
+                  focusNode: jsonrpcPortFocusNode,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'JSON-RPC Port',
-                    hintText: '9000',
-                    border: OutlineInputBorder(),
+                    floatingLabelBehavior: FloatingLabelBehavior.always,
+                    hintText: jsonrpcPortFocusNode.hasFocus ? '9000' : null,
+                    border: const OutlineInputBorder(),
                   ),
                 ),
               ),
@@ -174,25 +215,30 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
           const SizedBox(height: 12),
           TextField(
             controller: playerNameCtrl,
-            decoration: const InputDecoration(
+            focusNode: playerNameFocusNode,
+            decoration: InputDecoration(
               labelText: 'Player Name',
-              hintText: 'GoLEDs VU',
-              border: OutlineInputBorder(),
+              floatingLabelBehavior: FloatingLabelBehavior.always,
+              hintText: playerNameFocusNode.hasFocus ? 'GoLEDs VU' : null,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: playerMACCtrl,
-            decoration: const InputDecoration(
+            focusNode: playerMACFocusNode,
+            decoration: InputDecoration(
               labelText: 'Player MAC Address',
-              hintText: 'Auto-generated if empty',
-              border: OutlineInputBorder(),
+              floatingLabelBehavior: FloatingLabelBehavior.always,
+              hintText: playerMACFocusNode.hasFocus
+                  ? 'Auto-generated when empty'
+                  : null,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
           SwitchListTile(
             title: const Text('Auto-Sync to Active Player'),
-            subtitle: const Text('Automatically sync with any playing Squeezebox'),
             value: autoSync,
             onChanged: (val) => setState(() => autoSync = val),
             activeThumbColor: Colors.greenAccent,
@@ -211,15 +257,19 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
             const SizedBox(height: 12),
             TextField(
               controller: ignoredPlayersCtrl,
+              focusNode: ignoredPlayersFocusNode,
               decoration: const InputDecoration(
                 labelText: 'Ignored Players',
+                floatingLabelBehavior: FloatingLabelBehavior.always,
                 border: OutlineInputBorder(),
               ),
             ),
           ],
-
           const SizedBox(height: 24),
-          _buildSectionHeader('VU Meter Timing & Sensitivity'),
+          const SectionHeader(
+            'VU Meter Timing & Sensitivity',
+            color: Colors.greenAccent,
+          ),
           ConfigSlider(
             label: 'LED Update Frequency',
             value: updateFreqMs.toDouble(),
@@ -239,14 +289,13 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
               maxDB = max;
             }),
           ),
-
           const SizedBox(height: 24),
-          _buildSectionHeader('Channel Mapping'),
+          const SectionHeader('Channel Mapping', color: Colors.greenAccent),
           LedRangeSelector(
             label: 'Left Channel',
             start: startLedLeft,
             end: endLedLeft,
-            totalLeds: ledsTotal,
+            totalLeds: widget.totalLeds,
             onChanged: (s, e) => setState(() {
               startLedLeft = s;
               endLedLeft = e;
@@ -257,33 +306,30 @@ class _AudioLEDEditorState extends State<AudioLEDEditor> {
             label: 'Right Channel',
             start: startLedRight,
             end: endLedRight,
-            totalLeds: ledsTotal,
+            totalLeds: widget.totalLeds,
             onChanged: (s, e) => setState(() {
               startLedRight = s;
               endLedRight = e;
             }),
           ),
-
           const SizedBox(height: 24),
-          _buildSectionHeader('VU Colors'),
-          ColorPickerTile(label: 'Low (Green)', color: ledGreen, onColorChanged: (c) => setState(() => ledGreen = c)),
-          ColorPickerTile(label: 'Mid (Yellow)', color: ledYellow, onColorChanged: (c) => setState(() => ledYellow = c)),
-          ColorPickerTile(label: 'High (Red)', color: ledRed, onColorChanged: (c) => setState(() => ledRed = c)),
+          const SectionHeader('VU Colors', color: Colors.greenAccent),
+          ColorPickerTile(
+            label: 'Low (Green)',
+            color: ledGreen,
+            onColorChanged: (c) => setState(() => ledGreen = c),
+          ),
+          ColorPickerTile(
+            label: 'Mid (Yellow)',
+            color: ledYellow,
+            onColorChanged: (c) => setState(() => ledYellow = c),
+          ),
+          ColorPickerTile(
+            label: 'High (Red)',
+            color: ledRed,
+            onColorChanged: (c) => setState(() => ledRed = c),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        title.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.greenAccent,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
-        ),
       ),
     );
   }

@@ -2,13 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/config_provider.dart';
 import '../../widgets/config_slider.dart';
+import '../../widgets/section_header.dart';
 import '../../models.dart';
 import '../../utils.dart';
 import '../../widgets/rgb_input_picker.dart';
 import '../../widgets/led_preview.dart';
 
 class MultiBlobLEDEditor extends StatefulWidget {
-  const MultiBlobLEDEditor({super.key});
+  final MultiBlobLEDConfig initialConfig;
+  final int totalLeds;
+
+  const MultiBlobLEDEditor({
+    super.key,
+    required this.initialConfig,
+    required this.totalLeds,
+  });
 
   @override
   State<MultiBlobLEDEditor> createState() => _MultiBlobLEDEditorState();
@@ -18,34 +26,24 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
   late int durationSec;
   late int delayMs;
   late List<BlobCfg> blobs;
-  late int ledsTotal;
-
-  bool _initialized = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_initialized) {
-      final config = context.read<ConfigProvider>().config;
-      if (config != null) {
-        ledsTotal = config.ledsTotal;
-        final m = config.multiBlobLED;
-        durationSec = m.durationSec;
-        delayMs = m.delayMs;
-        // Deep copy blobs to allow editing/canceling
-        blobs = m.blobCfg
-            .map(
-              (b) => BlobCfg(
-                deltaX: b.deltaX,
-                x: b.x,
-                width: b.width,
-                ledRGB: List.from(b.ledRGB),
-              ),
-            )
-            .toList();
-        _initialized = true;
-      }
-    }
+  void initState() {
+    super.initState();
+    final m = widget.initialConfig;
+    durationSec = m.durationSec;
+    delayMs = m.delayMs;
+    // Deep copy blobs to allow editing/canceling safely
+    blobs = m.blobCfg
+        .map(
+          (b) => BlobCfg(
+            deltaX: b.deltaX,
+            x: b.x,
+            width: b.width,
+            ledRGB: List.from(b.ledRGB),
+          ),
+        )
+        .toList();
   }
 
   void _save() {
@@ -82,16 +80,22 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
 
   void _performSave() {
     final provider = context.read<ConfigProvider>();
-    final config = provider.config;
-    if (config == null) return;
+    final currentFullConfig = provider.config;
+    if (currentFullConfig == null) return;
 
-    config.multiBlobLED.durationSec = durationSec;
-    config.multiBlobLED.delayMs = delayMs;
-    config.multiBlobLED.blobCfg = blobs;
+    final updatedMultiBlobConfig = currentFullConfig.multiBlobLED.copyWith(
+      durationSec: durationSec,
+      delayMs: delayMs,
+      blobCfg: blobs,
+    );
 
-    provider.updateConfig(config).then((_) {
-      if (mounted) Navigator.pop(context);
-    });
+    provider
+        .updateConfig(
+          currentFullConfig.copyWith(multiBlobLED: updatedMultiBlobConfig),
+        )
+        .then((_) {
+          if (mounted) Navigator.pop(context);
+        });
   }
 
   void _editBlob({int? index}) {
@@ -106,7 +110,7 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
         ledRGB: List.from(b.ledRGB),
       );
     } else {
-      tempBlob = BlobCfg(
+      tempBlob = const BlobCfg(
         deltaX: 0.5,
         x: 0,
         width: 2,
@@ -133,8 +137,9 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
                     max: 2.0,
                     isInt: false,
                     onChanged: (v) => setState(
-                      () =>
-                          tempBlob.deltaX = double.parse(v.toStringAsFixed(2)),
+                      () => tempBlob = tempBlob.copyWith(
+                        deltaX: double.parse(v.toStringAsFixed(2)),
+                      ),
                     ),
                     activeColor: Colors.pinkAccent,
                   ),
@@ -142,8 +147,9 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
                     label: 'Initial Pos (X)',
                     value: tempBlob.x,
                     min: 0,
-                    max: ledsTotal.toDouble() - 1,
-                    onChanged: (v) => setState(() => tempBlob.x = v),
+                    max: widget.totalLeds.toDouble() - 1,
+                    onChanged: (v) =>
+                        setState(() => tempBlob = tempBlob.copyWith(x: v)),
                     activeColor: Colors.pinkAccent,
                   ),
                   ConfigSlider(
@@ -151,7 +157,8 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
                     value: tempBlob.width,
                     min: 1,
                     max: 1024,
-                    onChanged: (v) => setState(() => tempBlob.width = v),
+                    onChanged: (v) =>
+                        setState(() => tempBlob = tempBlob.copyWith(width: v)),
                     activeColor: Colors.pinkAccent,
                   ),
                   const SizedBox(height: 16),
@@ -164,7 +171,7 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
                     initialColor: tempColor,
                     onColorChanged: (c) {
                       tempColor = c;
-                      tempBlob.ledRGB = toRgbList(c);
+                      tempBlob = tempBlob.copyWith(ledRGB: toRgbList(c));
                     },
                   ),
                 ],
@@ -204,10 +211,6 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_initialized) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Multi Blob Config'),
@@ -216,7 +219,7 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildSectionHeader('Global Settings'),
+          const SectionHeader('Global Settings', color: Colors.pinkAccent),
           ConfigSlider(
             label: 'Cycle Duration',
             value: durationSec.toDouble(),
@@ -235,12 +238,11 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
             onChanged: (v) => setState(() => delayMs = v.toInt()),
             activeColor: Colors.pinkAccent,
           ),
-
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildSectionHeader('Blobs'),
+              const SectionHeader('Blobs', color: Colors.pinkAccent),
               IconButton(
                 icon: const Icon(Icons.add_circle, color: Colors.pinkAccent),
                 onPressed: () => _editBlob(),
@@ -252,7 +254,7 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
             final b = entry.value;
             final color = fromRgbList(b.ledRGB);
             return Card(
-              color: Colors.grey.shade900,
+              color: const Color(0xFF1E1E1E),
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
                 leading: LedPreview(color: color, size: 24),
@@ -266,17 +268,6 @@ class _MultiBlobLEDEditorState extends State<MultiBlobLEDEditor> {
             );
           }),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title.toUpperCase(),
-      style: const TextStyle(
-        color: Colors.pinkAccent,
-        fontWeight: FontWeight.bold,
-        letterSpacing: 1.2,
       ),
     );
   }

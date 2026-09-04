@@ -2,10 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/config_provider.dart';
 import '../../widgets/color_picker_tile.dart';
+import '../../widgets/config_slider.dart';
+import '../../widgets/section_header.dart';
+import '../../models.dart';
 import '../../utils.dart';
 
 class CylonLEDEditor extends StatefulWidget {
-  const CylonLEDEditor({super.key});
+  final CylonLEDConfig initialConfig;
+  final int totalLeds;
+
+  const CylonLEDEditor({
+    super.key,
+    required this.initialConfig,
+    required this.totalLeds,
+  });
 
   @override
   State<CylonLEDEditor> createState() => _CylonLEDEditorState();
@@ -17,71 +27,88 @@ class _CylonLEDEditorState extends State<CylonLEDEditor> {
   late double step;
   late int width;
   late Color eyeColor;
-  late int ledsTotal;
-
-  bool _initialized = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_initialized) {
-      final config = context.read<ConfigProvider>().config;
-      if (config != null) {
-        ledsTotal = config.ledsTotal;
-        final c = config.cylonLED;
-        durationSec = c.durationSec;
-        delayMs = c.delayMs;
-        step = c.step;
-        width = c.width;
-        eyeColor = fromRgbList(c.ledRGB);
-        _initialized = true;
-      }
-    }
+  void initState() {
+    super.initState();
+    final c = widget.initialConfig;
+    durationSec = c.durationSec;
+    delayMs = c.delayMs;
+    step = c.step;
+    width = c.width;
+    eyeColor = fromRgbList(c.ledRGB);
   }
 
   void _save() {
     final provider = context.read<ConfigProvider>();
-    final config = provider.config;
-    if (config == null) return;
+    final currentFullConfig = provider.config;
+    if (currentFullConfig == null) return;
 
-    config.cylonLED.durationSec = durationSec;
-    config.cylonLED.delayMs = delayMs;
-    config.cylonLED.step = step;
-    config.cylonLED.width = width;
-    config.cylonLED.ledRGB = toRgbList(eyeColor);
+    final updatedCylonConfig = currentFullConfig.cylonLED.copyWith(
+      durationSec: durationSec,
+      delayMs: delayMs,
+      step: step,
+      width: width,
+      ledRGB: toRgbList(eyeColor),
+    );
 
-    provider.updateConfig(config).then((_) {
-      if (mounted) Navigator.pop(context);
-    });
+    provider
+        .updateConfig(currentFullConfig.copyWith(cylonLED: updatedCylonConfig))
+        .then((_) {
+          if (mounted) Navigator.pop(context);
+        });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_initialized) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cylon Eye Config'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _save,
-          )
-        ],
+        actions: [IconButton(icon: const Icon(Icons.save), onPressed: _save)],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildSectionHeader('Animation Settings'),
-          _buildSlider('Duration', durationSec.toDouble(), 0, 300, 's', (v) => setState(() => durationSec = v.toInt())),
-          _buildSlider('Speed (Delay)', delayMs.toDouble(), 0, 200, 'ms', (v) => setState(() => delayMs = v.toInt())),
-          
+          const SectionHeader('Animation Settings', color: Colors.redAccent),
+          ConfigSlider(
+            label: 'Duration',
+            value: durationSec.toDouble(),
+            min: 0,
+            max: 300,
+            unit: 's',
+            onChanged: (v) => setState(() => durationSec = v.toInt()),
+            activeColor: Colors.redAccent,
+          ),
+          ConfigSlider(
+            label: 'Speed (Delay)',
+            value: delayMs.toDouble(),
+            min: 0,
+            max: 200,
+            unit: 'ms',
+            onChanged: (v) => setState(() => delayMs = v.toInt()),
+            activeColor: Colors.redAccent,
+          ),
           const SizedBox(height: 16),
-          _buildSectionHeader('Appearance'),
-          _buildSlider('Eye Width', width.toDouble(), 1, (ledsTotal / 2).floorToDouble(), 'px', (v) => setState(() => width = v.toInt())),
-          // Step is a double, maybe use a slider with divisions
-          _buildSlider('Step Size', step, 0.1, 5.0, '', (v) => setState(() => step = double.parse(v.toStringAsFixed(1)))),
-          
+          const SectionHeader('Appearance', color: Colors.redAccent),
+          ConfigSlider(
+            label: 'Eye Width',
+            value: width.toDouble(),
+            min: 1,
+            max: (widget.totalLeds / 2).floorToDouble(),
+            unit: 'px',
+            onChanged: (v) => setState(() => width = v.toInt()),
+            activeColor: Colors.redAccent,
+          ),
+          ConfigSlider(
+            label: 'Step Size',
+            value: step,
+            min: 0.1,
+            max: 5.0,
+            isInt: false,
+            onChanged: (v) =>
+                setState(() => step = double.parse(v.toStringAsFixed(1))),
+            activeColor: Colors.redAccent,
+          ),
           ColorPickerTile(
             label: 'Eye Color',
             color: eyeColor,
@@ -89,43 +116,6 @@ class _CylonLEDEditorState extends State<CylonLEDEditor> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        title.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.redAccent,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSlider(String label, double value, double min, double max, String unit, ValueChanged<double> onChanged) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label),
-            Text('${value.toStringAsFixed(value is int ? 0 : 1)}$unit', style: const TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        Slider(
-          value: value,
-          min: min,
-          max: max,
-          divisions: (max - min) ~/ (unit.isEmpty ? 0.1 : 1),
-          onChanged: onChanged,
-          activeColor: Colors.redAccent,
-        ),
-      ],
     );
   }
 }

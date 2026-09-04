@@ -3,10 +3,19 @@ import 'package:provider/provider.dart';
 import '../../providers/config_provider.dart';
 import '../../widgets/color_picker_tile.dart';
 import '../../widgets/led_selectors.dart';
+import '../../widgets/section_header.dart';
+import '../../models.dart';
 import '../../utils.dart';
 
 class ClockLEDEditor extends StatefulWidget {
-  const ClockLEDEditor({super.key});
+  final ClockLEDConfig initialConfig;
+  final int totalLeds;
+
+  const ClockLEDEditor({
+    super.key,
+    required this.initialConfig,
+    required this.totalLeds,
+  });
 
   @override
   State<ClockLEDEditor> createState() => _ClockLEDEditorState();
@@ -19,50 +28,42 @@ class _ClockLEDEditorState extends State<ClockLEDEditor> {
   late int endLedMinute;
   late Color ledHourColor;
   late Color ledMinuteColor;
-  late int ledsTotal;
-
-  bool _initialized = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_initialized) {
-      final config = context.read<ConfigProvider>().config;
-      if (config != null) {
-        ledsTotal = config.ledsTotal;
-        final c = config.clockLED;
-        startLedHour = c.startLedHour;
-        endLedHour = c.endLedHour;
-        startLedMinute = c.startLedMinute;
-        endLedMinute = c.endLedMinute;
-        ledHourColor = fromRgbList(c.ledHour);
-        ledMinuteColor = fromRgbList(c.ledMinute);
-        _initialized = true;
-      }
-    }
+  void initState() {
+    super.initState();
+    final c = widget.initialConfig;
+    startLedHour = c.startLedHour;
+    endLedHour = c.endLedHour;
+    startLedMinute = c.startLedMinute;
+    endLedMinute = c.endLedMinute;
+    ledHourColor = fromRgbList(c.ledHour);
+    ledMinuteColor = fromRgbList(c.ledMinute);
   }
 
   void _save() {
     final provider = context.read<ConfigProvider>();
-    final config = provider.config;
-    if (config == null) return;
+    final currentFullConfig = provider.config;
+    if (currentFullConfig == null) return;
 
-    config.clockLED.startLedHour = startLedHour;
-    config.clockLED.endLedHour = endLedHour;
-    config.clockLED.startLedMinute = startLedMinute;
-    config.clockLED.endLedMinute = endLedMinute;
-    config.clockLED.ledHour = toRgbList(ledHourColor);
-    config.clockLED.ledMinute = toRgbList(ledMinuteColor);
+    final updatedClockConfig = currentFullConfig.clockLED.copyWith(
+      startLedHour: startLedHour,
+      endLedHour: endLedHour,
+      startLedMinute: startLedMinute,
+      endLedMinute: endLedMinute,
+      ledHour: toRgbList(ledHourColor),
+      ledMinute: toRgbList(ledMinuteColor),
+    );
 
-    provider.updateConfig(config).then((_) {
-      if (mounted) Navigator.pop(context);
-    });
+    provider
+        .updateConfig(currentFullConfig.copyWith(clockLED: updatedClockConfig))
+        .then((_) {
+          if (mounted) Navigator.pop(context);
+        });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_initialized) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Clock Config'),
@@ -71,12 +72,12 @@ class _ClockLEDEditorState extends State<ClockLEDEditor> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildSectionHeader('Hour Hands'),
+          const SectionHeader('Hour Hands', color: Colors.blueAccent),
           LedRangeSelector(
             label: 'Hour Range',
             start: startLedHour,
             end: endLedHour,
-            totalLeds: ledsTotal,
+            totalLeds: widget.totalLeds,
             onChanged: (s, e) => setState(() {
               startLedHour = s;
               endLedHour = e;
@@ -88,14 +89,13 @@ class _ClockLEDEditorState extends State<ClockLEDEditor> {
             color: ledHourColor,
             onColorChanged: (c) => setState(() => ledHourColor = c),
           ),
-          
           const SizedBox(height: 24),
-          _buildSectionHeader('Minute Hands'),
+          const SectionHeader('Minute Hands', color: Colors.blueAccent),
           LedRangeSelector(
             label: 'Minute Range',
             start: startLedMinute,
             end: endLedMinute,
-            totalLeds: ledsTotal,
+            totalLeds: widget.totalLeds,
             onChanged: (s, e) => setState(() {
               startLedMinute = s;
               endLedMinute = e;
@@ -108,20 +108,6 @@ class _ClockLEDEditorState extends State<ClockLEDEditor> {
             onColorChanged: (c) => setState(() => ledMinuteColor = c),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        title.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.blueAccent,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
-        ),
       ),
     );
   }

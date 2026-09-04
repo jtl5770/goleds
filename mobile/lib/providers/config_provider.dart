@@ -94,35 +94,10 @@ class ConfigProvider with ChangeNotifier {
     }
   }
 
-  void toggleProducer(String producerName, bool isEnabled) {
+  void toggleProducer(Producer producer, bool isEnabled) {
     if (_config == null) return;
-
-    switch (producerName) {
-      case 'SensorLED':
-        _config!.sensorLED.enabled = isEnabled;
-        if (!isEnabled) {
-          _config!.cylonLED.enabled = false;
-          _config!.multiBlobLED.enabled = false;
-        }
-        break;
-      case 'NightLED':
-        _config!.nightLED.enabled = isEnabled;
-        break;
-      case 'ClockLED':
-        _config!.clockLED.enabled = isEnabled;
-        break;
-      case 'AudioLED':
-        _config!.audioLED.enabled = isEnabled;
-        break;
-      case 'CylonLED':
-        _config!.cylonLED.enabled = isEnabled;
-        break;
-      case 'MultiBlobLED':
-        _config!.multiBlobLED.enabled = isEnabled;
-        break;
-    }
-
-    updateConfig(_config!);
+    final updatedConfig = _config!.toggleProducer(producer, isEnabled);
+    updateConfig(updatedConfig);
   }
 
   Future<bool> calibrateSensors() async {

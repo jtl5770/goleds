@@ -1,13 +1,18 @@
-class RuntimeConfig {
-  int ledsTotal;
-  SensorLEDConfig sensorLED;
-  NightLEDConfig nightLED;
-  ClockLEDConfig clockLED;
-  AudioLEDConfig audioLED;
-  CylonLEDConfig cylonLED;
-  MultiBlobLEDConfig multiBlobLED;
+const int _nsPerMs = 1000000;
+const int _nsPerSec = 1000000000;
 
-  RuntimeConfig({
+enum Producer { sensor, night, clock, audio, cylon, multiBlob }
+
+class RuntimeConfig {
+  final int ledsTotal;
+  final SensorLEDConfig sensorLED;
+  final NightLEDConfig nightLED;
+  final ClockLEDConfig clockLED;
+  final AudioLEDConfig audioLED;
+  final CylonLEDConfig cylonLED;
+  final MultiBlobLEDConfig multiBlobLED;
+
+  const RuntimeConfig({
     required this.ledsTotal,
     required this.sensorLED,
     required this.nightLED,
@@ -16,6 +21,51 @@ class RuntimeConfig {
     required this.cylonLED,
     required this.multiBlobLED,
   });
+
+  RuntimeConfig copyWith({
+    int? ledsTotal,
+    SensorLEDConfig? sensorLED,
+    NightLEDConfig? nightLED,
+    ClockLEDConfig? clockLED,
+    AudioLEDConfig? audioLED,
+    CylonLEDConfig? cylonLED,
+    MultiBlobLEDConfig? multiBlobLED,
+  }) {
+    return RuntimeConfig(
+      ledsTotal: ledsTotal ?? this.ledsTotal,
+      sensorLED: sensorLED ?? this.sensorLED,
+      nightLED: nightLED ?? this.nightLED,
+      clockLED: clockLED ?? this.clockLED,
+      audioLED: audioLED ?? this.audioLED,
+      cylonLED: cylonLED ?? this.cylonLED,
+      multiBlobLED: multiBlobLED ?? this.multiBlobLED,
+    );
+  }
+
+  RuntimeConfig toggleProducer(Producer producer, bool isEnabled) {
+    switch (producer) {
+      case Producer.sensor:
+        return copyWith(
+          sensorLED: sensorLED.copyWith(enabled: isEnabled),
+          cylonLED: isEnabled ? cylonLED : cylonLED.copyWith(enabled: false),
+          multiBlobLED: isEnabled
+              ? multiBlobLED
+              : multiBlobLED.copyWith(enabled: false),
+        );
+      case Producer.night:
+        return copyWith(nightLED: nightLED.copyWith(enabled: isEnabled));
+      case Producer.clock:
+        return copyWith(clockLED: clockLED.copyWith(enabled: isEnabled));
+      case Producer.audio:
+        return copyWith(audioLED: audioLED.copyWith(enabled: isEnabled));
+      case Producer.cylon:
+        return copyWith(cylonLED: cylonLED.copyWith(enabled: isEnabled));
+      case Producer.multiBlob:
+        return copyWith(
+          multiBlobLED: multiBlobLED.copyWith(enabled: isEnabled),
+        );
+    }
+  }
 
   factory RuntimeConfig.fromJson(Map<String, dynamic> json) {
     return RuntimeConfig(
@@ -43,18 +93,18 @@ class RuntimeConfig {
 }
 
 class SensorLEDConfig {
-  bool enabled;
-  int runUpDelayMs;
-  int runDownDelayMs;
-  int holdTimeSec;
-  List<double> ledRGB;
-  bool latchEnabled;
-  int latchTriggerValue;
-  int latchTriggerDelaySec;
-  int latchTimeSec;
-  List<double> latchLedRGB;
+  final bool enabled;
+  final int runUpDelayMs;
+  final int runDownDelayMs;
+  final int holdTimeSec;
+  final List<double> ledRGB;
+  final bool latchEnabled;
+  final int latchTriggerValue;
+  final int latchTriggerDelaySec;
+  final int latchTimeSec;
+  final List<double> latchLedRGB;
 
-  SensorLEDConfig({
+  const SensorLEDConfig({
     required this.enabled,
     required this.runUpDelayMs,
     required this.runDownDelayMs,
@@ -66,6 +116,32 @@ class SensorLEDConfig {
     required this.latchTimeSec,
     required this.latchLedRGB,
   });
+
+  SensorLEDConfig copyWith({
+    bool? enabled,
+    int? runUpDelayMs,
+    int? runDownDelayMs,
+    int? holdTimeSec,
+    List<double>? ledRGB,
+    bool? latchEnabled,
+    int? latchTriggerValue,
+    int? latchTriggerDelaySec,
+    int? latchTimeSec,
+    List<double>? latchLedRGB,
+  }) {
+    return SensorLEDConfig(
+      enabled: enabled ?? this.enabled,
+      runUpDelayMs: runUpDelayMs ?? this.runUpDelayMs,
+      runDownDelayMs: runDownDelayMs ?? this.runDownDelayMs,
+      holdTimeSec: holdTimeSec ?? this.holdTimeSec,
+      ledRGB: ledRGB ?? List.from(this.ledRGB),
+      latchEnabled: latchEnabled ?? this.latchEnabled,
+      latchTriggerValue: latchTriggerValue ?? this.latchTriggerValue,
+      latchTriggerDelaySec: latchTriggerDelaySec ?? this.latchTriggerDelaySec,
+      latchTimeSec: latchTimeSec ?? this.latchTimeSec,
+      latchLedRGB: latchLedRGB ?? List.from(this.latchLedRGB),
+    );
+  }
 
   factory SensorLEDConfig.fromJson(Map<String, dynamic> json) {
     return SensorLEDConfig(
@@ -85,34 +161,48 @@ class SensorLEDConfig {
   Map<String, dynamic> toJson() {
     return {
       'Enabled': enabled,
-      'RunUpDelay': runUpDelayMs * 1000000,
-      'RunDownDelay': runDownDelayMs * 1000000,
-      'HoldTime': holdTimeSec * 1000000000,
+      'RunUpDelay': runUpDelayMs * _nsPerMs,
+      'RunDownDelay': runDownDelayMs * _nsPerMs,
+      'HoldTime': holdTimeSec * _nsPerSec,
       'LedRGB': ledRGB,
       'LatchEnabled': latchEnabled,
       'LatchTriggerValue': latchTriggerValue,
-      'LatchTriggerDelay': latchTriggerDelaySec * 1000000000,
-      'LatchTime': latchTimeSec * 1000000000,
+      'LatchTriggerDelay': latchTriggerDelaySec * _nsPerSec,
+      'LatchTime': latchTimeSec * _nsPerSec,
       'LatchLedRGB': latchLedRGB,
     };
   }
 }
 
 class NightLEDConfig {
-  bool enabled;
-  double latitude;
-  double longitude;
-  List<List<double>> ledRGB;
+  final bool enabled;
+  final double latitude;
+  final double longitude;
+  final List<List<double>> ledRGB;
 
-  NightLEDConfig({
+  const NightLEDConfig({
     required this.enabled,
     required this.latitude,
     required this.longitude,
     required this.ledRGB,
   });
 
+  NightLEDConfig copyWith({
+    bool? enabled,
+    double? latitude,
+    double? longitude,
+    List<List<double>>? ledRGB,
+  }) {
+    return NightLEDConfig(
+      enabled: enabled ?? this.enabled,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      ledRGB: ledRGB ?? this.ledRGB.map((e) => List<double>.from(e)).toList(),
+    );
+  }
+
   factory NightLEDConfig.fromJson(Map<String, dynamic> json) {
-    var list = json['LedRGB'] as List?;
+    final list = json['LedRGB'] as List?;
     List<List<double>> rgbList = [];
     if (list != null) {
       rgbList = list.map((e) => _parseDoubleList(e)).toList();
@@ -140,15 +230,15 @@ class NightLEDConfig {
 }
 
 class ClockLEDConfig {
-  bool enabled;
-  int startLedHour;
-  int endLedHour;
-  int startLedMinute;
-  int endLedMinute;
-  List<double> ledHour;
-  List<double> ledMinute;
+  final bool enabled;
+  final int startLedHour;
+  final int endLedHour;
+  final int startLedMinute;
+  final int endLedMinute;
+  final List<double> ledHour;
+  final List<double> ledMinute;
 
-  ClockLEDConfig({
+  const ClockLEDConfig({
     required this.enabled,
     required this.startLedHour,
     required this.endLedHour,
@@ -157,6 +247,26 @@ class ClockLEDConfig {
     required this.ledHour,
     required this.ledMinute,
   });
+
+  ClockLEDConfig copyWith({
+    bool? enabled,
+    int? startLedHour,
+    int? endLedHour,
+    int? startLedMinute,
+    int? endLedMinute,
+    List<double>? ledHour,
+    List<double>? ledMinute,
+  }) {
+    return ClockLEDConfig(
+      enabled: enabled ?? this.enabled,
+      startLedHour: startLedHour ?? this.startLedHour,
+      endLedHour: endLedHour ?? this.endLedHour,
+      startLedMinute: startLedMinute ?? this.startLedMinute,
+      endLedMinute: endLedMinute ?? this.endLedMinute,
+      ledHour: ledHour ?? List.from(this.ledHour),
+      ledMinute: ledMinute ?? List.from(this.ledMinute),
+    );
+  }
 
   factory ClockLEDConfig.fromJson(Map<String, dynamic> json) {
     return ClockLEDConfig(
@@ -184,16 +294,16 @@ class ClockLEDConfig {
 }
 
 class SqueezeboxConfig {
-  String server;
-  int slimProtoPort;
-  int jsonrpcPort;
-  String playerMAC;
-  String playerName;
-  List<String> ignoredPlayers;
-  bool autoSync;
-  int pollIntervalMs;
+  final String server;
+  final int slimProtoPort;
+  final int jsonrpcPort;
+  final String playerMAC;
+  final String playerName;
+  final List<String> ignoredPlayers;
+  final bool autoSync;
+  final int pollIntervalMs;
 
-  SqueezeboxConfig({
+  const SqueezeboxConfig({
     required this.server,
     required this.slimProtoPort,
     required this.jsonrpcPort,
@@ -204,6 +314,28 @@ class SqueezeboxConfig {
     required this.pollIntervalMs,
   });
 
+  SqueezeboxConfig copyWith({
+    String? server,
+    int? slimProtoPort,
+    int? jsonrpcPort,
+    String? playerMAC,
+    String? playerName,
+    List<String>? ignoredPlayers,
+    bool? autoSync,
+    int? pollIntervalMs,
+  }) {
+    return SqueezeboxConfig(
+      server: server ?? this.server,
+      slimProtoPort: slimProtoPort ?? this.slimProtoPort,
+      jsonrpcPort: jsonrpcPort ?? this.jsonrpcPort,
+      playerMAC: playerMAC ?? this.playerMAC,
+      playerName: playerName ?? this.playerName,
+      ignoredPlayers: ignoredPlayers ?? List.from(this.ignoredPlayers),
+      autoSync: autoSync ?? this.autoSync,
+      pollIntervalMs: pollIntervalMs ?? this.pollIntervalMs,
+    );
+  }
+
   factory SqueezeboxConfig.fromJson(Map<String, dynamic> json) {
     return SqueezeboxConfig(
       server: json['Server'] ?? '',
@@ -212,7 +344,10 @@ class SqueezeboxConfig {
       playerMAC: json['PlayerMAC'] ?? '',
       playerName: json['PlayerName'] ?? '',
       ignoredPlayers:
-          (json['IgnoredPlayers'] as List?)?.map((e) => e.toString()).toList() ?? [],
+          (json['IgnoredPlayers'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
       autoSync: json['AutoSync'] ?? false,
       pollIntervalMs: _parseDurationToMs(json['PollInterval']),
     );
@@ -227,29 +362,29 @@ class SqueezeboxConfig {
       'PlayerName': playerName,
       'IgnoredPlayers': ignoredPlayers,
       'AutoSync': autoSync,
-      'PollInterval': pollIntervalMs * 1000000,
+      'PollInterval': pollIntervalMs * _nsPerMs,
     };
   }
 }
 
 class AudioLEDConfig {
-  bool enabled;
-  int startLedLeft;
-  int endLedLeft;
-  int startLedRight;
-  int endLedRight;
-  List<double> ledGreen;
-  List<double> ledYellow;
-  List<double> ledRed;
-  bool peakHoldEnabled;
-  int peakHoldTimeMs;
-  double peakDecayRate;
-  int updateFreqMs;
-  double minDB;
-  double maxDB;
-  SqueezeboxConfig squeezebox;
+  final bool enabled;
+  final int startLedLeft;
+  final int endLedLeft;
+  final int startLedRight;
+  final int endLedRight;
+  final List<double> ledGreen;
+  final List<double> ledYellow;
+  final List<double> ledRed;
+  final bool peakHoldEnabled;
+  final int peakHoldTimeMs;
+  final double peakDecayRate;
+  final int updateFreqMs;
+  final double minDB;
+  final double maxDB;
+  final SqueezeboxConfig squeezebox;
 
-  AudioLEDConfig({
+  const AudioLEDConfig({
     required this.enabled,
     required this.startLedLeft,
     required this.endLedLeft,
@@ -267,6 +402,42 @@ class AudioLEDConfig {
     required this.squeezebox,
   });
 
+  AudioLEDConfig copyWith({
+    bool? enabled,
+    int? startLedLeft,
+    int? endLedLeft,
+    int? startLedRight,
+    int? endLedRight,
+    List<double>? ledGreen,
+    List<double>? ledYellow,
+    List<double>? ledRed,
+    bool? peakHoldEnabled,
+    int? peakHoldTimeMs,
+    double? peakDecayRate,
+    int? updateFreqMs,
+    double? minDB,
+    double? maxDB,
+    SqueezeboxConfig? squeezebox,
+  }) {
+    return AudioLEDConfig(
+      enabled: enabled ?? this.enabled,
+      startLedLeft: startLedLeft ?? this.startLedLeft,
+      endLedLeft: endLedLeft ?? this.endLedLeft,
+      startLedRight: startLedRight ?? this.startLedRight,
+      endLedRight: endLedRight ?? this.endLedRight,
+      ledGreen: ledGreen ?? List.from(this.ledGreen),
+      ledYellow: ledYellow ?? List.from(this.ledYellow),
+      ledRed: ledRed ?? List.from(this.ledRed),
+      peakHoldEnabled: peakHoldEnabled ?? this.peakHoldEnabled,
+      peakHoldTimeMs: peakHoldTimeMs ?? this.peakHoldTimeMs,
+      peakDecayRate: peakDecayRate ?? this.peakDecayRate,
+      updateFreqMs: updateFreqMs ?? this.updateFreqMs,
+      minDB: minDB ?? this.minDB,
+      maxDB: maxDB ?? this.maxDB,
+      squeezebox: squeezebox ?? this.squeezebox,
+    );
+  }
+
   factory AudioLEDConfig.fromJson(Map<String, dynamic> json) {
     return AudioLEDConfig(
       enabled: json['Enabled'] ?? false,
@@ -278,7 +449,9 @@ class AudioLEDConfig {
       ledYellow: _parseDoubleList(json['LedYellow']),
       ledRed: _parseDoubleList(json['LedRed']),
       peakHoldEnabled: json['PeakHoldEnabled'] ?? true,
-      peakHoldTimeMs: json['PeakHoldTime'] != null ? _parseDurationToMs(json['PeakHoldTime']) : 250,
+      peakHoldTimeMs: json['PeakHoldTime'] != null
+          ? _parseDurationToMs(json['PeakHoldTime'])
+          : 250,
       peakDecayRate: (json['PeakDecayRate'] ?? 20.0).toDouble(),
       updateFreqMs: _parseDurationToMs(json['UpdateFreq']),
       minDB: (json['MinDB'] ?? -60.0).toDouble(),
@@ -298,9 +471,9 @@ class AudioLEDConfig {
       'LedYellow': ledYellow,
       'LedRed': ledRed,
       'PeakHoldEnabled': peakHoldEnabled,
-      'PeakHoldTime': peakHoldTimeMs * 1000000,
+      'PeakHoldTime': peakHoldTimeMs * _nsPerMs,
       'PeakDecayRate': peakDecayRate,
-      'UpdateFreq': updateFreqMs * 1000000,
+      'UpdateFreq': updateFreqMs * _nsPerMs,
       'MinDB': minDB,
       'MaxDB': maxDB,
       'Squeezebox': squeezebox.toJson(),
@@ -309,14 +482,14 @@ class AudioLEDConfig {
 }
 
 class CylonLEDConfig {
-  bool enabled;
-  int durationSec;
-  int delayMs;
-  double step;
-  int width;
-  List<double> ledRGB;
+  final bool enabled;
+  final int durationSec;
+  final int delayMs;
+  final double step;
+  final int width;
+  final List<double> ledRGB;
 
-  CylonLEDConfig({
+  const CylonLEDConfig({
     required this.enabled,
     required this.durationSec,
     required this.delayMs,
@@ -324,6 +497,24 @@ class CylonLEDConfig {
     required this.width,
     required this.ledRGB,
   });
+
+  CylonLEDConfig copyWith({
+    bool? enabled,
+    int? durationSec,
+    int? delayMs,
+    double? step,
+    int? width,
+    List<double>? ledRGB,
+  }) {
+    return CylonLEDConfig(
+      enabled: enabled ?? this.enabled,
+      durationSec: durationSec ?? this.durationSec,
+      delayMs: delayMs ?? this.delayMs,
+      step: step ?? this.step,
+      width: width ?? this.width,
+      ledRGB: ledRGB ?? List.from(this.ledRGB),
+    );
+  }
 
   factory CylonLEDConfig.fromJson(Map<String, dynamic> json) {
     return CylonLEDConfig(
@@ -339,8 +530,8 @@ class CylonLEDConfig {
   Map<String, dynamic> toJson() {
     return {
       'Enabled': enabled,
-      'Duration': durationSec * 1000000000,
-      'Delay': delayMs * 1000000,
+      'Duration': durationSec * _nsPerSec,
+      'Delay': delayMs * _nsPerMs,
       'Step': step,
       'Width': width,
       'LedRGB': ledRGB,
@@ -349,20 +540,34 @@ class CylonLEDConfig {
 }
 
 class MultiBlobLEDConfig {
-  bool enabled;
-  int durationSec;
-  int delayMs;
-  List<BlobCfg> blobCfg;
+  final bool enabled;
+  final int durationSec;
+  final int delayMs;
+  final List<BlobCfg> blobCfg;
 
-  MultiBlobLEDConfig({
+  const MultiBlobLEDConfig({
     required this.enabled,
     required this.durationSec,
     required this.delayMs,
     required this.blobCfg,
   });
 
+  MultiBlobLEDConfig copyWith({
+    bool? enabled,
+    int? durationSec,
+    int? delayMs,
+    List<BlobCfg>? blobCfg,
+  }) {
+    return MultiBlobLEDConfig(
+      enabled: enabled ?? this.enabled,
+      durationSec: durationSec ?? this.durationSec,
+      delayMs: delayMs ?? this.delayMs,
+      blobCfg: blobCfg ?? this.blobCfg.map((b) => b.copyWith()).toList(),
+    );
+  }
+
   factory MultiBlobLEDConfig.fromJson(Map<String, dynamic> json) {
-    var list = json['BlobCfg'] as List?;
+    final list = json['BlobCfg'] as List?;
     List<BlobCfg> blobs = [];
     if (list != null) {
       blobs = list.map((e) => BlobCfg.fromJson(e)).toList();
@@ -378,25 +583,39 @@ class MultiBlobLEDConfig {
   Map<String, dynamic> toJson() {
     return {
       'Enabled': enabled,
-      'Duration': durationSec * 1000000000,
-      'Delay': delayMs * 1000000,
+      'Duration': durationSec * _nsPerSec,
+      'Delay': delayMs * _nsPerMs,
       'BlobCfg': blobCfg.map((e) => e.toJson()).toList(),
     };
   }
 }
 
 class BlobCfg {
-  double deltaX;
-  double x;
-  double width;
-  List<double> ledRGB;
+  final double deltaX;
+  final double x;
+  final double width;
+  final List<double> ledRGB;
 
-  BlobCfg({
+  const BlobCfg({
     required this.deltaX,
     required this.x,
     required this.width,
     required this.ledRGB,
   });
+
+  BlobCfg copyWith({
+    double? deltaX,
+    double? x,
+    double? width,
+    List<double>? ledRGB,
+  }) {
+    return BlobCfg(
+      deltaX: deltaX ?? this.deltaX,
+      x: x ?? this.x,
+      width: width ?? this.width,
+      ledRGB: ledRGB ?? List.from(this.ledRGB),
+    );
+  }
 
   factory BlobCfg.fromJson(Map<String, dynamic> json) {
     return BlobCfg(
@@ -412,8 +631,6 @@ class BlobCfg {
   }
 }
 
-// Helper functions for parsing
-
 List<double> _parseDoubleList(dynamic json) {
   if (json == null) return [0.0, 0.0, 0.0];
   if (json is List) {
@@ -425,7 +642,7 @@ List<double> _parseDoubleList(dynamic json) {
 int _parseDurationToMs(dynamic val) {
   if (val == null) return 0;
   if (val is num) {
-    return (val / 1000000).round();
+    return (val / _nsPerMs).round();
   }
   return 0;
 }
@@ -433,7 +650,7 @@ int _parseDurationToMs(dynamic val) {
 int _parseDurationToSec(dynamic val) {
   if (val == null) return 0;
   if (val is num) {
-    return (val / 1000000000).round();
+    return (val / _nsPerSec).round();
   }
   return 0;
 }

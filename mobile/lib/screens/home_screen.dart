@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
+import '../models.dart';
 import '../providers/config_provider.dart';
 import '../widgets/producer_card.dart';
 import 'editors/sensor_led_editor.dart';
@@ -10,20 +11,10 @@ import 'editors/clock_led_editor.dart';
 import 'editors/audio_led_editor.dart';
 import 'editors/multi_blob_led_editor.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  void _showSettingsDialog() {
+  void _showSettingsDialog(BuildContext context) {
     final provider = context.read<ConfigProvider>();
     final controller = TextEditingController(text: provider.baseUrl);
 
@@ -56,6 +47,26 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _handleCalibration(BuildContext context) async {
+    final configProvider = context.read<ConfigProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Starting sensor calibration...')),
+    );
+
+    final success = await configProvider.calibrateSensors();
+    if (success) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Sensor calibration started.')),
+      );
+    } else {
+      messenger.showSnackBar(
+        SnackBar(content: Text(configProvider.error ?? 'Calibration failed')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final configProvider = context.watch<ConfigProvider>();
@@ -70,29 +81,12 @@ class _HomeScreenState extends State<HomeScreen> {
           if (!kIsWeb)
             IconButton(
               icon: const Icon(Icons.settings),
-              onPressed: _showSettingsDialog,
+              onPressed: () => _showSettingsDialog(context),
             ),
           IconButton(
             icon: const Icon(Icons.tune),
             tooltip: 'Calibrate Sensors',
-            onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              messenger.showSnackBar(
-                const SnackBar(content: Text('Starting sensor calibration...')),
-              );
-              final success = await configProvider.calibrateSensors();
-              if (success) {
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Sensor calibration started.')),
-                );
-              } else {
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(configProvider.error ?? 'Calibration failed'),
-                  ),
-                );
-              }
-            },
+            onPressed: () => _handleCalibration(context),
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -123,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   if (!kIsWeb)
                     ElevatedButton(
-                      onPressed: _showSettingsDialog,
+                      onPressed: () => _showSettingsDialog(context),
                       child: const Text('Check Settings'),
                     ),
                 ],
@@ -152,13 +146,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       isEnabled: config.sensorLED.enabled,
                       accentColor: Colors.purpleAccent,
                       onToggle: () => configProvider.toggleProducer(
-                        'SensorLED',
+                        Producer.sensor,
                         !config.sensorLED.enabled,
                       ),
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const SensorLEDEditor(),
+                          builder: (_) =>
+                              SensorLEDEditor(initialConfig: config.sensorLED),
                         ),
                       ),
                     ),
@@ -170,13 +165,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       isEnabled: config.nightLED.enabled,
                       accentColor: Colors.orangeAccent,
                       onToggle: () => configProvider.toggleProducer(
-                        'NightLED',
+                        Producer.night,
                         !config.nightLED.enabled,
                       ),
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const NightLEDEditor(),
+                          builder: (_) =>
+                              NightLEDEditor(initialConfig: config.nightLED),
                         ),
                       ),
                     ),
@@ -187,13 +183,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       isEnabled: config.clockLED.enabled,
                       accentColor: Colors.blueAccent,
                       onToggle: () => configProvider.toggleProducer(
-                        'ClockLED',
+                        Producer.clock,
                         !config.clockLED.enabled,
                       ),
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const ClockLEDEditor(),
+                          builder: (_) => ClockLEDEditor(
+                            initialConfig: config.clockLED,
+                            totalLeds: config.ledsTotal,
+                          ),
                         ),
                       ),
                     ),
@@ -205,13 +204,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       isEnabled: config.audioLED.enabled,
                       accentColor: Colors.greenAccent,
                       onToggle: () => configProvider.toggleProducer(
-                        'AudioLED',
+                        Producer.audio,
                         !config.audioLED.enabled,
                       ),
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const AudioLEDEditor(),
+                          builder: (_) => AudioLEDEditor(
+                            initialConfig: config.audioLED,
+                            totalLeds: config.ledsTotal,
+                          ),
                         ),
                       ),
                     ),
@@ -223,13 +225,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       isDisabled: !config.sensorLED.enabled,
                       accentColor: Colors.redAccent,
                       onToggle: () => configProvider.toggleProducer(
-                        'CylonLED',
+                        Producer.cylon,
                         !config.cylonLED.enabled,
                       ),
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const CylonLEDEditor(),
+                          builder: (_) => CylonLEDEditor(
+                            initialConfig: config.cylonLED,
+                            totalLeds: config.ledsTotal,
+                          ),
                         ),
                       ),
                     ),
@@ -241,13 +246,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       isDisabled: !config.sensorLED.enabled,
                       accentColor: Colors.pinkAccent,
                       onToggle: () => configProvider.toggleProducer(
-                        'MultiBlobLED',
+                        Producer.multiBlob,
                         !config.multiBlobLED.enabled,
                       ),
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const MultiBlobLEDEditor(),
+                          builder: (_) => MultiBlobLEDEditor(
+                            initialConfig: config.multiBlobLED,
+                            totalLeds: config.ledsTotal,
+                          ),
                         ),
                       ),
                     ),
