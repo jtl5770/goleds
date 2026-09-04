@@ -46,17 +46,17 @@ the outside sensors)
 ## Raspberry Pi
 
 I am using a Raspberry Pi 3b in my installation. This has plenty
-enough horsepower to drive the project. In idle mode (no lights
-burning/effect running, only the readout loop of the sensors is
-active) the CPU usage is around 1.7%. While the multiblob effect is
-running as configured in the default config file CPU usage goes up to
-around 4.3%.
+enough horsepower to drive the project. In idle mode (no effect running, 
+only the readout loop of the sensors is active) the CPU usage is 
+around 1%. Quasi static displays like the NightLite- or ClockProducer are 
+essentially idle. MultiBlobProducer is at around 2%. While the 
+AudioLedProducer is showing the VU meter effect, CPU usage goes up to around 6%.
 
 The OS used is standard Rasbian, and - thanks to the fact that GO
-compiles to a static binary - there is not much else needed more than
+compiles to a static binary - there is not much else needed other than
 that. You have to enable the SPI interface on the Pi though, there is
 plenty of documentation on the net on other things you could do (like
-overclocking, which may be overkill. One thing I did was making sure
+overclocking, which mould be overkill. One thing I did was making sure
 that the CPU doesn't scale but instead keeps running at a steady
 frequency as it seems to help with getting the SPI timings right, but
 YMMV)

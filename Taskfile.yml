@@ -2,8 +2,8 @@ version: '3'
 
 tasks:
   default:
-    desc: Build everything (Server, Web, Android App)
-    deps: [build-server, build-web, build-android]
+    desc: Build everything (Server, Pi Binary, Web, Android App)
+    deps: [build-server, build-pi, build-web, build-android]
 
   build-server:
     desc: Build the Go server for local development
@@ -15,6 +15,20 @@ tasks:
       - goleds
     cmds:
       - go build -o goleds .
+
+  build-pi:
+    desc: Cross-compile the Go server for Raspberry Pi (ARMv7 and ARM64)
+    sources:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+    generates:
+      - goleds.armv7
+      - goleds.arm64
+    cmds:
+      - GOOS=linux GOARCH=arm GOARM=7 go build -o goleds.armv7 .
+      - GOOS=linux GOARCH=arm64 go build -o goleds.arm64 .
+      - echo "Raspberry Pi binaries built as ./goleds.armv7 and ./goleds.arm64"
 
   generate-icons:
     desc: Generate app icons from SVG source
@@ -36,14 +50,12 @@ tasks:
       - "mobile/web/**/*"
     generates:
       - "web/index.html"
-      - "goleds_web.tar.gz"
     cmds:
       - cd mobile && flutter build web --release --no-wasm-dry-run
       - rm -rf web
       - mkdir -p web
       - cp -r mobile/build/web/* web/
-      - tar -czf goleds_web.tar.gz web/
-      - echo "Web build deployed to ./web and archived to ./goleds_web.tar.gz"
+      - echo "Web build deployed to ./web"
 
   build-android:
     desc: Build Flutter Android Split APKs
@@ -79,7 +91,7 @@ tasks:
   clean:
     desc: Clean all artifacts
     cmds:
-      - rm -f goleds goleds_commander*.apk goleds_web.tar.gz
+      - rm -f goleds goleds.arm* goleds_pi goleds_commander*.apk
       - rm -rf web
       - cmd: cd mobile && flutter clean
         ignore_error: true
