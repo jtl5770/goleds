@@ -35,16 +35,16 @@ func isValidIndex(index, ledsTotal int) bool {
 
 // SensorLEDConfig defines the configuration for the SensorLED producer.
 type SensorLEDConfig struct {
-	Enabled           bool          `yaml:"Enabled"`
-	RunUpDelay        time.Duration `yaml:"RunUpDelay"`
-	RunDownDelay      time.Duration `yaml:"RunDownDelay"`
-	HoldTime          time.Duration `yaml:"HoldTime"`
-	LedRGB            []float64     `yaml:"LedRGB,flow"`
-	LatchEnabled      bool          `yaml:"LatchEnabled"`
-	LatchTriggerValue int           `yaml:"LatchTriggerValue"`
-	LatchTriggerDelay time.Duration `yaml:"LatchTriggerDelay"`
-	LatchTime         time.Duration `yaml:"LatchTime"`
-	LatchLedRGB       []float64     `yaml:"LatchLedRGB,flow"`
+	Enabled           bool          `yaml:"Enabled" json:"Enabled"`
+	RunUpDelay        time.Duration `yaml:"RunUpDelay" json:"RunUpDelay"`
+	RunDownDelay      time.Duration `yaml:"RunDownDelay" json:"RunDownDelay"`
+	HoldTime          time.Duration `yaml:"HoldTime" json:"HoldTime"`
+	LedRGB            []float64     `yaml:"LedRGB,flow" json:"LedRGB"`
+	LatchEnabled      bool          `yaml:"LatchEnabled" json:"LatchEnabled"`
+	LatchTriggerValue int           `yaml:"LatchTriggerValue" json:"LatchTriggerValue"`
+	LatchTriggerDelay time.Duration `yaml:"LatchTriggerDelay" json:"LatchTriggerDelay"`
+	LatchTime         time.Duration `yaml:"LatchTime" json:"LatchTime"`
+	LatchLedRGB       []float64     `yaml:"LatchLedRGB,flow" json:"LatchLedRGB"`
 }
 
 func (c *SensorLEDConfig) Validate() error {
@@ -79,10 +79,10 @@ func (c *SensorLEDConfig) Validate() error {
 
 // NightLEDConfig defines the configuration for the NightLED producer.
 type NightLEDConfig struct {
-	Enabled   bool        `yaml:"Enabled"`
-	Latitude  float64     `yaml:"Latitude"`
-	Longitude float64     `yaml:"Longitude"`
-	LedRGB    [][]float64 `yaml:"LedRGB,flow"`
+	Enabled   bool        `yaml:"Enabled" json:"Enabled"`
+	Latitude  float64     `yaml:"Latitude" json:"Latitude"`
+	Longitude float64     `yaml:"Longitude" json:"Longitude"`
+	LedRGB    [][]float64 `yaml:"LedRGB,flow" json:"LedRGB"`
 }
 
 func (c *NightLEDConfig) Validate() error {
@@ -102,13 +102,13 @@ func (c *NightLEDConfig) Validate() error {
 
 // ClockLEDConfig defines the configuration for the ClockLED producer.
 type ClockLEDConfig struct {
-	Enabled        bool      `yaml:"Enabled"`
-	StartLedHour   int       `yaml:"StartLedHour"`
-	EndLedHour     int       `yaml:"EndLedHour"`
-	StartLedMinute int       `yaml:"StartLedMinute"`
-	EndLedMinute   int       `yaml:"EndLedMinute"`
-	LedHour        []float64 `yaml:"LedHour,flow"`
-	LedMinute      []float64 `yaml:"LedMinute,flow"`
+	Enabled        bool      `yaml:"Enabled" json:"Enabled"`
+	StartLedHour   int       `yaml:"StartLedHour" json:"StartLedHour"`
+	EndLedHour     int       `yaml:"EndLedHour" json:"EndLedHour"`
+	StartLedMinute int       `yaml:"StartLedMinute" json:"StartLedMinute"`
+	EndLedMinute   int       `yaml:"EndLedMinute" json:"EndLedMinute"`
+	LedHour        []float64 `yaml:"LedHour,flow" json:"LedHour"`
+	LedMinute      []float64 `yaml:"LedMinute,flow" json:"LedMinute"`
 }
 
 func (c *ClockLEDConfig) Validate(ledsTotal int) error {
@@ -143,14 +143,14 @@ func (c *ClockLEDConfig) Validate(ledsTotal int) error {
 // If Server is empty, modern TLV auto-discovery is used on UDP port 3483,
 // and any configured port numbers are ignored.
 type SqueezeboxConfig struct {
-	Server         string        `yaml:"Server"`
-	SlimProtoPort  int           `yaml:"SlimProtoPort"`
-	JSONRPCPort    int           `yaml:"JSONRPCPort"`
-	PlayerMAC      string        `yaml:"PlayerMAC"`
-	PlayerName     string        `yaml:"PlayerName"`
-	IgnoredPlayers []string      `yaml:"IgnoredPlayers"`
-	AutoSync       bool          `yaml:"AutoSync"`
-	PollInterval   time.Duration `yaml:"PollInterval"`
+	Server         string        `yaml:"Server" json:"Server"`
+	SlimProtoPort  int           `yaml:"SlimProtoPort" json:"SlimProtoPort"`
+	JSONRPCPort    int           `yaml:"JSONRPCPort" json:"JSONRPCPort"`
+	PlayerMAC      string        `yaml:"PlayerMAC" json:"PlayerMAC"`
+	PlayerName     string        `yaml:"PlayerName" json:"PlayerName"`
+	IgnoredPlayers []string      `yaml:"IgnoredPlayers" json:"IgnoredPlayers"`
+	AutoSync       bool          `yaml:"AutoSync" json:"AutoSync"`
+	PollInterval   time.Duration `yaml:"PollInterval" json:"PollInterval"`
 }
 
 func (c *SqueezeboxConfig) Validate() error {
@@ -173,46 +173,153 @@ func (c *SqueezeboxConfig) Validate() error {
 	return nil
 }
 
-// AudioLEDConfig defines the configuration for the AudioLED producer.
-type AudioLEDConfig struct {
-	Enabled         bool             `yaml:"Enabled"`
-	StartLedLeft    int              `yaml:"StartLedLeft"`
-	EndLedLeft      int              `yaml:"EndLedLeft"`
-	StartLedRight   int              `yaml:"StartLedRight"`
-	EndLedRight     int              `yaml:"EndLedRight"`
-	LedGreen        []float64        `yaml:"LedGreen,flow"`
-	LedYellow       []float64        `yaml:"LedYellow,flow"`
-	LedRed          []float64        `yaml:"LedRed,flow"`
-	PeakHoldEnabled bool             `yaml:"PeakHoldEnabled"`
-	PeakHoldTime    time.Duration    `yaml:"PeakHoldTime"`
-	PeakDecayRate   float64          `yaml:"PeakDecayRate"`
-	UpdateFreq      time.Duration    `yaml:"UpdateFreq"`
-	MinDB           float64          `yaml:"MinDB"`
-	MaxDB           float64          `yaml:"MaxDB"`
-	Squeezebox      SqueezeboxConfig `yaml:"Squeezebox"`
+// AudioEffectType specifies the animation effect rendered on an audio segment.
+type AudioEffectType string
+
+const (
+	AudioEffectLeftVU        AudioEffectType = "LeftVU"
+	AudioEffectRightVU       AudioEffectType = "RightVU"
+	AudioEffectMonoVU        AudioEffectType = "MonoVU"
+	AudioEffectLeftSpectrum  AudioEffectType = "LeftSpectrum"
+	AudioEffectRightSpectrum AudioEffectType = "RightSpectrum"
+	AudioEffectMonoSpectrum  AudioEffectType = "MonoSpectrum"
+	AudioEffectSpectrum                      = AudioEffectMonoSpectrum // Deprecated alias for AudioEffectMonoSpectrum
+)
+
+// IsSpectrum reports whether the effect is any variant of frequency spectrum visualization.
+func (e AudioEffectType) IsSpectrum() bool {
+	switch e {
+	case AudioEffectLeftSpectrum, AudioEffectRightSpectrum, AudioEffectMonoSpectrum:
+		return true
+	default:
+		return false
+	}
 }
 
-func (c *AudioLEDConfig) Validate(ledsTotal int) error {
-	if !isValidIndex(c.StartLedLeft, ledsTotal) {
-		return fmt.Errorf("StartLedLeft out of bounds")
+// UnmarshalYAML implements custom unmarshaling to normalize AudioEffectType values.
+func (e *AudioEffectType) UnmarshalYAML(value *yaml.Node) error {
+	var s string
+	if err := value.Decode(&s); err != nil {
+		return err
 	}
-	if !isValidIndex(c.EndLedLeft, ledsTotal) {
-		return fmt.Errorf("EndLedLeft out of bounds")
+	parsed, err := ParseAudioEffectType(s)
+	if err != nil {
+		return err
 	}
-	if !isValidIndex(c.StartLedRight, ledsTotal) {
-		return fmt.Errorf("StartLedRight out of bounds")
+	*e = parsed
+	return nil
+}
+
+// ParseAudioEffectType normalizes string inputs into canonical AudioEffectType.
+func ParseAudioEffectType(s string) (AudioEffectType, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "leftvu", "left_vu", "left":
+		return AudioEffectLeftVU, nil
+	case "rightvu", "right_vu", "right":
+		return AudioEffectRightVU, nil
+	case "monovu", "mono_vu", "mono":
+		return AudioEffectMonoVU, nil
+	case "spectrum", "spec":
+		return AudioEffectMonoSpectrum, nil
+	case "leftspectrum", "left_spectrum", "leftspec", "left_spec":
+		return AudioEffectLeftSpectrum, nil
+	case "rightspectrum", "right_spectrum", "rightspec", "right_spec":
+		return AudioEffectRightSpectrum, nil
+	case "monospectrum", "mono_spectrum", "monospec", "mono_spec":
+		return AudioEffectMonoSpectrum, nil
+	default:
+		return "", fmt.Errorf("invalid audio effect '%s', must be 'LeftVU', 'RightVU', 'MonoVU', 'LeftSpectrum', 'RightSpectrum', or 'MonoSpectrum'", s)
 	}
-	if !isValidIndex(c.EndLedRight, ledsTotal) {
-		return fmt.Errorf("EndLedRight out of bounds")
+}
+
+// AudioSegmentConfig defines a segment of LEDs assigned to a specific audio effect.
+// Direction of animation is determined by comparing StartLed and EndLed:
+// - StartLed <= EndLed: forward (from StartLed towards EndLed)
+// - StartLed > EndLed: reverse (from StartLed towards EndLed)
+type AudioSegmentConfig struct {
+	StartLed int             `yaml:"StartLed" json:"StartLed"`
+	EndLed   int             `yaml:"EndLed" json:"EndLed"`
+	Effect   AudioEffectType `yaml:"Effect" json:"Effect"`
+}
+
+func (s *AudioSegmentConfig) Validate(ledsTotal int) error {
+	if !isValidIndex(s.StartLed, ledsTotal) {
+		return fmt.Errorf("StartLed out of bounds (0-%d): %d", ledsTotal-1, s.StartLed)
 	}
-	if err := validateRGB(c.LedGreen); err != nil {
-		return fmt.Errorf("LedGreen invalid: %w", err)
+	if !isValidIndex(s.EndLed, ledsTotal) {
+		return fmt.Errorf("EndLed out of bounds (0-%d): %d", ledsTotal-1, s.EndLed)
 	}
-	if err := validateRGB(c.LedYellow); err != nil {
-		return fmt.Errorf("LedYellow invalid: %w", err)
+	if _, err := ParseAudioEffectType(string(s.Effect)); err != nil {
+		return err
 	}
-	if err := validateRGB(c.LedRed); err != nil {
-		return fmt.Errorf("LedRed invalid: %w", err)
+
+	length := max(s.StartLed, s.EndLed) - min(s.StartLed, s.EndLed) + 1
+	if s.Effect.IsSpectrum() && length < 16 {
+		return fmt.Errorf("spectrum segment requires at least 16 LEDs, got %d (start=%d, end=%d)", length, s.StartLed, s.EndLed)
+	}
+	return nil
+}
+
+// AudioSceneConfig defines a named collection of LED segments and their assigned effects.
+type AudioSceneConfig struct {
+	Name     string               `yaml:"Name" json:"Name"`
+	Segments []AudioSegmentConfig `yaml:"Segments" json:"Segments"`
+}
+
+func (sc *AudioSceneConfig) Validate(ledsTotal int) error {
+	name := strings.TrimSpace(sc.Name)
+	if name == "" {
+		return fmt.Errorf("scene name cannot be empty")
+	}
+	if len(sc.Segments) == 0 {
+		return fmt.Errorf("scene '%s' must contain at least one segment", sc.Name)
+	}
+
+	occupied := make([]bool, ledsTotal)
+	for i := range sc.Segments {
+		seg := &sc.Segments[i]
+		if err := seg.Validate(ledsTotal); err != nil {
+			return fmt.Errorf("scene '%s' segment %d invalid: %w", sc.Name, i, err)
+		}
+
+		start := min(seg.StartLed, seg.EndLed)
+		end := max(seg.StartLed, seg.EndLed)
+		for idx := start; idx <= end; idx++ {
+			if occupied[idx] {
+				return fmt.Errorf("scene '%s' has overlapping segments at LED index %d", sc.Name, idx)
+			}
+			occupied[idx] = true
+		}
+	}
+	return nil
+}
+
+// AudioVUConfig isolates VU-meter styling and peak indicator parameters.
+type AudioVUConfig struct {
+	LedLow          []float64     `yaml:"LedLow,flow" json:"LedLow"`
+	LedMid          []float64     `yaml:"LedMid,flow" json:"LedMid"`
+	LedHigh         []float64     `yaml:"LedHigh,flow" json:"LedHigh"`
+	SwitchSteps     []int         `yaml:"SwitchSteps,flow" json:"SwitchSteps"`
+	PeakHoldEnabled bool          `yaml:"PeakHoldEnabled" json:"PeakHoldEnabled"`
+	PeakHoldTime    time.Duration `yaml:"PeakHoldTime" json:"PeakHoldTime"`
+	PeakDecayRate   float64       `yaml:"PeakDecayRate" json:"PeakDecayRate"`
+}
+
+func (c *AudioVUConfig) Validate() error {
+	if err := validateRGB(c.LedLow); err != nil {
+		return fmt.Errorf("LedLow invalid: %w", err)
+	}
+	if err := validateRGB(c.LedMid); err != nil {
+		return fmt.Errorf("LedMid invalid: %w", err)
+	}
+	if err := validateRGB(c.LedHigh); err != nil {
+		return fmt.Errorf("LedHigh invalid: %w", err)
+	}
+	if len(c.SwitchSteps) != 2 {
+		return fmt.Errorf("SwitchSteps must contain exactly 2 percentages, got %d", len(c.SwitchSteps))
+	}
+	if c.SwitchSteps[0] <= 0 || c.SwitchSteps[0] >= c.SwitchSteps[1] || c.SwitchSteps[1] >= 100 {
+		return fmt.Errorf("SwitchSteps must satisfy 0 < step1 (%d) < step2 (%d) < 100", c.SwitchSteps[0], c.SwitchSteps[1])
 	}
 	if c.PeakHoldTime < 0 {
 		return fmt.Errorf("PeakHoldTime must be non-negative")
@@ -220,8 +327,73 @@ func (c *AudioLEDConfig) Validate(ledsTotal int) error {
 	if c.PeakDecayRate < 0 {
 		return fmt.Errorf("PeakDecayRate must be non-negative")
 	}
-	if c.UpdateFreq < 0 {
-		return fmt.Errorf("UpdateFreq must be non-negative")
+	return nil
+}
+
+// AudioSpectrumConfig isolates Spectrum analyzer styling and gradient parameters.
+type AudioSpectrumConfig struct {
+	LedLow  []float64 `yaml:"LedLow,flow" json:"LedLow"`
+	LedMid  []float64 `yaml:"LedMid,flow" json:"LedMid"`
+	LedHigh []float64 `yaml:"LedHigh,flow" json:"LedHigh"`
+}
+
+func (c *AudioSpectrumConfig) Validate() error {
+	if err := validateRGB(c.LedLow); err != nil {
+		return fmt.Errorf("LedLow invalid: %w", err)
+	}
+	if err := validateRGB(c.LedMid); err != nil {
+		return fmt.Errorf("LedMid invalid: %w", err)
+	}
+	if err := validateRGB(c.LedHigh); err != nil {
+		return fmt.Errorf("LedHigh invalid: %w", err)
+	}
+	return nil
+}
+
+// AudioLEDConfig defines the configuration for the AudioLED producer.
+type AudioLEDConfig struct {
+	Enabled     bool                `yaml:"Enabled" json:"Enabled"`
+	ActiveScene string              `yaml:"ActiveScene,omitempty" json:"ActiveScene,omitempty"`
+	Scenes      []AudioSceneConfig  `yaml:"Scenes" json:"Scenes"`
+	VU          AudioVUConfig       `yaml:"VU" json:"VU"`
+	Spectrum    AudioSpectrumConfig `yaml:"Spectrum" json:"Spectrum"`
+	UpdateFreq  time.Duration       `yaml:"UpdateFreq" json:"UpdateFreq"`
+	MinDB       float64             `yaml:"MinDB" json:"MinDB"`
+	MaxDB       float64             `yaml:"MaxDB" json:"MaxDB"`
+	Squeezebox  SqueezeboxConfig    `yaml:"Squeezebox" json:"Squeezebox"`
+}
+
+func (c *AudioLEDConfig) Validate(ledsTotal int) error {
+	if len(c.Scenes) == 0 {
+		return fmt.Errorf("AudioLED must define at least one scene in 'Scenes'")
+	}
+
+	sceneNames := make(map[string]struct{}, len(c.Scenes))
+	for i := range c.Scenes {
+		if err := c.Scenes[i].Validate(ledsTotal); err != nil {
+			return fmt.Errorf("Scenes[%d] invalid: %w", i, err)
+		}
+		if _, exists := sceneNames[c.Scenes[i].Name]; exists {
+			return fmt.Errorf("duplicate scene name '%s' in AudioLED.Scenes", c.Scenes[i].Name)
+		}
+		sceneNames[c.Scenes[i].Name] = struct{}{}
+	}
+
+	if c.ActiveScene != "" {
+		if _, ok := sceneNames[c.ActiveScene]; !ok {
+			return fmt.Errorf("ActiveScene '%s' does not match any configured scene", c.ActiveScene)
+		}
+	}
+
+	if err := c.VU.Validate(); err != nil {
+		return fmt.Errorf("AudioLED VU config invalid: %w", err)
+	}
+	if err := c.Spectrum.Validate(); err != nil {
+		return fmt.Errorf("AudioLED Spectrum config invalid: %w", err)
+	}
+
+	if c.UpdateFreq <= 0 {
+		return fmt.Errorf("UpdateFreq must be positive")
 	}
 	if c.MinDB > 0 {
 		return fmt.Errorf("MinDB must be <= 0")
@@ -242,12 +414,12 @@ func (c *AudioLEDConfig) Validate(ledsTotal int) error {
 
 // CylonLEDConfig defines the configuration for the CylonLED producer.
 type CylonLEDConfig struct {
-	Enabled  bool          `yaml:"Enabled"`
-	Duration time.Duration `yaml:"Duration"`
-	Delay    time.Duration `yaml:"Delay"`
-	Step     float64       `yaml:"Step"`
-	Width    int           `yaml:"Width"`
-	LedRGB   []float64     `yaml:"LedRGB,flow"`
+	Enabled  bool          `yaml:"Enabled" json:"Enabled"`
+	Duration time.Duration `yaml:"Duration" json:"Duration"`
+	Delay    time.Duration `yaml:"Delay" json:"Delay"`
+	Step     float64       `yaml:"Step" json:"Step"`
+	Width    int           `yaml:"Width" json:"Width"`
+	LedRGB   []float64     `yaml:"LedRGB,flow" json:"LedRGB"`
 }
 
 func (c *CylonLEDConfig) Validate(ledsTotal int) error {
@@ -274,10 +446,10 @@ func (c *CylonLEDConfig) Validate(ledsTotal int) error {
 
 // MultiBlobLEDConfig defines the configuration for the MultiBlobLED producer.
 type MultiBlobLEDConfig struct {
-	Enabled  bool          `yaml:"Enabled"`
-	Duration time.Duration `yaml:"Duration"`
-	Delay    time.Duration `yaml:"Delay"`
-	BlobCfg  []BlobCfg     `yaml:"BlobCfg"`
+	Enabled  bool          `yaml:"Enabled" json:"Enabled"`
+	Duration time.Duration `yaml:"Duration" json:"Duration"`
+	Delay    time.Duration `yaml:"Delay" json:"Delay"`
+	BlobCfg  []BlobCfg     `yaml:"BlobCfg" json:"BlobCfg"`
 }
 
 func (c *MultiBlobLEDConfig) Validate(ledsTotal int) error {
@@ -297,10 +469,10 @@ func (c *MultiBlobLEDConfig) Validate(ledsTotal int) error {
 
 // BlobCfg defines the configuration for a single blob in the MultiBlobLED producer.
 type BlobCfg struct {
-	DeltaX float64   `yaml:"DeltaX"`
-	X      float64   `yaml:"X"`
-	Width  float64   `yaml:"Width"`
-	LedRGB []float64 `yaml:"LedRGB,flow"`
+	DeltaX float64   `yaml:"DeltaX" json:"DeltaX"`
+	X      float64   `yaml:"X" json:"X"`
+	Width  float64   `yaml:"Width" json:"Width"`
+	LedRGB []float64 `yaml:"LedRGB,flow" json:"LedRGB"`
 }
 
 func (b *BlobCfg) Validate(ledsTotal int) error {

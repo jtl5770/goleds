@@ -367,18 +367,202 @@ class SqueezeboxConfig {
   }
 }
 
-class AudioLEDConfig {
-  final bool enabled;
-  final int startLedLeft;
-  final int endLedLeft;
-  final int startLedRight;
-  final int endLedRight;
-  final List<double> ledGreen;
-  final List<double> ledYellow;
-  final List<double> ledRed;
+class AudioSegmentConfig {
+  final int startLed;
+  final int endLed;
+  final String effect;
+
+  const AudioSegmentConfig({
+    required this.startLed,
+    required this.endLed,
+    required this.effect,
+  });
+
+  AudioSegmentConfig copyWith({
+    int? startLed,
+    int? endLed,
+    String? effect,
+  }) {
+    return AudioSegmentConfig(
+      startLed: startLed ?? this.startLed,
+      endLed: endLed ?? this.endLed,
+      effect: effect ?? this.effect,
+    );
+  }
+
+  factory AudioSegmentConfig.fromJson(Map<String, dynamic> json) {
+    return AudioSegmentConfig(
+      startLed: json['StartLed'] ?? 0,
+      endLed: json['EndLed'] ?? 0,
+      effect: json['Effect'] ?? 'LeftVU',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'StartLed': startLed,
+      'EndLed': endLed,
+      'Effect': effect,
+    };
+  }
+}
+
+class AudioSceneConfig {
+  final String name;
+  final List<AudioSegmentConfig> segments;
+
+  const AudioSceneConfig({
+    required this.name,
+    required this.segments,
+  });
+
+  AudioSceneConfig copyWith({
+    String? name,
+    List<AudioSegmentConfig>? segments,
+  }) {
+    return AudioSceneConfig(
+      name: name ?? this.name,
+      segments: segments ?? this.segments.map((s) => s.copyWith()).toList(),
+    );
+  }
+
+  factory AudioSceneConfig.fromJson(Map<String, dynamic> json) {
+    final list = json['Segments'] as List?;
+    List<AudioSegmentConfig> segs = [];
+    if (list != null) {
+      segs = list.map((e) => AudioSegmentConfig.fromJson(e)).toList();
+    }
+    return AudioSceneConfig(
+      name: json['Name'] ?? '',
+      segments: segs,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Name': name,
+      'Segments': segments.map((s) => s.toJson()).toList(),
+    };
+  }
+}
+
+class AudioVUConfig {
+  final List<double> ledLow;
+  final List<double> ledMid;
+  final List<double> ledHigh;
+  final List<int> switchSteps;
   final bool peakHoldEnabled;
   final int peakHoldTimeMs;
   final double peakDecayRate;
+
+  const AudioVUConfig({
+    required this.ledLow,
+    required this.ledMid,
+    required this.ledHigh,
+    this.switchSteps = const [60, 80],
+    this.peakHoldEnabled = true,
+    this.peakHoldTimeMs = 250,
+    this.peakDecayRate = 15.0,
+  });
+
+  AudioVUConfig copyWith({
+    List<double>? ledLow,
+    List<double>? ledMid,
+    List<double>? ledHigh,
+    List<int>? switchSteps,
+    bool? peakHoldEnabled,
+    int? peakHoldTimeMs,
+    double? peakDecayRate,
+  }) {
+    return AudioVUConfig(
+      ledLow: ledLow ?? List.from(this.ledLow),
+      ledMid: ledMid ?? List.from(this.ledMid),
+      ledHigh: ledHigh ?? List.from(this.ledHigh),
+      switchSteps: switchSteps ?? List.from(this.switchSteps),
+      peakHoldEnabled: peakHoldEnabled ?? this.peakHoldEnabled,
+      peakHoldTimeMs: peakHoldTimeMs ?? this.peakHoldTimeMs,
+      peakDecayRate: peakDecayRate ?? this.peakDecayRate,
+    );
+  }
+
+  factory AudioVUConfig.fromJson(Map<String, dynamic> json) {
+    final stepsList = json['SwitchSteps'] as List?;
+    List<int> steps = [60, 80];
+    if (stepsList != null && stepsList.length == 2) {
+      steps = stepsList.map((e) => (e as num).toInt()).toList();
+    }
+    return AudioVUConfig(
+      ledLow: _parseDoubleList(json['LedLow']),
+      ledMid: _parseDoubleList(json['LedMid']),
+      ledHigh: _parseDoubleList(json['LedHigh']),
+      switchSteps: steps,
+      peakHoldEnabled: json['PeakHoldEnabled'] ?? true,
+      peakHoldTimeMs: json['PeakHoldTime'] != null
+          ? _parseDurationToMs(json['PeakHoldTime'])
+          : 250,
+      peakDecayRate: (json['PeakDecayRate'] ?? 15.0).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'LedLow': ledLow,
+      'LedMid': ledMid,
+      'LedHigh': ledHigh,
+      'SwitchSteps': switchSteps,
+      'PeakHoldEnabled': peakHoldEnabled,
+      'PeakHoldTime': peakHoldTimeMs * _nsPerMs,
+      'PeakDecayRate': peakDecayRate,
+    };
+  }
+}
+
+class AudioSpectrumConfig {
+  final List<double> ledLow;
+  final List<double> ledMid;
+  final List<double> ledHigh;
+
+  const AudioSpectrumConfig({
+    required this.ledLow,
+    required this.ledMid,
+    required this.ledHigh,
+  });
+
+  AudioSpectrumConfig copyWith({
+    List<double>? ledLow,
+    List<double>? ledMid,
+    List<double>? ledHigh,
+  }) {
+    return AudioSpectrumConfig(
+      ledLow: ledLow ?? List.from(this.ledLow),
+      ledMid: ledMid ?? List.from(this.ledMid),
+      ledHigh: ledHigh ?? List.from(this.ledHigh),
+    );
+  }
+
+  factory AudioSpectrumConfig.fromJson(Map<String, dynamic> json) {
+    return AudioSpectrumConfig(
+      ledLow: _parseDoubleList(json['LedLow']),
+      ledMid: _parseDoubleList(json['LedMid']),
+      ledHigh: _parseDoubleList(json['LedHigh']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'LedLow': ledLow,
+      'LedMid': ledMid,
+      'LedHigh': ledHigh,
+    };
+  }
+}
+
+class AudioLEDConfig {
+  final bool enabled;
+  final String activeScene;
+  final List<AudioSceneConfig> scenes;
+  final AudioVUConfig vu;
+  final AudioSpectrumConfig spectrum;
   final int updateFreqMs;
   final double minDB;
   final double maxDB;
@@ -386,16 +570,10 @@ class AudioLEDConfig {
 
   const AudioLEDConfig({
     required this.enabled,
-    required this.startLedLeft,
-    required this.endLedLeft,
-    required this.startLedRight,
-    required this.endLedRight,
-    required this.ledGreen,
-    required this.ledYellow,
-    required this.ledRed,
-    this.peakHoldEnabled = true,
-    this.peakHoldTimeMs = 60,
-    this.peakDecayRate = 20.0,
+    this.activeScene = '',
+    required this.scenes,
+    required this.vu,
+    required this.spectrum,
     required this.updateFreqMs,
     required this.minDB,
     required this.maxDB,
@@ -404,16 +582,10 @@ class AudioLEDConfig {
 
   AudioLEDConfig copyWith({
     bool? enabled,
-    int? startLedLeft,
-    int? endLedLeft,
-    int? startLedRight,
-    int? endLedRight,
-    List<double>? ledGreen,
-    List<double>? ledYellow,
-    List<double>? ledRed,
-    bool? peakHoldEnabled,
-    int? peakHoldTimeMs,
-    double? peakDecayRate,
+    String? activeScene,
+    List<AudioSceneConfig>? scenes,
+    AudioVUConfig? vu,
+    AudioSpectrumConfig? spectrum,
     int? updateFreqMs,
     double? minDB,
     double? maxDB,
@@ -421,16 +593,10 @@ class AudioLEDConfig {
   }) {
     return AudioLEDConfig(
       enabled: enabled ?? this.enabled,
-      startLedLeft: startLedLeft ?? this.startLedLeft,
-      endLedLeft: endLedLeft ?? this.endLedLeft,
-      startLedRight: startLedRight ?? this.startLedRight,
-      endLedRight: endLedRight ?? this.endLedRight,
-      ledGreen: ledGreen ?? List.from(this.ledGreen),
-      ledYellow: ledYellow ?? List.from(this.ledYellow),
-      ledRed: ledRed ?? List.from(this.ledRed),
-      peakHoldEnabled: peakHoldEnabled ?? this.peakHoldEnabled,
-      peakHoldTimeMs: peakHoldTimeMs ?? this.peakHoldTimeMs,
-      peakDecayRate: peakDecayRate ?? this.peakDecayRate,
+      activeScene: activeScene ?? this.activeScene,
+      scenes: scenes ?? this.scenes.map((s) => s.copyWith()).toList(),
+      vu: vu ?? this.vu.copyWith(),
+      spectrum: spectrum ?? this.spectrum.copyWith(),
       updateFreqMs: updateFreqMs ?? this.updateFreqMs,
       minDB: minDB ?? this.minDB,
       maxDB: maxDB ?? this.maxDB,
@@ -439,20 +605,17 @@ class AudioLEDConfig {
   }
 
   factory AudioLEDConfig.fromJson(Map<String, dynamic> json) {
+    final scenesList = json['Scenes'] as List?;
+    List<AudioSceneConfig> scenes = [];
+    if (scenesList != null) {
+      scenes = scenesList.map((e) => AudioSceneConfig.fromJson(e)).toList();
+    }
     return AudioLEDConfig(
       enabled: json['Enabled'] ?? false,
-      startLedLeft: json['StartLedLeft'] ?? 0,
-      endLedLeft: json['EndLedLeft'] ?? 0,
-      startLedRight: json['StartLedRight'] ?? 0,
-      endLedRight: json['EndLedRight'] ?? 0,
-      ledGreen: _parseDoubleList(json['LedGreen']),
-      ledYellow: _parseDoubleList(json['LedYellow']),
-      ledRed: _parseDoubleList(json['LedRed']),
-      peakHoldEnabled: json['PeakHoldEnabled'] ?? true,
-      peakHoldTimeMs: json['PeakHoldTime'] != null
-          ? _parseDurationToMs(json['PeakHoldTime'])
-          : 250,
-      peakDecayRate: (json['PeakDecayRate'] ?? 20.0).toDouble(),
+      activeScene: json['ActiveScene'] ?? '',
+      scenes: scenes,
+      vu: AudioVUConfig.fromJson(json['VU'] ?? {}),
+      spectrum: AudioSpectrumConfig.fromJson(json['Spectrum'] ?? {}),
       updateFreqMs: _parseDurationToMs(json['UpdateFreq']),
       minDB: (json['MinDB'] ?? -60.0).toDouble(),
       maxDB: (json['MaxDB'] ?? -3.0).toDouble(),
@@ -463,16 +626,10 @@ class AudioLEDConfig {
   Map<String, dynamic> toJson() {
     return {
       'Enabled': enabled,
-      'StartLedLeft': startLedLeft,
-      'EndLedLeft': endLedLeft,
-      'StartLedRight': startLedRight,
-      'EndLedRight': endLedRight,
-      'LedGreen': ledGreen,
-      'LedYellow': ledYellow,
-      'LedRed': ledRed,
-      'PeakHoldEnabled': peakHoldEnabled,
-      'PeakHoldTime': peakHoldTimeMs * _nsPerMs,
-      'PeakDecayRate': peakDecayRate,
+      'ActiveScene': activeScene,
+      'Scenes': scenes.map((s) => s.toJson()).toList(),
+      'VU': vu.toJson(),
+      'Spectrum': spectrum.toJson(),
       'UpdateFreq': updateFreqMs * _nsPerMs,
       'MinDB': minDB,
       'MaxDB': maxDB,

@@ -6,12 +6,12 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gammazero/deque v1.2.0
 	github.com/gdamore/tcell/v2 v2.13.8
-	github.com/jtl5770/go-slimvu v0.0.0-20260906122350-93e62362b08e
+	github.com/jtl5770/go-slimvu v0.0.0-20260911074340-ed6bb11ea028
 	github.com/nathan-osman/go-sunrise v1.1.0
 	github.com/rivo/tview v0.42.0
 	github.com/stianeikeland/go-rpio/v4 v4.6.0
 	golang.org/x/exp v0.0.0-20260209203927-2842357ff358
-	golang.org/x/sys v0.47.0
+	golang.org/x/sys v0.48.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

@@ -197,7 +197,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                     ProducerCard(
-                      title: 'Audio VU',
+                      title: 'Audio LED',
                       icon: Icons.equalizer,
                       imagePath: 'images/audio.webp',
                       imageOpacity: 0.12,

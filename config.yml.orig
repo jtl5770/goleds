@@ -189,24 +189,58 @@ ClockLED:
   LedHour: [50, 30, 0]
   LedMinute: [50, 30, 0]
 
-# AudioLED: A producer connecting to LMS Squeezebox to show a VU meter
+# AudioLED: A producer connecting to LMS Squeezebox to show a VU meter or spectrum analyzer
 AudioLED:
-  Enabled: true 
-  # Which LED to use as the "start" of the left channel VU meter.
-  StartLedLeft: 69
-  # Which LED to use as the "end" of the left VU meter.
-  EndLedLeft: 0
-  # Which LED to use as the "start" of the right channel VU meter.
-  StartLedRight: 111
-  # Which LED to use as the "end" of the right channel VU meter.
-  EndLedRight: 164
-  LedGreen: [0, 80, 0]
-  LedYellow: [40, 40, 0]
-  LedRed: [100, 0, 0]
-  # Peak hold and falloff indicator settings
-  PeakHoldEnabled: true
-  PeakHoldTime: 250ms
-  PeakDecayRate: 15.0 # LEDs per second
+  Enabled: true
+  # ActiveScene specifies the scene to display by name. If empty, the first scene is used.
+  ActiveScene: "Stereo Spectrum"
+  Scenes:
+    - Name: "Stereo VU"
+      Segments:
+        # StartLed > EndLed animates in reverse (from 69 down towards 0)
+        - StartLed: 69
+          EndLed: 0
+          Effect: "LeftVU"
+        # StartLed <= EndLed animates forward (from 111 up towards 164)
+        - StartLed: 111
+          EndLed: 164
+          Effect: "RightVU"
+
+    - Name: "Stereo Spectrum"
+      Segments:
+        - StartLed: 0
+          EndLed: 69
+          Effect: "LeftSpectrum"
+        - StartLed: 111
+          EndLed: 164
+          Effect: "RightSpectrum"
+
+    - Name: "SpectrumVU"
+      Segments:
+        - StartLed: 0
+          EndLed: 69
+          Effect: "MonoSpectrum"
+        - StartLed: 111
+          EndLed: 164
+          Effect: "MonoVU"
+
+  # VU-meter specific colors, gradient transition steps, and peak settings
+  VU:
+    LedLow: [0, 80, 0]
+    LedMid: [40, 40, 0]
+    LedHigh: [80, 0, 0]
+    SwitchSteps: [70, 98] # Transition percentage thresholds (0-100) for Mid and High gradients
+    # Peak hold and falloff indicator settings
+    PeakHoldEnabled: true
+    PeakHoldTime: 250ms
+    PeakDecayRate: 15.0 # LEDs per second
+
+  # Spectrum analyzer specific colors and gradient transition steps
+  Spectrum:
+    LedLow: [0, 1, 0]      # Very dark/dim base color (low energy in band)
+    LedMid: [10, 50, 0]     # Medium brightness amber/yellow
+    LedHigh: [120, 0, 0]    # Bright, vivid high/peak energy color
+
   # How often to read out levels and update the LED strip
   UpdateFreq: 30ms
   MinDB: -60.0

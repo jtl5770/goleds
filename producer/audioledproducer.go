@@ -3,6 +3,7 @@ package producer
 import (
 	"log/slog"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/jtl5770/go-slimvu"
@@ -16,6 +17,20 @@ type channelPeak struct {
 	color     Led
 }
 
+type segmentRuntime struct {
+	startLed int
+	endLed   int
+	effect   config.AudioEffectType
+	barLUT   []Led
+	peakLUT  []Led
+	peak     channelPeak
+}
+
+type sceneRuntime struct {
+	name     string
+	segments []segmentRuntime
+}
+
 func brighten(c Led, factor float64) Led {
 	return Led{
 		Red:   min(math.Round(c.Red*factor), 255),
@@ -24,9 +39,34 @@ func brighten(c Led, factor float64) Led {
 	}
 }
 
+func lerpLed(a, b Led, t float64) Led {
+	return Led{
+		Red:   min(math.Round(a.Red + t*(b.Red-a.Red)), 255),
+		Green: min(math.Round(a.Green + t*(b.Green-a.Green)), 255),
+		Blue:  min(math.Round(a.Blue + t*(b.Blue-a.Blue)), 255),
+	}
+}
+
+// generateSpectrumLUT precomputes a 101-entry (0% to 100%) color lookup table
+// for spectrum bins linearly interpolating from low to mid (0% to 50%) and mid to high (50% to 100%).
+func generateSpectrumLUT(low, mid, high Led) [101]Led {
+	var lut [101]Led
+	for i := 0; i <= 100; i++ {
+		t := float64(i) / 100.0
+		var led Led
+		if t <= 0.5 {
+			led = lerpLed(low, mid, t*2.0)
+		} else {
+			led = lerpLed(mid, high, (t-0.5)*2.0)
+		}
+		lut[i] = led
+	}
+	return lut
+}
+
 // generateGradientLUT precomputes the bar and peak LED color lookup tables
-// for a segment of given length using anchor points centered at 0.60 and 0.85.
-func generateGradientLUT(length int, green, yellow, red Led) (barLUT, peakLUT []Led) {
+// for a segment of given length using exact transition percentages (step1, step2 in [0.0, 1.0]).
+func generateGradientLUT(length int, low, mid, high Led, step1, step2 float64) (barLUT, peakLUT []Led) {
 	if length <= 0 {
 		return nil, nil
 	}
@@ -37,69 +77,37 @@ func generateGradientLUT(length int, green, yellow, red Led) (barLUT, peakLUT []
 		var t float64
 		if length > 1 {
 			t = float64(i) / float64(length-1)
-		} else {
-			t = 0
 		}
 
-		var r, g, b float64
-		// Anchor transitions centered at 0.60 and 0.85:
-		// 0.00 - 0.45: Solid green
-		// 0.45 - 0.75: Green -> Yellow gradient
-		// 0.75 - 0.95: Yellow -> Red gradient
-		// 0.95 - 1.00: Solid red
-		if t < 0.45 {
-			r = green.Red
-			g = green.Green
-			b = green.Blue
-		} else if t < 0.75 {
-			f := (t - 0.45) / (0.75 - 0.45)
-			r = green.Red + f*(yellow.Red-green.Red)
-			g = green.Green + f*(yellow.Green-green.Green)
-			b = green.Blue + f*(yellow.Blue-green.Blue)
-		} else if t < 0.95 {
-			f := (t - 0.75) / (0.95 - 0.75)
-			r = yellow.Red + f*(red.Red-yellow.Red)
-			g = yellow.Green + f*(red.Green-yellow.Green)
-			b = yellow.Blue + f*(red.Blue-yellow.Blue)
+		var led Led
+		if t < step1 {
+			led = lerpLed(low, mid, t/step1)
+		} else if t < step2 {
+			led = lerpLed(mid, high, (t-step1)/(step2-step1))
 		} else {
-			r = red.Red
-			g = red.Green
-			b = red.Blue
+			led = high
 		}
 
-		led := Led{
-			Red:   min(math.Round(r), 255),
-			Green: min(math.Round(g), 255),
-			Blue:  min(math.Round(b), 255),
-		}
 		barLUT[i] = led
 		peakLUT[i] = brighten(led, 1.8)
 	}
 	return barLUT, peakLUT
 }
 
-// AudioLEDProducer implements a VU meter that reads atomic audio levels
-// from an AudioProvider and displays the volume on LED segments with peak hold falloff.
+// AudioLEDProducer implements audio visualization (VU meter & Spectrum analyzer)
+// reading atomic audio levels from an AudioProvider across configurable scenes and segments.
 type AudioLEDProducer struct {
 	*AbstractProducer
-	provider        slimvu.AudioProvider
-	startLedLeft    int
-	endLedLeft      int
-	startLedRight   int
-	endLedRight     int
-	leftBarLUT      []Led
-	leftPeakLUT     []Led
-	rightBarLUT     []Led
-	rightPeakLUT    []Led
-	peakHoldEnabled bool
-	peakHoldTime    time.Duration
-	peakDecayRate   float64 // LEDs per second
-	peakLeft        channelPeak
-	peakRight       channelPeak
-	lastUpdate      time.Time
-	updateFreq      time.Duration
-	minDB           float64
-	maxDB           float64
+	provider       slimvu.AudioProvider
+	scenes         []sceneRuntime
+	activeSceneIdx int
+	sceneMutex     sync.RWMutex
+	vuCfg          config.AudioVUConfig
+	spectrumLUT    [101]Led
+	lastUpdate     time.Time
+	updateFreq     time.Duration
+	minDB          float64
+	maxDB          float64
 }
 
 // NewAudioLEDProducer creates a new AudioLEDProducer.
@@ -110,65 +118,193 @@ func NewAudioLEDProducer(
 	cfg config.AudioLEDConfig,
 	provider slimvu.AudioProvider,
 ) *AudioLEDProducer {
+	vuCfg := cfg.VU
 	p := &AudioLEDProducer{
-		provider:        provider,
-		startLedLeft:    cfg.StartLedLeft,
-		endLedLeft:      cfg.EndLedLeft,
-		startLedRight:   cfg.StartLedRight,
-		endLedRight:     cfg.EndLedRight,
-		updateFreq:      cfg.UpdateFreq,
-		minDB:           cfg.MinDB,
-		maxDB:           cfg.MaxDB,
-		peakHoldEnabled: cfg.PeakHoldEnabled,
-		peakHoldTime:    cfg.PeakHoldTime,
-		peakDecayRate:   cfg.PeakDecayRate,
+		provider:   provider,
+		vuCfg:      vuCfg,
+		updateFreq: cfg.UpdateFreq,
+		minDB:      cfg.MinDB,
+		maxDB:      cfg.MaxDB,
 	}
 
-	var colorGreen, colorYellow, colorRed Led
-	if len(cfg.LedGreen) >= 3 {
-		colorGreen = Led{Red: cfg.LedGreen[0], Green: cfg.LedGreen[1], Blue: cfg.LedGreen[2]}
-	}
-	if len(cfg.LedYellow) >= 3 {
-		colorYellow = Led{Red: cfg.LedYellow[0], Green: cfg.LedYellow[1], Blue: cfg.LedYellow[2]}
-	}
-	if len(cfg.LedRed) >= 3 {
-		colorRed = Led{Red: cfg.LedRed[0], Green: cfg.LedRed[1], Blue: cfg.LedRed[2]}
+	step1 := float64(vuCfg.SwitchSteps[0]) / 100.0
+	step2 := float64(vuCfg.SwitchSteps[1]) / 100.0
+
+	colorLow := Led{Red: vuCfg.LedLow[0], Green: vuCfg.LedLow[1], Blue: vuCfg.LedLow[2]}
+	colorMid := Led{Red: vuCfg.LedMid[0], Green: vuCfg.LedMid[1], Blue: vuCfg.LedMid[2]}
+	colorHigh := Led{Red: vuCfg.LedHigh[0], Green: vuCfg.LedHigh[1], Blue: vuCfg.LedHigh[2]}
+
+	specLow := Led{Red: cfg.Spectrum.LedLow[0], Green: cfg.Spectrum.LedLow[1], Blue: cfg.Spectrum.LedLow[2]}
+	specMid := Led{Red: cfg.Spectrum.LedMid[0], Green: cfg.Spectrum.LedMid[1], Blue: cfg.Spectrum.LedMid[2]}
+	specHigh := Led{Red: cfg.Spectrum.LedHigh[0], Green: cfg.Spectrum.LedHigh[1], Blue: cfg.Spectrum.LedHigh[2]}
+
+	p.spectrumLUT = generateSpectrumLUT(specLow, specMid, specHigh)
+
+	p.scenes = make([]sceneRuntime, len(cfg.Scenes))
+	for sIdx, sc := range cfg.Scenes {
+		runtimeSegs := make([]segmentRuntime, len(sc.Segments))
+		for segIdx, seg := range sc.Segments {
+			segLen := max(seg.StartLed, seg.EndLed) - min(seg.StartLed, seg.EndLed) + 1
+			barLUT, peakLUT := generateGradientLUT(segLen, colorLow, colorMid, colorHigh, step1, step2)
+			runtimeSegs[segIdx] = segmentRuntime{
+				startLed: seg.StartLed,
+				endLed:   seg.EndLed,
+				effect:   seg.Effect,
+				barLUT:   barLUT,
+				peakLUT:  peakLUT,
+			}
+		}
+		p.scenes[sIdx] = sceneRuntime{
+			name:     sc.Name,
+			segments: runtimeSegs,
+		}
 	}
 
-	leftLen := max(p.startLedLeft, p.endLedLeft) - min(p.startLedLeft, p.endLedLeft) + 1
-	rightLen := max(p.startLedRight, p.endLedRight) - min(p.startLedRight, p.endLedRight) + 1
-
-	p.leftBarLUT, p.leftPeakLUT = generateGradientLUT(leftLen, colorGreen, colorYellow, colorRed)
-	p.rightBarLUT, p.rightPeakLUT = generateGradientLUT(rightLen, colorGreen, colorYellow, colorRed)
-
-	if p.peakHoldTime <= 0 {
-		p.peakHoldTime = 250 * time.Millisecond
-	}
-	if p.peakDecayRate <= 0 {
-		p.peakDecayRate = 20.0 // 20 LEDs/sec default decay rate
-	}
-
-	if p.updateFreq <= 0 {
-		p.updateFreq = 30 * time.Millisecond
+	p.activeSceneIdx = 0
+	if cfg.ActiveScene != "" {
+		for i, sc := range p.scenes {
+			if sc.name == cfg.ActiveScene {
+				p.activeSceneIdx = i
+				break
+			}
+		}
 	}
 
 	p.AbstractProducer = NewAbstractProducer(uid, ledsChanged, p.runner, ledsTotal)
 	p.SetPriority(10)
+	p.syncSpectrumEnabled()
 	return p
+}
+
+// syncSpectrumEnabled activates or deactivates spectrum FFT processing on the audio provider
+// depending on whether the currently active scene uses any spectrum effects.
+func (p *AudioLEDProducer) syncSpectrumEnabled() {
+	if p.provider == nil {
+		return
+	}
+	p.sceneMutex.RLock()
+	hasSpectrum := false
+	if p.activeSceneIdx >= 0 && p.activeSceneIdx < len(p.scenes) {
+		for _, seg := range p.scenes[p.activeSceneIdx].segments {
+			if seg.effect.IsSpectrum() {
+				hasSpectrum = true
+				break
+			}
+		}
+	}
+	p.sceneMutex.RUnlock()
+
+	p.provider.SetSpectrumEnabled(hasSpectrum)
+}
+
+// SetActiveScene switches the active scene by name. Returns true if found and set.
+func (p *AudioLEDProducer) SetActiveScene(name string) bool {
+	p.sceneMutex.Lock()
+	changed := false
+	found := false
+	for i, sc := range p.scenes {
+		if sc.name == name {
+			if p.activeSceneIdx != i {
+				p.activeSceneIdx = i
+				p.ClearLeds()
+				changed = true
+			}
+			found = true
+			break
+		}
+	}
+	p.sceneMutex.Unlock()
+
+	if changed {
+		p.syncSpectrumEnabled()
+	}
+	return found
+}
+
+// SetSceneIndex switches the active scene by index. Returns true if valid index.
+func (p *AudioLEDProducer) SetSceneIndex(idx int) bool {
+	p.sceneMutex.Lock()
+	if idx < 0 || idx >= len(p.scenes) {
+		p.sceneMutex.Unlock()
+		return false
+	}
+	changed := false
+	if p.activeSceneIdx != idx {
+		p.activeSceneIdx = idx
+		p.ClearLeds()
+		changed = true
+	}
+	p.sceneMutex.Unlock()
+
+	if changed {
+		p.syncSpectrumEnabled()
+	}
+	return true
+}
+
+// NextScene cycles to the next available scene.
+func (p *AudioLEDProducer) NextScene() {
+	p.sceneMutex.Lock()
+	changed := false
+	if len(p.scenes) > 1 {
+		p.activeSceneIdx = (p.activeSceneIdx + 1) % len(p.scenes)
+		p.ClearLeds()
+		changed = true
+	}
+	p.sceneMutex.Unlock()
+
+	if changed {
+		p.syncSpectrumEnabled()
+	}
+}
+
+// GetActiveSceneName returns the name of the currently active scene.
+func (p *AudioLEDProducer) GetActiveSceneName() string {
+	p.sceneMutex.RLock()
+	defer p.sceneMutex.RUnlock()
+
+	if len(p.scenes) == 0 {
+		return ""
+	}
+	return p.scenes[p.activeSceneIdx].name
+}
+
+// GetSceneNames returns the names of all configured scenes.
+func (p *AudioLEDProducer) GetSceneNames() []string {
+	p.sceneMutex.RLock()
+	defer p.sceneMutex.RUnlock()
+
+	names := make([]string, len(p.scenes))
+	for i, sc := range p.scenes {
+		names[i] = sc.name
+	}
+	return names
 }
 
 // runner is the main loop polling the AudioProvider and updating LEDs.
 func (p *AudioLEDProducer) runner() {
-	defer p.ClearLeds()
+	defer func() {
+		p.ClearLeds()
+		if p.provider != nil {
+			p.provider.SetSpectrumEnabled(false)
+		}
+	}()
 
 	if p.provider == nil {
 		slog.Warn("AudioLEDProducer started without AudioProvider", "uid", p.GetUID())
 		return
 	}
 
+	p.syncSpectrumEnabled()
+
 	ticker := time.NewTicker(p.updateFreq)
 	defer ticker.Stop()
 
+	var (
+		spectrumLeft  [16]float32
+		spectrumRight [16]float32
+		spectrumMono  [16]float32
+	)
 	tickCount := 0
 	p.lastUpdate = time.Now()
 
@@ -186,14 +322,41 @@ func (p *AudioLEDProducer) runner() {
 			p.lastUpdate = now
 
 			leftDB, rightDB, playing := p.provider.GetLevels()
+			monoDB := (leftDB + rightDB) / 2.0
+
+			p.sceneMutex.Lock()
+			activeIdx := p.activeSceneIdx
+			if activeIdx < 0 || activeIdx >= len(p.scenes) {
+				p.sceneMutex.Unlock()
+				continue
+			}
+			currentScene := &p.scenes[activeIdx]
+
+			hasSpectrum := false
+			for i := range currentScene.segments {
+				if currentScene.segments[i].effect.IsSpectrum() {
+					hasSpectrum = true
+					break
+				}
+			}
+
+			if hasSpectrum {
+				p.provider.GetSpectrum(spectrumLeft[:], spectrumRight[:])
+				for b := 0; b < 16; b++ {
+					spectrumMono[b] = (spectrumLeft[b] + spectrumRight[b]) / 2.0
+				}
+			}
 
 			if tickCount%100 == 1 { // Log periodically
 				slog.Debug("AudioLEDProducer polling levels", "uid", p.GetUID(), "playing", playing, "leftDB", leftDB, "rightDB", rightDB)
 			}
 
 			if !playing {
-				p.peakLeft = channelPeak{}
-				p.peakRight = channelPeak{}
+				for i := range currentScene.segments {
+					currentScene.segments[i].peak = channelPeak{}
+				}
+				p.sceneMutex.Unlock()
+
 				if p.IsActive() {
 					p.SetActive(false)
 					p.ClearLeds()
@@ -202,7 +365,17 @@ func (p *AudioLEDProducer) runner() {
 			}
 
 			if leftDB <= p.minDB && rightDB <= p.minDB {
-				if !p.peakHoldEnabled || (p.peakLeft.position <= 0 && p.peakRight.position <= 0) {
+				hasActivePeak := false
+				if p.vuCfg.PeakHoldEnabled {
+					for i := range currentScene.segments {
+						if currentScene.segments[i].peak.position > 0 {
+							hasActivePeak = true
+							break
+						}
+					}
+				}
+				if !hasActivePeak {
+					p.sceneMutex.Unlock()
 					if p.IsActive() {
 						p.SetActive(false)
 						p.ClearLeds()
@@ -216,33 +389,94 @@ func (p *AudioLEDProducer) runner() {
 			}
 
 			p.ledsMutex.Lock()
-			p.updateLeds(leftDB, p.startLedLeft, p.endLedLeft, &p.peakLeft, p.leftBarLUT, p.leftPeakLUT, dt, now)
-			p.updateLeds(rightDB, p.startLedRight, p.endLedRight, &p.peakRight, p.rightBarLUT, p.rightPeakLUT, dt, now)
+			for i := range currentScene.segments {
+				seg := &currentScene.segments[i]
+				switch seg.effect {
+				case config.AudioEffectLeftVU:
+					p.updateVUSegment(seg, leftDB, dt, now)
+				case config.AudioEffectRightVU:
+					p.updateVUSegment(seg, rightDB, dt, now)
+				case config.AudioEffectMonoVU:
+					p.updateVUSegment(seg, monoDB, dt, now)
+				case config.AudioEffectLeftSpectrum:
+					p.updateSpectrumSegment(seg, spectrumLeft[:])
+				case config.AudioEffectRightSpectrum:
+					p.updateSpectrumSegment(seg, spectrumRight[:])
+				case config.AudioEffectMonoSpectrum:
+					p.updateSpectrumSegment(seg, spectrumMono[:])
+				}
+			}
 			p.ledsMutex.Unlock()
+			p.sceneMutex.Unlock()
 
 			p.ledsChanged.Send(p.GetUID(), p)
 		}
 	}
 }
 
-// updateLeds sets the LED colors directly using the precomputed gradient LUTs and handles peak indicators.
-func (p *AudioLEDProducer) updateLeds(
+// updateSpectrumSegment renders the 16 frequency bands onto the segment.
+func (p *AudioLEDProducer) updateSpectrumSegment(seg *segmentRuntime, bands []float32) {
+	startLed := seg.startLed
+	endLed := seg.endLed
+	reverse := startLed > endLed
+	segLen := max(startLed, endLed) - min(startLed, endLed) + 1
+	if segLen < 16 {
+		return
+	}
+
+	const numBins = 16
+	var binWidth, gap, margin int
+	if segLen >= 31 {
+		gap = 1
+		binWidth = (segLen - 15) / numBins
+		used := (numBins * binWidth) + 15
+		margin = (segLen - used) / 2
+	} else {
+		gap = 0
+		binWidth = 1
+		margin = (segLen - numBins) / 2
+	}
+
+	step := 1
+	if reverse {
+		step = -1
+	}
+
+	// Clear segment first (margins and gaps remain dark)
+	for i := range segLen {
+		p.leds[startLed+(i*step)] = Led{}
+	}
+
+	dbRange := p.maxDB - p.minDB
+	for bin := 0; bin < numBins && bin < len(bands); bin++ {
+		db := min(max(float64(bands[bin]), p.minDB), p.maxDB)
+		var t float64
+		if dbRange > 0 {
+			t = (db - p.minDB) / dbRange
+		}
+		pct := min(max(int(math.Round(t*100.0)), 0), 100)
+		binColor := p.spectrumLUT[pct]
+
+		binStartLocal := margin + bin*(binWidth+gap)
+		for w := 0; w < binWidth; w++ {
+			localIdx := binStartLocal + w
+			p.leds[startLed+(localIdx*step)] = binColor
+		}
+	}
+}
+
+// updateVUSegment sets the LED colors directly using the precomputed gradient LUTs and handles peak indicators.
+func (p *AudioLEDProducer) updateVUSegment(
+	seg *segmentRuntime,
 	db float64,
-	startLed int,
-	endLed int,
-	peak *channelPeak,
-	barLUT []Led,
-	peakLUT []Led,
 	dt float64,
 	now time.Time,
 ) {
-	reverse := false
-	if startLed > endLed {
-		reverse = true
-		startLed, endLed = endLed, startLed
-	}
-	segmentLen := endLed - startLed + 1
-	if segmentLen <= 0 || len(barLUT) < segmentLen {
+	startLed := seg.startLed
+	endLed := seg.endLed
+	reverse := startLed > endLed
+	segmentLen := max(startLed, endLed) - min(startLed, endLed) + 1
+	if segmentLen <= 0 || len(seg.barLUT) < segmentLen {
 		return
 	}
 
@@ -255,55 +489,49 @@ func (p *AudioLEDProducer) updateLeds(
 	ledsToLight := int(math.Ceil(level * float64(segmentLen)))
 
 	// Update peak tracking
-	if p.peakHoldEnabled {
+	if p.vuCfg.PeakHoldEnabled {
 		targetPeak := float64(ledsToLight)
-		if targetPeak >= peak.position {
-			peak.position = targetPeak
-			peak.holdUntil = now.Add(p.peakHoldTime)
+		if targetPeak >= seg.peak.position {
+			seg.peak.position = targetPeak
+			seg.peak.holdUntil = now.Add(p.vuCfg.PeakHoldTime)
 			if targetPeak >= 1.0 {
 				peakIdx := min(int(math.Round(targetPeak))-1, segmentLen-1)
-				peak.color = peakLUT[peakIdx]
+				seg.peak.color = seg.peakLUT[peakIdx]
 			}
 		} else {
-			if now.After(peak.holdUntil) && dt > 0 {
-				peak.position -= p.peakDecayRate * dt
-				if peak.position < targetPeak {
-					peak.position = targetPeak
+			if now.After(seg.peak.holdUntil) && dt > 0 {
+				seg.peak.position -= p.vuCfg.PeakDecayRate * dt
+				if seg.peak.position < targetPeak {
+					seg.peak.position = targetPeak
 				}
 			}
 		}
-		if peak.position < 0 {
-			peak.position = 0
+		if seg.peak.position < 0 {
+			seg.peak.position = 0
 		}
-		if peak.position > float64(segmentLen) {
-			peak.position = float64(segmentLen)
+		if seg.peak.position > float64(segmentLen) {
+			seg.peak.position = float64(segmentLen)
 		}
 	}
 
-	// Fill the LED strip from precomputed gradient LUT
+	// Single-pass direct write using directional step offset
+	step := 1
+	if reverse {
+		step = -1
+	}
+
 	for i := range segmentLen {
-		stripIndex := startLed + i
+		stripIndex := startLed + (i * step)
 		if i < ledsToLight {
-			p.leds[stripIndex] = barLUT[i]
+			p.leds[stripIndex] = seg.barLUT[i]
 		} else {
 			p.leds[stripIndex] = Led{} // Off
 		}
 	}
 
-	// Draw 1-LED peak marker with its captured brightened gradient color
-	if p.peakHoldEnabled && peak.position >= 1.0 {
-		peakIdx := int(math.Round(peak.position)) - 1
-		if peakIdx >= segmentLen {
-			peakIdx = segmentLen - 1
-		}
-		if peakIdx >= 0 {
-			p.leds[startLed+peakIdx] = peak.color
-		}
-	}
-
-	if reverse {
-		for i := 0; i < segmentLen/2; i++ {
-			p.leds[startLed+i], p.leds[endLed-i] = p.leds[endLed-i], p.leds[startLed+i]
-		}
+	// Draw 1-LED peak marker directly at computed physical index
+	if p.vuCfg.PeakHoldEnabled && seg.peak.position >= 1.0 {
+		peakIdx := min(max(int(math.Round(seg.peak.position))-1, 0), segmentLen-1)
+		p.leds[startLed+(peakIdx*step)] = seg.peak.color
 	}
 }
