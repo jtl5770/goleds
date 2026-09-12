@@ -26,10 +26,11 @@ type RaspberryPiPlatform struct {
 	sensorStopChan  chan bool
 }
 
+const spi0ClockPin = rpio.Pin(11) // BCM GPIO 11 is SCLK on Raspberry Pi SPI0
+
 type gpiocfg struct {
 	low  []rpio.Pin
 	high []rpio.Pin
-	cs   rpio.Pin
 }
 
 func NewRaspberryPiPlatform(conf *config.Config) *RaspberryPiPlatform {
@@ -75,17 +76,10 @@ func (s *RaspberryPiPlatform) Start(pool *sync.Pool, calibCurves CalibrationCurv
 			rpiopin.Output()
 			high = append(high, rpiopin)
 		}
-		var cs rpio.Pin
-		if cfg.CS != 0 {
-			cs = rpio.Pin(cfg.CS)
-			cs.Output()
-			cs.High()
-		}
 
 		s.spimultiplexcfg[key] = gpiocfg{
 			low:  low,
 			high: high,
-			cs:   cs,
 		}
 	}
 
@@ -312,19 +306,29 @@ func (s *RaspberryPiPlatform) spiExchangeMultiplex(index string, data []byte) []
 	s.spiMutex.Lock()
 	defer s.spiMutex.Unlock()
 
+	// 1. Ensure SPI clock is idling LOW before switching multiplexer pins
+	//    so that the AND gates clamp the output to 0 and block transient switching glitches.
+	spi0ClockPin.Low()
+
 	// The existence of the key is guaranteed by the config validation at startup.
 	cfg := s.spimultiplexcfg[index]
-	for _, pin := range cfg.low {
-		pin.Low()
-	}
+
+	// 2. BREAK-BEFORE-MAKE: Disable unselected devices first (HIGH)
 	for _, pin := range cfg.high {
 		pin.High()
 	}
-	if cfg.cs != rpio.Pin(0) {
-		cfg.cs.Low()
-		defer cfg.cs.High()
+
+	// 3. Enable the selected target device (LOW)
+	for _, pin := range cfg.low {
+		pin.Low()
 	}
+
+	// 4. Perform SPI transmission
 	rpio.SpiExchange(data)
+
+	// 5. Ensure SPI clock rests LOW at the end of transmission
+	spi0ClockPin.Low()
+
 	return data
 }
 

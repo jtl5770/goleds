@@ -43,11 +43,9 @@ Hardware:
     L1:
       Low: [1]
       High: [2]
-      CS: 3
     ADC1:
       Low: [1]
       High: [2]
-      CS: 3
 Logging:
   TUI:
     Level: "DEBUG"
