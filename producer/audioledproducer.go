@@ -3,7 +3,7 @@ package producer
 import (
 	"log/slog"
 	"math"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jtl5770/go-slimvu"
@@ -23,12 +23,15 @@ type segmentRuntime struct {
 	effect   config.AudioEffectType
 	barLUT   []Led
 	peakLUT  []Led
-	peak     channelPeak
 }
 
 type sceneRuntime struct {
 	name     string
 	segments []segmentRuntime
+}
+
+type sceneState struct {
+	peaks []channelPeak
 }
 
 func brighten(c Led, factor float64) Led {
@@ -100,8 +103,8 @@ type AudioLEDProducer struct {
 	*AbstractProducer
 	provider       slimvu.AudioProvider
 	scenes         []sceneRuntime
-	activeSceneIdx int
-	sceneMutex     sync.RWMutex
+	sceneStates    []sceneState
+	activeSceneIdx atomic.Int32
 	vuCfg          config.AudioVUConfig
 	spectrumLUT    [101]Led
 	lastUpdate     time.Time
@@ -141,6 +144,7 @@ func NewAudioLEDProducer(
 	p.spectrumLUT = generateSpectrumLUT(specLow, specMid, specHigh)
 
 	p.scenes = make([]sceneRuntime, len(cfg.Scenes))
+	p.sceneStates = make([]sceneState, len(cfg.Scenes))
 	for sIdx, sc := range cfg.Scenes {
 		runtimeSegs := make([]segmentRuntime, len(sc.Segments))
 		for segIdx, seg := range sc.Segments {
@@ -158,13 +162,16 @@ func NewAudioLEDProducer(
 			name:     sc.Name,
 			segments: runtimeSegs,
 		}
+		p.sceneStates[sIdx] = sceneState{
+			peaks: make([]channelPeak, len(sc.Segments)),
+		}
 	}
 
-	p.activeSceneIdx = 0
+	p.activeSceneIdx.Store(0)
 	if cfg.ActiveScene != "" {
 		for i, sc := range p.scenes {
 			if sc.name == cfg.ActiveScene {
-				p.activeSceneIdx = i
+				p.activeSceneIdx.Store(int32(i))
 				break
 			}
 		}
@@ -182,61 +189,43 @@ func (p *AudioLEDProducer) syncSpectrumEnabled() {
 	if p.provider == nil {
 		return
 	}
-	p.sceneMutex.RLock()
+	activeIdx := int(p.activeSceneIdx.Load())
 	hasSpectrum := false
-	if p.activeSceneIdx >= 0 && p.activeSceneIdx < len(p.scenes) {
-		for _, seg := range p.scenes[p.activeSceneIdx].segments {
+	if activeIdx >= 0 && activeIdx < len(p.scenes) {
+		for _, seg := range p.scenes[activeIdx].segments {
 			if seg.effect.IsSpectrum() {
 				hasSpectrum = true
 				break
 			}
 		}
 	}
-	p.sceneMutex.RUnlock()
 
 	p.provider.SetSpectrumEnabled(hasSpectrum)
 }
 
 // SetActiveScene switches the active scene by name. Returns true if found and set.
 func (p *AudioLEDProducer) SetActiveScene(name string) bool {
-	p.sceneMutex.Lock()
-	changed := false
-	found := false
 	for i, sc := range p.scenes {
 		if sc.name == name {
-			if p.activeSceneIdx != i {
-				p.activeSceneIdx = i
+			if int(p.activeSceneIdx.Load()) != i {
+				p.activeSceneIdx.Store(int32(i))
 				p.ClearLeds()
-				changed = true
+				p.syncSpectrumEnabled()
 			}
-			found = true
-			break
+			return true
 		}
 	}
-	p.sceneMutex.Unlock()
-
-	if changed {
-		p.syncSpectrumEnabled()
-	}
-	return found
+	return false
 }
 
 // SetSceneIndex switches the active scene by index. Returns true if valid index.
 func (p *AudioLEDProducer) SetSceneIndex(idx int) bool {
-	p.sceneMutex.Lock()
 	if idx < 0 || idx >= len(p.scenes) {
-		p.sceneMutex.Unlock()
 		return false
 	}
-	changed := false
-	if p.activeSceneIdx != idx {
-		p.activeSceneIdx = idx
+	if int(p.activeSceneIdx.Load()) != idx {
+		p.activeSceneIdx.Store(int32(idx))
 		p.ClearLeds()
-		changed = true
-	}
-	p.sceneMutex.Unlock()
-
-	if changed {
 		p.syncSpectrumEnabled()
 	}
 	return true
@@ -244,36 +233,29 @@ func (p *AudioLEDProducer) SetSceneIndex(idx int) bool {
 
 // NextScene cycles to the next available scene.
 func (p *AudioLEDProducer) NextScene() {
-	p.sceneMutex.Lock()
-	changed := false
 	if len(p.scenes) > 1 {
-		p.activeSceneIdx = (p.activeSceneIdx + 1) % len(p.scenes)
+		cur := p.activeSceneIdx.Load()
+		next := (cur + 1) % int32(len(p.scenes))
+		p.activeSceneIdx.Store(next)
 		p.ClearLeds()
-		changed = true
-	}
-	p.sceneMutex.Unlock()
-
-	if changed {
 		p.syncSpectrumEnabled()
 	}
 }
 
 // GetActiveSceneName returns the name of the currently active scene.
 func (p *AudioLEDProducer) GetActiveSceneName() string {
-	p.sceneMutex.RLock()
-	defer p.sceneMutex.RUnlock()
-
 	if len(p.scenes) == 0 {
 		return ""
 	}
-	return p.scenes[p.activeSceneIdx].name
+	activeIdx := int(p.activeSceneIdx.Load())
+	if activeIdx < 0 || activeIdx >= len(p.scenes) {
+		return ""
+	}
+	return p.scenes[activeIdx].name
 }
 
 // GetSceneNames returns the names of all configured scenes.
 func (p *AudioLEDProducer) GetSceneNames() []string {
-	p.sceneMutex.RLock()
-	defer p.sceneMutex.RUnlock()
-
 	names := make([]string, len(p.scenes))
 	for i, sc := range p.scenes {
 		names[i] = sc.name
@@ -324,13 +306,12 @@ func (p *AudioLEDProducer) runner() {
 			leftDB, rightDB, playing := p.provider.GetLevels()
 			monoDB := (leftDB + rightDB) / 2.0
 
-			p.sceneMutex.Lock()
-			activeIdx := p.activeSceneIdx
+			activeIdx := int(p.activeSceneIdx.Load())
 			if activeIdx < 0 || activeIdx >= len(p.scenes) {
-				p.sceneMutex.Unlock()
 				continue
 			}
 			currentScene := &p.scenes[activeIdx]
+			peaks := p.sceneStates[activeIdx].peaks
 
 			hasSpectrum := false
 			for i := range currentScene.segments {
@@ -352,10 +333,9 @@ func (p *AudioLEDProducer) runner() {
 			}
 
 			if !playing {
-				for i := range currentScene.segments {
-					currentScene.segments[i].peak = channelPeak{}
+				for i := range peaks {
+					peaks[i] = channelPeak{}
 				}
-				p.sceneMutex.Unlock()
 
 				if p.IsActive() {
 					p.SetActive(false)
@@ -367,15 +347,14 @@ func (p *AudioLEDProducer) runner() {
 			if leftDB <= p.minDB && rightDB <= p.minDB {
 				hasActivePeak := false
 				if p.vuCfg.PeakHoldEnabled {
-					for i := range currentScene.segments {
-						if currentScene.segments[i].peak.position > 0 {
+					for i := range peaks {
+						if peaks[i].position > 0 {
 							hasActivePeak = true
 							break
 						}
 					}
 				}
 				if !hasActivePeak {
-					p.sceneMutex.Unlock()
 					if p.IsActive() {
 						p.SetActive(false)
 						p.ClearLeds()
@@ -393,11 +372,11 @@ func (p *AudioLEDProducer) runner() {
 				seg := &currentScene.segments[i]
 				switch seg.effect {
 				case config.AudioEffectLeftVU:
-					p.updateVUSegment(seg, leftDB, dt, now)
+					p.updateVUSegment(seg, &peaks[i], leftDB, dt, now)
 				case config.AudioEffectRightVU:
-					p.updateVUSegment(seg, rightDB, dt, now)
+					p.updateVUSegment(seg, &peaks[i], rightDB, dt, now)
 				case config.AudioEffectMonoVU:
-					p.updateVUSegment(seg, monoDB, dt, now)
+					p.updateVUSegment(seg, &peaks[i], monoDB, dt, now)
 				case config.AudioEffectLeftSpectrum:
 					p.updateSpectrumSegment(seg, spectrumLeft[:])
 				case config.AudioEffectRightSpectrum:
@@ -407,7 +386,6 @@ func (p *AudioLEDProducer) runner() {
 				}
 			}
 			p.ledsMutex.Unlock()
-			p.sceneMutex.Unlock()
 
 			p.ledsChanged.Send(p.GetUID(), p)
 		}
@@ -468,6 +446,7 @@ func (p *AudioLEDProducer) updateSpectrumSegment(seg *segmentRuntime, bands []fl
 // updateVUSegment sets the LED colors directly using the precomputed gradient LUTs and handles peak indicators.
 func (p *AudioLEDProducer) updateVUSegment(
 	seg *segmentRuntime,
+	peak *channelPeak,
 	db float64,
 	dt float64,
 	now time.Time,
@@ -491,26 +470,26 @@ func (p *AudioLEDProducer) updateVUSegment(
 	// Update peak tracking
 	if p.vuCfg.PeakHoldEnabled {
 		targetPeak := float64(ledsToLight)
-		if targetPeak >= seg.peak.position {
-			seg.peak.position = targetPeak
-			seg.peak.holdUntil = now.Add(p.vuCfg.PeakHoldTime)
+		if targetPeak >= peak.position {
+			peak.position = targetPeak
+			peak.holdUntil = now.Add(p.vuCfg.PeakHoldTime)
 			if targetPeak >= 1.0 {
 				peakIdx := min(int(math.Round(targetPeak))-1, segmentLen-1)
-				seg.peak.color = seg.peakLUT[peakIdx]
+				peak.color = seg.peakLUT[peakIdx]
 			}
 		} else {
-			if now.After(seg.peak.holdUntil) && dt > 0 {
-				seg.peak.position -= p.vuCfg.PeakDecayRate * dt
-				if seg.peak.position < targetPeak {
-					seg.peak.position = targetPeak
+			if now.After(peak.holdUntil) && dt > 0 {
+				peak.position -= p.vuCfg.PeakDecayRate * dt
+				if peak.position < targetPeak {
+					peak.position = targetPeak
 				}
 			}
 		}
-		if seg.peak.position < 0 {
-			seg.peak.position = 0
+		if peak.position < 0 {
+			peak.position = 0
 		}
-		if seg.peak.position > float64(segmentLen) {
-			seg.peak.position = float64(segmentLen)
+		if peak.position > float64(segmentLen) {
+			peak.position = float64(segmentLen)
 		}
 	}
 
@@ -530,8 +509,8 @@ func (p *AudioLEDProducer) updateVUSegment(
 	}
 
 	// Draw 1-LED peak marker directly at computed physical index
-	if p.vuCfg.PeakHoldEnabled && seg.peak.position >= 1.0 {
-		peakIdx := min(max(int(math.Round(seg.peak.position))-1, 0), segmentLen-1)
-		p.leds[startLed+(peakIdx*step)] = seg.peak.color
+	if p.vuCfg.PeakHoldEnabled && peak.position >= 1.0 {
+		peakIdx := min(max(int(math.Round(peak.position))-1, 0), segmentLen-1)
+		p.leds[startLed+(peakIdx*step)] = peak.color
 	}
 }

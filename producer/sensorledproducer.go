@@ -144,7 +144,10 @@ func (s *SensorLedProducer) holdPhase() (stopped bool) {
 			return false // Hold time expired
 		case <-s.triggerEvent.Channel():
 			holdTimer.Stop() // Reset hold timer on any trigger
-			trigger := s.triggerEvent.Value()
+			trigger, ok := s.triggerEvent.Consume()
+			if !ok {
+				continue
+			}
 
 			if s.latchEnabled && trigger.Value >= s.latchTriggerValue {
 				if !inLatchZone {
@@ -206,7 +209,10 @@ func (s *SensorLedProducer) runLatchMode() (stopped bool) {
 			slog.Info("Latch Mode Timed Out", "uid", s.GetUID())
 			return false
 		case <-s.triggerEvent.Channel():
-			trigger := s.triggerEvent.Value()
+			trigger, ok := s.triggerEvent.Consume()
+			if !ok {
+				continue
+			}
 			if s.latchEnabled && trigger.Value >= s.latchTriggerValue {
 				if !inLatchOffZone {
 					// Start of a potential latch-off sequence

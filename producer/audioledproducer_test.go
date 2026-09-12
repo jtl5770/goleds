@@ -615,13 +615,14 @@ func BenchmarkAudioLEDProducer_UpdateVUSegment(b *testing.B) {
 		peakLUT:  peakLUT,
 	}
 
+	var peak channelPeak
 	now := time.Now()
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		p.updateVUSegment(&seg, -12.5, 0.030, now)
+		p.updateVUSegment(&seg, &peak, -12.5, 0.030, now)
 	}
 }
 

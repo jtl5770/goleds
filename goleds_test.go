@@ -218,9 +218,9 @@ func TestStateManager_SensorEvent_TransitionsToSensorState(t *testing.T) {
 	// Verify that the trigger was received by the producer
 	select {
 	case <-mockSensorProducer.triggerEvent.Channel():
-		receivedTrigger := mockSensorProducer.triggerEvent.Value()
-		if receivedTrigger != trigger {
-			t.Errorf("Expected trigger %v, got %v", trigger, receivedTrigger)
+		receivedTrigger, ok := mockSensorProducer.triggerEvent.Consume()
+		if !ok || receivedTrigger != trigger {
+			t.Errorf("Expected trigger %v, got %v (ok=%v)", trigger, receivedTrigger, ok)
 		}
 	case <-time.After(1 * time.Second):
 		t.Fatal("Timed out waiting for trigger event")

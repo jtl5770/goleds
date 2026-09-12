@@ -2,13 +2,14 @@ package util
 
 import (
 	"sync"
-	"sync/atomic"
 )
 
 // AtomicEvent holds a single, latest event and provides non-blocking updates.
 // Only the most recent event is retained.
 type AtomicEvent[T any] struct {
-	val    atomic.Value
+	mu     sync.Mutex
+	val    T
+	hasVal bool
 	notify chan struct{} // Buffered channel of size 1 for notification
 }
 
@@ -20,8 +21,16 @@ func NewAtomicEvent[T any]() *AtomicEvent[T] {
 }
 
 // Send updates with the latest event. It is non-blocking.
-func (ae *AtomicEvent[T]) Send(event T) {
-	ae.val.Store(event)
+// If an unconsumed event was displaced, it returns that event and true.
+func (ae *AtomicEvent[T]) Send(event T) (displaced T, hadPrevious bool) {
+	ae.mu.Lock()
+	if ae.hasVal {
+		displaced = ae.val
+		hadPrevious = true
+	}
+	ae.val = event
+	ae.hasVal = true
+	ae.mu.Unlock()
 
 	select {
 	case ae.notify <- struct{}{}:
@@ -29,6 +38,8 @@ func (ae *AtomicEvent[T]) Send(event T) {
 	default:
 		// Channel was already full, notification is already pending.
 	}
+
+	return displaced, hadPrevious
 }
 
 // Channel returns the notification channel for use in select statements.
@@ -36,18 +47,27 @@ func (ae *AtomicEvent[T]) Channel() <-chan struct{} {
 	return ae.notify
 }
 
-// Value returns the current latest event.
-func (ae *AtomicEvent[T]) Value() T {
-	v := ae.val.Load()
-	if v == nil {
+// Consume retrieves and consumes the current latest event, marking the
+// event as empty. Returns false if no event is present.
+func (ae *AtomicEvent[T]) Consume() (T, bool) {
+	ae.mu.Lock()
+	defer ae.mu.Unlock()
+
+	if !ae.hasVal {
 		var zero T
-		return zero
+		return zero, false
 	}
-	return v.(T)
+
+	val := ae.val
+	var zero T
+	ae.val = zero
+	ae.hasVal = false
+
+	return val, true
 }
 
 // HasPending checks if a notification is waiting to be consumed.
-// This is a non-destructive check.
+// This is a non-destructive check on the notification channel.
 func (ae *AtomicEvent[T]) HasPending() bool {
 	return len(ae.notify) > 0
 }

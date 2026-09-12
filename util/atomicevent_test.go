@@ -14,16 +14,22 @@ func TestNewAtomicEvent(t *testing.T) {
 	assert.NotNil(t, ae.notify, "notify channel should be initialized")
 }
 
-func TestSendAndValue(t *testing.T) {
+func TestSendAndConsume(t *testing.T) {
 	// Test with an integer
 	aeInt := NewAtomicEvent[int]()
 	aeInt.Send(123)
-	assert.Equal(t, 123, aeInt.Value(), "Value should be 123")
+	valInt, okInt := aeInt.Consume()
+	assert.True(t, okInt)
+	assert.Equal(t, 123, valInt, "Value should be 123")
+	_, okIntAfter := aeInt.Consume()
+	assert.False(t, okIntAfter, "Second Consume should return false")
 
 	// Test with a string
 	aeStr := NewAtomicEvent[string]()
 	aeStr.Send("hello")
-	assert.Equal(t, "hello", aeStr.Value(), "Value should be 'hello'")
+	valStr, okStr := aeStr.Consume()
+	assert.True(t, okStr)
+	assert.Equal(t, "hello", valStr, "Value should be 'hello'")
 
 	// Test with a struct
 	type testStruct struct {
@@ -32,7 +38,9 @@ func TestSendAndValue(t *testing.T) {
 	ts := testStruct{Field: 42}
 	aeStruct := NewAtomicEvent[testStruct]()
 	aeStruct.Send(ts)
-	assert.Equal(t, ts, aeStruct.Value(), "Value should be the test struct")
+	valStruct, okStruct := aeStruct.Consume()
+	assert.True(t, okStruct)
+	assert.Equal(t, ts, valStruct, "Value should be the test struct")
 }
 
 func TestNotificationChannel(t *testing.T) {
@@ -74,7 +82,40 @@ func TestNotificationChannel(t *testing.T) {
 	}
 
 	// Check the value is the latest one
-	assert.Equal(t, "event3", ae.Value(), "Value should be the last event sent")
+	val, ok := ae.Consume()
+	assert.True(t, ok)
+	assert.Equal(t, "event3", val, "Value should be the last event sent")
+	_, okAfter := ae.Consume()
+	assert.False(t, okAfter, "Value should have been cleared by Consume")
+}
+
+func TestAtomicEvent_Send_DisplacedValue(t *testing.T) {
+	ae := NewAtomicEvent[string]()
+
+	// First send has no displaced value
+	disp, ok := ae.Send("first")
+	assert.False(t, ok)
+	assert.Empty(t, disp)
+
+	// Second send before consumption displaces "first"
+	disp, ok = ae.Send("second")
+	assert.True(t, ok)
+	assert.Equal(t, "first", disp)
+
+	// Third send before consumption displaces "second"
+	disp, ok = ae.Send("third")
+	assert.True(t, ok)
+	assert.Equal(t, "second", disp)
+
+	// Consume current value
+	val, ok := ae.Consume()
+	assert.True(t, ok)
+	assert.Equal(t, "third", val)
+
+	// Send after consumption has no displaced value
+	disp, ok = ae.Send("fourth")
+	assert.False(t, ok)
+	assert.Empty(t, disp)
 }
 
 func TestConcurrency(t *testing.T) {
@@ -98,7 +139,10 @@ func TestConcurrency(t *testing.T) {
 		for {
 			select {
 			case <-ae.Channel():
-				val := ae.Value()
+				val, ok := ae.Consume()
+				if !ok {
+					continue
+				}
 				if val < lastRead {
 					t.Errorf("read a stale value: got %d, last was %d", val, lastRead)
 				}
@@ -107,11 +151,13 @@ func TestConcurrency(t *testing.T) {
 				// Drain the channel one last time to avoid a race.
 				select {
 				case <-ae.Channel():
-					val := ae.Value()
-					if val < lastRead {
+					val, ok := ae.Consume()
+					if ok && val < lastRead {
 						t.Errorf("read a stale value: got %d, last was %d", val, lastRead)
 					}
-					lastRead = val
+					if ok {
+						lastRead = val
+					}
 				default:
 				}
 				return
@@ -121,7 +167,31 @@ func TestConcurrency(t *testing.T) {
 
 	readerWg.Wait()
 
-	assert.Equal(t, 999, ae.Value(), "Final value should be 999")
+	assert.Equal(t, 999, lastRead, "Final read value should be 999")
+}
+
+
+func TestAtomicEvent_SingleConsumption(t *testing.T) {
+	ae := NewAtomicEvent[string]()
+	ae.Send("bid100")
+	assert.True(t, ae.HasPending())
+
+	// Normal consumption pattern: select on Channel, then Consume
+	select {
+	case <-ae.Channel():
+		val, ok := ae.Consume()
+		assert.True(t, ok)
+		assert.Equal(t, "bid100", val)
+	default:
+		t.Fatal("channel should have had notification")
+	}
+
+	assert.False(t, ae.HasPending())
+
+	// Second consume MUST return false
+	val2, ok2 := ae.Consume()
+	assert.False(t, ok2)
+	assert.Empty(t, val2)
 }
 
 func TestNewAtomicMapEvent(t *testing.T) {

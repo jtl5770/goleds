@@ -45,7 +45,9 @@ func (s *AbstractPlatform) Ready() <-chan bool {
 }
 
 func (s *AbstractPlatform) SetLeds(leds []producer.Led) {
-	s.ledsEvent.Send(leds)
+	if dropped, ok := s.ledsEvent.Send(leds); ok {
+		s.ledBufferPool.Put(dropped)
+	}
 }
 
 func (s *AbstractPlatform) GetSensorEvents() <-chan *util.Trigger {
@@ -88,7 +90,10 @@ func (s *AbstractPlatform) displayDriver() {
 			slog.Info("Ending DisplayDriver go-routine...")
 			return
 		case <-s.ledsEvent.Channel():
-			sumLeds := s.ledsEvent.Value()
+			sumLeds, ok := s.ledsEvent.Consume()
+			if !ok {
+				continue
+			}
 			if !s.isShuttingDown.Load() && !s.isCalibrating.Load() {
 				var maxR float64
 				for _, led := range sumLeds {
